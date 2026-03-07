@@ -1,0 +1,1142 @@
+# docs-plus-plus: Next-Generation dbt Documentation Site Generator
+
+## Product Requirements Document (PRD)
+
+**Version:** 0.1.0
+**Author:** Josh
+**Date:** March 2026
+**Status:** Initial Build
+
+---
+
+## 1. Executive Summary
+
+**docs-plus-plus** is an open-source Python CLI tool that generates a modern, feature-rich static documentation site from dbt project artifacts. It is a drop-in replacement for `dbt docs generate + dbt docs serve` that produces a dramatically more useful documentation experience — including column-level statistics, test result overlays, source freshness indicators, full-text search, and an optional AI-powered chat interface for querying project metadata in natural language.
+
+The tool reads the same artifacts dbt already produces (`manifest.json`, `catalog.json`, `run_results.json`, `sources.json`) and optionally runs profiling queries against the warehouse to collect column-level statistics. It outputs a single static site (React-based SPA bundled into a single `index.html` with embedded JSON data) that can be hosted anywhere — S3, Netlify, GitHub Pages, or served locally.
+
+---
+
+## 2. Target Users
+
+1. **Data Engineers / Analytics Engineers** using dbt Core (open source) who have no access to dbt Cloud's Catalog product
+2. **Data team leads / Directors** who want visibility into documentation coverage, test coverage, and project health
+3. **Business stakeholders** (analysts, PMs, executives) who need to understand available data without learning dbt's technical interface
+
+---
+
+## 3. Project Structure
+
+```
+docs-plus-plus/
+├── pyproject.toml                 # Package config (use Poetry or Hatch)
+├── README.md
+├── LICENSE                        # MIT
+├── src/
+│   └── dbt_datum/
+│       ├── __init__.py
+│       ├── cli.py                 # CLI entry point (Click)
+│       ├── config.py              # Configuration management
+│       ├── artifacts/
+│       │   ├── __init__.py
+│       │   ├── loader.py          # Load and validate dbt artifacts
+│       │   ├── manifest.py        # Parse manifest.json
+│       │   ├── catalog.py         # Parse catalog.json
+│       │   ├── run_results.py     # Parse run_results.json
+│       │   └── sources.py         # Parse sources.json (freshness)
+│       ├── profiler/
+│       │   ├── __init__.py
+│       │   ├── engine.py          # Profiling query engine
+│       │   ├── queries.py         # SQL templates per warehouse type
+│       │   ├── stats.py           # Statistics computation
+│       │   └── cache.py           # Profile caching (avoid re-profiling unchanged models)
+│       ├── analyzer/
+│       │   ├── __init__.py
+│       │   ├── health.py          # Project health scoring
+│       │   ├── coverage.py        # Doc/test coverage calculations
+│       │   ├── complexity.py      # Model complexity analysis
+│       │   └── naming.py          # Naming convention checks
+│       ├── ai/
+│       │   ├── __init__.py
+│       │   ├── chat.py            # AI chat backend (Anthropic API)
+│       │   ├── context.py         # Build context from artifacts for AI
+│       │   └── prompts.py         # System prompts and templates
+│       ├── generator/
+│       │   ├── __init__.py
+│       │   ├── site.py            # Static site generator
+│       │   ├── data.py            # Prepare JSON data payload for frontend
+│       │   └── bundle.py          # Bundle React app + data into single HTML
+│       └── server/
+│           ├── __init__.py
+│           └── dev.py             # Local dev server (like dbt docs serve)
+├── frontend/                      # React SPA (built separately, bundled into Python package)
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── vite.config.ts
+│   ├── index.html
+│   ├── src/
+│   │   ├── main.tsx
+│   │   ├── App.tsx
+│   │   ├── types/
+│   │   │   ├── index.ts           # TypeScript interfaces for all data
+│   │   │   ├── manifest.ts
+│   │   │   ├── catalog.ts
+│   │   │   ├── profile.ts
+│   │   │   └── health.ts
+│   │   ├── stores/
+│   │   │   ├── projectStore.ts    # Zustand store for project data
+│   │   │   └── searchStore.ts     # Zustand store for search state
+│   │   ├── components/
+│   │   │   ├── layout/
+│   │   │   │   ├── Sidebar.tsx        # Project tree navigation
+│   │   │   │   ├── Header.tsx         # Search bar + view toggle
+│   │   │   │   └── MainLayout.tsx     # Shell layout
+│   │   │   ├── models/
+│   │   │   │   ├── ModelDetail.tsx     # Full model detail page
+│   │   │   │   ├── ModelList.tsx       # Model listing/grid
+│   │   │   │   ├── ColumnTable.tsx     # Column details with stats
+│   │   │   │   ├── ColumnStats.tsx     # Inline stats visualizations
+│   │   │   │   └── SqlViewer.tsx       # Syntax-highlighted SQL
+│   │   │   ├── lineage/
+│   │   │   │   ├── LineageGraph.tsx    # Interactive DAG (D3 or dagre)
+│   │   │   │   └── ImpactAnalysis.tsx  # Upstream/downstream explorer
+│   │   │   ├── health/
+│   │   │   │   ├── HealthDashboard.tsx # Project health overview
+│   │   │   │   ├── CoverageChart.tsx   # Doc/test coverage viz
+│   │   │   │   └── HealthBadge.tsx     # Inline health indicator
+│   │   │   ├── search/
+│   │   │   │   ├── SearchBar.tsx       # Global search input
+│   │   │   │   ├── SearchResults.tsx   # Results with highlighting
+│   │   │   │   └── SearchIndex.ts      # Client-side search (Fuse.js)
+│   │   │   ├── freshness/
+│   │   │   │   ├── FreshnessBadge.tsx  # Source freshness indicator
+│   │   │   │   └── FreshnessPanel.tsx  # Freshness detail panel
+│   │   │   ├── tests/
+│   │   │   │   ├── TestBadge.tsx       # Pass/fail/warn badge
+│   │   │   │   └── TestResultsPanel.tsx# Test details for a model
+│   │   │   └── ai/
+│   │   │       ├── ChatPanel.tsx       # AI chat sidebar
+│   │   │       ├── ChatMessage.tsx     # Individual message
+│   │   │       └── ChatInput.tsx       # Message input with suggestions
+│   │   ├── pages/
+│   │   │   ├── Overview.tsx           # Landing page / project overview
+│   │   │   ├── ModelPage.tsx          # Individual model view
+│   │   │   ├── SourcePage.tsx         # Individual source view
+│   │   │   ├── LineagePage.tsx        # Full lineage explorer
+│   │   │   ├── HealthPage.tsx         # Project health dashboard
+│   │   │   └── SearchPage.tsx         # Full search results page
+│   │   ├── hooks/
+│   │   │   ├── useSearch.ts
+│   │   │   ├── useLineage.ts
+│   │   │   └── useProfile.ts
+│   │   └── utils/
+│   │       ├── formatting.ts          # Number formatting, dates
+│   │       ├── colors.ts              # Health status colors
+│   │       └── graph.ts               # DAG traversal utilities
+│   └── public/
+│       └── favicon.svg
+└── tests/
+    ├── conftest.py
+    ├── fixtures/                      # Sample dbt artifacts for testing
+    │   ├── manifest.json
+    │   ├── catalog.json
+    │   ├── run_results.json
+    │   └── sources.json
+    ├── test_loader.py
+    ├── test_profiler.py
+    ├── test_health.py
+    └── test_generator.py
+```
+
+---
+
+## 4. Technical Architecture
+
+### 4.1 Data Flow
+
+```
+┌─────────────────────────────────────────────────────┐
+│                   dbt Project                        │
+│                                                      │
+│  manifest.json ─┐                                    │
+│  catalog.json  ─┤                                    │
+│  run_results.json─┤  (already exist after dbt build) │
+│  sources.json  ─┘                                    │
+└────────┬────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────┐
+│              docs-plus-plus CLI (Python)                   │
+│                                                      │
+│  1. Load & validate artifacts                        │
+│  2. (Optional) Run profiling queries against DWH     │
+│  3. Compute health scores & coverage metrics         │
+│  4. Merge all data into unified JSON payload         │
+│  5. Bundle React SPA + JSON → single index.html      │
+└────────┬────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────┐
+│            Static Site Output                        │
+│                                                      │
+│  target/datum/                                       │
+│  ├── index.html    (self-contained SPA)              │
+│  └── datum.json    (optional separate data file)     │
+│                                                      │
+│  Can be:                                             │
+│  - Served locally (docs-plus-plus serve)                  │
+│  - Uploaded to S3/GCS/Netlify/GitHub Pages           │
+│  - Shared as a single HTML file via email/Slack      │
+└─────────────────────────────────────────────────────┘
+```
+
+### 4.2 Technology Stack
+
+**Python Backend (CLI + data processing):**
+- Python 3.10+
+- Click (CLI framework)
+- Pydantic (data validation and artifact parsing)
+- SQLAlchemy (warehouse connections for profiling — supports Snowflake, BigQuery, Postgres, Redshift, DuckDB)
+- Jinja2 (HTML template rendering for bundling)
+- Rich (CLI output formatting and progress bars)
+
+**Frontend (React SPA):**
+- React 18+ with TypeScript
+- Vite (build tooling)
+- Tailwind CSS (styling)
+- Zustand (state management — lightweight, no boilerplate)
+- Fuse.js (client-side fuzzy search)
+- D3.js or dagre-d3 (lineage DAG visualization)
+- Recharts (charts for statistics and health dashboard)
+- Prism.js or Shiki (SQL syntax highlighting)
+
+**AI Chat (optional feature, Phase 3):**
+- Anthropic Claude API (claude-sonnet-4-20250514 model)
+- User provides their own API key (BYOK model)
+- Context window stuffed with manifest metadata, not raw SQL
+
+### 4.3 Warehouse Connection for Profiling
+
+The profiler connects to the same warehouse dbt uses. It reads connection details from:
+
+1. `profiles.yml` (standard dbt profiles file)
+2. Environment variables (DBT_PROFILE, DBT_TARGET)
+3. CLI flags (--profile, --target)
+
+Supported adapters (Phase 1): **Snowflake, PostgreSQL, DuckDB**
+Future adapters: BigQuery, Redshift, Databricks
+
+---
+
+## 5. CLI Interface Design
+
+### 5.1 Commands
+
+```bash
+# Generate the documentation site
+docs-plus-plus generate [OPTIONS]
+
+# Serve the documentation locally
+docs-plus-plus serve [OPTIONS]
+
+# Run profiling only (outputs profile.json)
+docs-plus-plus profile [OPTIONS]
+
+# Show project health score in terminal
+docs-plus-plus health [OPTIONS]
+```
+
+### 5.2 Generate Command Options
+
+```bash
+docs-plus-plus generate \
+  --project-dir .                    # Path to dbt project root (default: current dir)
+  --target-dir target                # Path to dbt target directory with artifacts
+  --output-dir target/datum          # Where to write the generated site
+  --profile                          # Enable column profiling (requires DWH connection)
+  --profile-target dev               # Which dbt target/profile to use for profiling
+  --profile-sample-size 10000        # Max rows to sample for profiling (default: 10000)
+  --profile-cache                    # Cache profiles, skip unchanged models (default: true)
+  --no-profile                       # Explicitly skip profiling
+  --select "tag:marts"               # Only include models matching selector
+  --exclude "tag:staging"            # Exclude models matching selector
+  --static                           # Bundle everything into single index.html
+  --ai                               # Enable AI chat panel (requires ANTHROPIC_API_KEY env var)
+  --title "Acme Data Docs"           # Custom site title
+  --theme dark                       # Color theme (light/dark/auto)
+  --verbose                          # Verbose output
+```
+
+### 5.3 Serve Command Options
+
+```bash
+docs-plus-plus serve \
+  --port 8081                        # Port (default: 8081, avoids dbt's 8080)
+  --host 0.0.0.0                     # Host to bind
+  --open                             # Auto-open browser (default: true)
+  --dir target/datum                 # Directory to serve
+```
+
+### 5.4 Health Command Options
+
+```bash
+docs-plus-plus health \
+  --project-dir .
+  --target-dir target
+  --format table                     # Output format: table, json, markdown
+  --select "tag:marts"               # Scope to specific models
+```
+
+**Example health output:**
+
+```
+╔══════════════════════════════════════════════╗
+║          docs-plus-plus Project Health             ║
+╠══════════════════════════════════════════════╣
+║  Overall Score: 72/100 (Good)                ║
+╠──────────────────────────────────────────────╣
+║  Documentation Coverage                      ║
+║    Models described:     45/68  (66%)        ║
+║    Columns described:   312/890 (35%)        ║
+║                                              ║
+║  Test Coverage                               ║
+║    Models with tests:    52/68  (76%)        ║
+║    Columns with tests:  198/890 (22%)        ║
+║                                              ║
+║  Source Freshness                             ║
+║    Sources monitored:    12/15  (80%)        ║
+║    Sources passing SLA:  10/12  (83%)        ║
+║                                              ║
+║  Model Complexity                            ║
+║    High complexity:      8 models            ║
+║    Unused models:        3 models            ║
+║                                              ║
+║  Naming Conventions                          ║
+║    Compliant models:     61/68  (90%)        ║
+╚══════════════════════════════════════════════╝
+```
+
+---
+
+## 6. Feature Specifications
+
+### 6.1 Phase 1 — Core Static Site (MVP)
+
+**Goal:** A working replacement for `dbt docs serve` that is visually better and more useful out of the box, with zero additional configuration required.
+
+#### F1.1: Artifact Loading & Parsing
+
+- Read `manifest.json` from the dbt target directory
+- Read `catalog.json` from the dbt target directory
+- Read `run_results.json` if present (gracefully skip if missing)
+- Read `sources.json` if present (gracefully skip if missing)
+- Validate artifact schema versions and warn if unsupported
+- Support dbt Core versions 1.6+ artifact schemas
+
+**Acceptance Criteria:**
+- CLI loads all available artifacts in under 5 seconds for a 500-model project
+- Missing optional artifacts produce a warning, not an error
+- Invalid JSON files produce a clear, actionable error message
+
+#### F1.2: Model Detail Page
+
+Each model (and source, seed, snapshot) gets a detail page showing:
+
+- **Header:** Model name, materialization type (table/view/incremental/ephemeral), schema, database, resource type badge
+- **Description:** Rendered markdown description from YAML (support doc blocks)
+- **Tags and Meta:** Display all tags and meta properties
+- **Column Table:** All columns with:
+  - Column name
+  - Data type (from catalog)
+  - Description (from YAML, or "No description" in muted text)
+  - Tests applied to this column (badges: not_null, unique, accepted_values, relationships, custom)
+  - Test status (pass/fail/warn/error badges from run_results, or "not run" if no results)
+- **SQL Viewer:** Syntax-highlighted compiled SQL with copy button
+- **Raw SQL Viewer:** Tab to see the raw (pre-compiled) SQL with Jinja
+- **Dependencies:**
+  - Upstream models (parents) as clickable links
+  - Downstream models (children) as clickable links
+  - Sources referenced
+  - Exposures that reference this model
+- **Mini Lineage Graph:** Small interactive DAG showing 2 levels up and 2 levels down from this model
+- **Test Results Panel:** All tests for this model with status, execution time, and failure messages
+- **Source Freshness** (for sources only): Freshness status, last loaded timestamp, SLA threshold
+
+**Acceptance Criteria:**
+- Model page loads in under 200ms (client-side rendering from pre-loaded JSON)
+- All columns from catalog appear even if not documented in YAML
+- SQL viewer supports Snowflake, BigQuery, and Postgres SQL dialects
+- Clicking any referenced model navigates to that model's page
+
+#### F1.3: Navigation & Project Tree
+
+- **Sidebar** with collapsible tree organized by:
+  - Resource type (models, sources, seeds, snapshots, exposures, metrics)
+  - Under models: organized by folder structure matching the dbt project
+- **Breadcrumbs** showing current location in the tree
+- **Quick-switch** dropdown for navigating directly by typing a model name (Cmd+K / Ctrl+K)
+
+**Acceptance Criteria:**
+- Sidebar renders full project tree for 500+ models without lag
+- Folder structure matches the dbt project's `models/` directory hierarchy
+- Cmd+K opens a spotlight-style search that filters as you type
+
+#### F1.4: Full-Text Search
+
+- Index all: model names, column names, descriptions, SQL code, tags, meta values
+- Use Fuse.js for client-side fuzzy matching
+- Search results grouped by type (models, columns, sources)
+- Each result shows: resource name, matched field, preview snippet with highlighted match
+- Keyboard navigation through results (arrow keys, Enter to select)
+
+**Acceptance Criteria:**
+- Search returns results in under 100ms for a 500-model project
+- Searching "revenue" finds models named revenue, columns named revenue, and models whose descriptions or SQL contain "revenue"
+- Results are ranked by relevance (name match > description match > SQL match)
+
+#### F1.5: Lineage DAG
+
+- Full project DAG with pan, zoom, and click-to-navigate
+- Nodes colored by resource type (model=blue, source=green, exposure=orange, seed=gray)
+- Click a node to navigate to its detail page
+- Highlight upstream/downstream paths on hover
+- Filter DAG by tag, folder, or search term
+- Mini-map in corner showing viewport position within full DAG
+
+**Acceptance Criteria:**
+- DAG renders 500 nodes without crashing or excessive lag
+- Selecting a node highlights its full upstream and downstream dependency chain
+- DAG supports both horizontal (left-to-right) and vertical layouts
+
+#### F1.6: Static Site Generation & Bundling
+
+- `docs-plus-plus generate` produces output in `target/datum/` directory
+- Default output: `index.html` + `datum-data.json` (separate data file loaded via fetch)
+- With `--static` flag: single `index.html` with data embedded as `<script>` tag (like dbt's `--static` flag)
+- The React frontend is pre-built and included in the Python package (no Node.js required at runtime)
+- Generated site works when opened directly from filesystem (`file://` protocol) via the static flag
+
+**Acceptance Criteria:**
+- `docs-plus-plus generate` completes in under 15 seconds for a 500-model project (without profiling)
+- Generated site loads and is interactive within 2 seconds in a browser
+- Static single-file output is under 10MB for a 500-model project
+- Site works on Chrome, Firefox, Safari, and Edge
+
+#### F1.7: Local Dev Server
+
+- `docs-plus-plus serve` starts a local HTTP server
+- Auto-opens browser to the site
+- Optionally watches for artifact changes and auto-rebuilds (--watch flag)
+
+---
+
+### 6.2 Phase 2 — Column Profiling & Health Dashboard
+
+**Goal:** Add the column-level statistics and project health features that differentiate docs-plus-plus from plain dbt docs.
+
+#### F2.1: Column Profiling Engine
+
+For each column in each model, compute and display:
+
+| Statistic | Column Types | Description |
+|---|---|---|
+| `row_count` | all | Total rows in the table |
+| `null_count` | all | Count of NULL values |
+| `null_rate` | all | Percentage of NULLs (0.0 - 1.0) |
+| `distinct_count` | all | Count of distinct values |
+| `distinct_rate` | all | Proportion of unique values |
+| `is_unique` | all | Boolean: all values distinct? |
+| `min` | numeric, date, timestamp | Minimum value |
+| `max` | numeric, date, timestamp | Maximum value |
+| `mean` | numeric | Average value |
+| `median` | numeric | Median (approx for large tables) |
+| `stddev` | numeric | Standard deviation |
+| `top_values` | string, numeric (low cardinality) | Top 10 most frequent values with counts |
+| `value_distribution` | numeric | Histogram buckets (10 bins) |
+| `min_length` | string | Shortest string length |
+| `max_length` | string | Longest string length |
+| `avg_length` | string | Average string length |
+| `pattern_sample` | string | Sample of common patterns (e.g., "XXX-NNNN") |
+
+**Profiling SQL generation strategy:**
+
+- Generate ONE query per model (not per column) to minimize warehouse queries
+- Use `LATERAL FLATTEN` / `UNNEST` patterns to compute all column stats in a single pass
+- Support `--profile-sample-size N` to use `TABLESAMPLE` or `LIMIT` for large tables
+- Store results in `target/datum/profiles.json` for caching
+- On subsequent runs, only re-profile models whose `catalog.json` entry has changed (compare row counts, schema hashes)
+
+**Example profiling query template (Snowflake):**
+
+```sql
+-- Generated by docs-plus-plus profiler for model: stg_orders
+SELECT
+  COUNT(*) as _row_count,
+  -- order_id (NUMBER)
+  COUNT("order_id") as "order_id__non_null_count",
+  COUNT(DISTINCT "order_id") as "order_id__distinct_count",
+  MIN("order_id") as "order_id__min",
+  MAX("order_id") as "order_id__max",
+  AVG("order_id") as "order_id__mean",
+  MEDIAN("order_id") as "order_id__median",
+  STDDEV("order_id") as "order_id__stddev",
+  -- order_date (DATE)
+  COUNT("order_date") as "order_date__non_null_count",
+  COUNT(DISTINCT "order_date") as "order_date__distinct_count",
+  MIN("order_date") as "order_date__min",
+  MAX("order_date") as "order_date__max",
+  -- status (VARCHAR)
+  COUNT("status") as "status__non_null_count",
+  COUNT(DISTINCT "status") as "status__distinct_count",
+  MIN(LENGTH("status")) as "status__min_length",
+  MAX(LENGTH("status")) as "status__max_length",
+  AVG(LENGTH("status")) as "status__avg_length"
+FROM {{ schema }}.{{ model_name }}
+{% if sample_size %}TABLESAMPLE ({{ sample_rows }} ROWS){% endif %};
+```
+
+**Top values query (separate, only for low-cardinality columns):**
+
+```sql
+-- Only run for columns where distinct_count <= 50
+SELECT "status" as value, COUNT(*) as frequency
+FROM {{ schema }}.{{ model_name }}
+GROUP BY "status"
+ORDER BY frequency DESC
+LIMIT 10;
+```
+
+**Acceptance Criteria:**
+- Profiling a 50-model project with ~20 columns each completes in under 5 minutes
+- Profile cache prevents re-querying unchanged models
+- Profile results render inline in the Column Table (F1.2) with sparkline visualizations
+- Users without warehouse access can still generate the site (profiling is optional)
+
+#### F2.2: Column Statistics UI Components
+
+In the Column Table on each model's detail page, add visual statistics:
+
+- **Null Rate Bar:** Horizontal bar showing % null (green=low, yellow=moderate, red=high)
+- **Distinct Count Badge:** Shows distinct count with tooltip showing proportion
+- **Value Distribution:** For numeric columns, a small inline sparkline histogram (10 bins)
+- **Top Values:** For low-cardinality string columns, expandable list of top 10 values with frequency bars
+- **Range Display:** For numeric/date columns, show min–max range with formatted values
+- **Stats Tooltip:** Hovering over any stat shows the full detail (mean, median, stddev, etc.)
+
+**Expandable Stats Row:**
+- Clicking a column row expands it to show the full statistics panel
+- Full panel includes: all computed statistics in a clean table, histogram chart (Recharts), top values bar chart
+
+#### F2.3: Project Health Dashboard
+
+A dedicated `/health` page showing:
+
+**Overall Health Score (0-100):**
+Computed as weighted average of:
+- Documentation coverage (25% weight): % of models with descriptions + % of columns with descriptions
+- Test coverage (25% weight): % of models with at least one test + % of primary/foreign key columns with uniqueness/not_null tests
+- Source freshness (15% weight): % of monitored sources passing SLA
+- Model complexity (15% weight): inverse of % of models exceeding complexity thresholds
+- Naming conventions (10% weight): % of models following configured naming patterns
+- Orphan detection (10% weight): inverse of % of models with no downstream consumers
+
+**Detail Panels:**
+
+1. **Documentation Coverage**
+   - Bar chart: coverage by folder (models/staging: 80%, models/marts: 45%, etc.)
+   - Table of undocumented models sorted by downstream impact (most depended-on first)
+   - Table of undocumented columns (grouped by model)
+
+2. **Test Coverage**
+   - Heatmap: models vs test types (not_null, unique, accepted_values, relationships, custom)
+   - Table of untested models sorted by downstream impact
+   - Table of models with failing tests
+
+3. **Source Freshness**
+   - Timeline: each source's freshness over time (if historical data available)
+   - Current status table: source name, last loaded, SLA, status
+
+4. **Model Complexity**
+   - Scatter plot: lines of SQL vs number of joins vs downstream dependents
+   - Table of high-complexity models (configurable thresholds)
+   - Flagged models: circular dependencies, extremely deep lineage chains
+
+5. **Naming Conventions**
+   - Configurable rules (e.g., staging models must start with `stg_`, marts with `fct_` or `dim_`)
+   - Table of non-compliant models with suggested fixes
+
+**Acceptance Criteria:**
+- Health dashboard loads in under 1 second
+- Health score is deterministic (same input always produces same score)
+- All tables are sortable and filterable
+- Health data is included in the JSON payload (no server-side computation at view time)
+
+---
+
+### 6.3 Phase 3 — AI Chat Interface
+
+**Goal:** Add an AI-powered chat panel that lets users query their project metadata using natural language.
+
+#### F3.1: AI Chat Panel
+
+- Slide-out panel on the right side of the screen (toggleable via button or keyboard shortcut)
+- Chat interface with message history (persists during session, not across sessions)
+- Suggested starter questions shown on empty state:
+  - "What models depend on the orders source?"
+  - "Which columns might contain PII?"
+  - "What would break if I changed stg_customers?"
+  - "Show me all models related to revenue"
+  - "Which models have the most failing tests?"
+
+#### F3.2: AI Context Building
+
+When the user asks a question, build a context payload from the loaded artifacts:
+
+```python
+# Context sent to Claude with each question
+{
+    "project_name": "acme_analytics",
+    "total_models": 68,
+    "total_sources": 15,
+
+    # Compact model registry (always included)
+    "models": [
+        {
+            "name": "fct_orders",
+            "description": "Fact table for completed orders...",
+            "materialization": "incremental",
+            "schema": "analytics",
+            "columns": ["order_id", "customer_id", "order_date", "total_amount", "status"],
+            "tags": ["marts", "finance"],
+            "depends_on": ["stg_orders", "stg_payments"],
+            "referenced_by": ["rpt_daily_revenue", "exposure:executive_dashboard"],
+            "test_status": {"pass": 8, "fail": 1, "warn": 0},
+            "row_count": 1250000
+        },
+        # ... all models in compact form
+    ],
+
+    # Source registry
+    "sources": [...],
+
+    # Relevant SQL (only included when question seems to need it)
+    # Use heuristic: if question mentions specific model, include that model's SQL
+}
+```
+
+**Context size management:**
+- For projects under 200 models: include full compact registry in every request
+- For projects 200-500 models: include full registry but omit column lists; include columns only for models referenced in the question
+- For projects 500+: include model names and descriptions only; fetch full details for mentioned models
+
+#### F3.3: AI Response Handling
+
+- Stream responses (use Anthropic streaming API)
+- Render markdown in responses
+- Model names in responses are clickable links that navigate to that model's page
+- If the AI references specific models, show a "Referenced Models" panel below the response with quick links
+- Rate limiting: max 20 requests per session (client-side enforced since this is BYOK)
+
+#### F3.4: BYOK (Bring Your Own Key) Configuration
+
+- API key provided via environment variable: `ANTHROPIC_API_KEY`
+- Or via `--ai-key` CLI flag (not recommended, but supported)
+- Or via a settings panel in the UI where users paste their key (stored in localStorage for the session only; remind users this is local only)
+- If no API key is available, the chat panel shows a setup prompt explaining how to add one
+- All API calls happen client-side (browser → Anthropic API directly) — the static site has no backend
+
+**Acceptance Criteria:**
+- Chat responses stream in under 2 seconds for first token
+- AI correctly identifies upstream/downstream dependencies when asked
+- AI can answer "what would break if I change X?" by tracing the lineage graph
+- Chat works entirely client-side (no proxy server needed)
+- Without an API key, the rest of the site works perfectly — AI is purely additive
+
+---
+
+### 6.4 Phase 4 — Advanced Features (Future)
+
+These are documented for future reference but NOT part of the initial build:
+
+- **Historical health tracking:** Store health scores over time, show trends
+- **CI/CD integration:** GitHub Action that runs `docs-plus-plus health` and comments on PRs with coverage delta
+- **Business glossary view:** Non-technical view that hides SQL, shows only descriptions and data health
+- **Hosted sharing:** `docs-plus-plus publish` to upload to a free hosted service
+- **dbt Cloud artifact sync:** Pull artifacts from dbt Cloud API for teams using Cloud but wanting better docs
+- **Custom themes and branding:** Allow teams to customize colors, logos, and layout
+
+---
+
+## 7. Data Schema
+
+### 7.1 Unified Data Payload (datum-data.json)
+
+This is the JSON structure that the Python backend generates and the React frontend consumes:
+
+```typescript
+interface DatumData {
+  metadata: {
+    generated_at: string;           // ISO timestamp
+    dbt_datum_version: string;
+    dbt_version: string;
+    project_name: string;
+    project_id: string;
+    target_name: string;
+    artifact_versions: {
+      manifest: string;
+      catalog: string | null;
+      run_results: string | null;
+      sources: string | null;
+    };
+    profiling_enabled: boolean;
+    ai_enabled: boolean;
+  };
+
+  models: Record<string, DatumModel>;
+  sources: Record<string, DatumSource>;
+  seeds: Record<string, DatumSeed>;
+  snapshots: Record<string, DatumSnapshot>;
+  exposures: Record<string, DatumExposure>;
+  metrics: Record<string, DatumMetric>;
+
+  // Pre-computed for frontend performance
+  lineage: {
+    nodes: LineageNode[];
+    edges: LineageEdge[];
+  };
+
+  health: HealthReport;
+
+  // Search index (pre-built for Fuse.js)
+  search_index: SearchEntry[];
+}
+
+interface DatumModel {
+  unique_id: string;               // e.g., "model.jaffle_shop.stg_orders"
+  name: string;
+  description: string;
+  schema: string;
+  database: string;
+  materialization: string;
+  tags: string[];
+  meta: Record<string, any>;
+  path: string;                    // File path relative to project root
+  folder: string;                  // Parent folder for tree nav
+  raw_sql: string;
+  compiled_sql: string;
+
+  columns: DatumColumn[];
+
+  // Relationships
+  depends_on: string[];            // unique_ids of upstream models/sources
+  referenced_by: string[];         // unique_ids of downstream models/exposures
+  sources_used: string[];          // unique_ids of sources
+
+  // From run_results
+  test_results: TestResult[];
+  last_run: {
+    status: "success" | "error" | "skipped" | null;
+    execution_time: number | null;
+    completed_at: string | null;
+  } | null;
+
+  // From catalog
+  catalog_stats: {
+    row_count: number | null;
+    bytes: number | null;
+    has_stats: boolean;
+  };
+}
+
+interface DatumColumn {
+  name: string;
+  description: string;
+  data_type: string;               // From catalog
+  meta: Record<string, any>;
+  tags: string[];
+
+  // Tests on this column
+  tests: ColumnTest[];
+
+  // From profiler (null if profiling disabled or not run)
+  profile: ColumnProfile | null;
+}
+
+interface ColumnProfile {
+  null_count: number;
+  null_rate: number;
+  distinct_count: number;
+  distinct_rate: number;
+  is_unique: boolean;
+  min: string | number | null;     // Serialized as string for dates
+  max: string | number | null;
+  mean: number | null;
+  median: number | null;
+  stddev: number | null;
+  min_length: number | null;       // String columns only
+  max_length: number | null;
+  avg_length: number | null;
+  top_values: TopValue[] | null;   // Low cardinality columns only
+  histogram: HistogramBin[] | null;// Numeric columns only
+  profiled_at: string;
+}
+
+interface TopValue {
+  value: string;
+  count: number;
+  percentage: number;
+}
+
+interface HistogramBin {
+  bin_start: number;
+  bin_end: number;
+  count: number;
+}
+
+interface TestResult {
+  test_name: string;
+  test_type: string;               // "not_null", "unique", "accepted_values", "relationships", "custom"
+  column_name: string | null;      // null for model-level tests
+  status: "pass" | "fail" | "warn" | "error";
+  execution_time: number;
+  failures: number;
+  message: string | null;
+}
+
+interface ColumnTest {
+  test_name: string;
+  test_type: string;
+  status: "pass" | "fail" | "warn" | "error" | "not_run";
+  config: Record<string, any>;     // e.g., accepted_values list
+}
+
+interface HealthReport {
+  overall_score: number;           // 0-100
+  grade: "A" | "B" | "C" | "D" | "F";
+  documentation: {
+    model_coverage: number;        // 0.0 - 1.0
+    column_coverage: number;
+    undocumented_models: string[];  // model names sorted by impact
+    undocumented_columns: { model: string; column: string }[];
+  };
+  testing: {
+    model_coverage: number;
+    column_coverage: number;
+    untested_models: string[];
+    failing_tests: TestResult[];
+  };
+  freshness: {
+    monitored_rate: number;
+    passing_rate: number;
+    stale_sources: string[];
+  };
+  complexity: {
+    high_complexity_models: {
+      name: string;
+      sql_lines: number;
+      join_count: number;
+      cte_count: number;
+      downstream_count: number;
+    }[];
+    orphan_models: string[];       // Models with no downstream dependents
+  };
+  naming: {
+    compliance_rate: number;
+    violations: {
+      model: string;
+      expected_pattern: string;
+      suggestion: string;
+    }[];
+  };
+}
+
+interface LineageNode {
+  id: string;                      // unique_id
+  name: string;
+  resource_type: "model" | "source" | "seed" | "snapshot" | "exposure" | "metric";
+  materialization: string;
+  schema: string;
+  test_status: "pass" | "fail" | "warn" | "none";
+  has_description: boolean;
+  folder: string;
+  tags: string[];
+}
+
+interface LineageEdge {
+  source: string;                  // unique_id
+  target: string;                  // unique_id
+}
+
+interface SearchEntry {
+  unique_id: string;
+  name: string;
+  resource_type: string;
+  description: string;
+  columns: string;                 // Comma-separated column names
+  tags: string;                    // Comma-separated tags
+  sql_snippet: string;             // First 500 chars of compiled SQL
+}
+```
+
+---
+
+## 8. UI Design Specifications
+
+### 8.1 Layout
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  [Logo] docs-plus-plus    [🔍 Search... (Cmd+K)]     [☀️/🌙] [💬 AI]  │
+├──────────────┬──────────────────────────────────────────────────────┤
+│              │                                                      │
+│  Project     │   Model: fct_orders                                  │
+│  Tree        │   ═══════════════                                    │
+│              │                                                      │
+│  ▼ models/   │   📋 Description │ 📊 Columns │ 🔗 Lineage │ 🧪 Tests │
+│    ▼ staging/│   ─────────────────────────────────────────────────  │
+│      stg_..  │                                                      │
+│    ▼ marts/  │   [Active tab content renders here]                  │
+│      fct_..  │                                                      │
+│      dim_..  │                                                      │
+│  ▼ sources/  │                                                      │
+│    stripe    │                                                      │
+│    postgres  │                                                      │
+│              │                                                      │
+│  ─────────── │                                                      │
+│  📊 Health   │                                                      │
+│  Score: 72   │                                                      │
+│              │                                                      │
+├──────────────┴──────────────────────────────────────────────────────┤
+│  Generated by docs-plus-plus v0.1.0 • 68 models • 15 sources • [time]  │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### 8.2 Color System
+
+Use a professional, accessible color palette:
+
+```
+Primary:       #2563EB (blue-600)     — Links, active states
+Secondary:     #7C3AED (violet-600)   — AI chat, special features
+Success:       #16A34A (green-600)    — Pass, good health
+Warning:       #D97706 (amber-600)    — Warn, moderate health
+Danger:        #DC2626 (red-600)      — Fail, poor health
+Neutral:       #6B7280 (gray-500)     — Secondary text, borders
+
+Background:    #FFFFFF (light) / #0F172A (dark)
+Surface:       #F8FAFC (light) / #1E293B (dark)
+Border:        #E2E8F0 (light) / #334155 (dark)
+```
+
+### 8.3 Key UI Components
+
+**Health Badge (used throughout the site):**
+- Small colored dot + label: 🟢 Pass | 🟡 Warn | 🔴 Fail | ⚪ None
+- Appears next to model names in sidebar, column rows, search results
+
+**Column Stats Inline:**
+- Compact row within the column table
+- Null rate shown as thin horizontal bar (green→yellow→red gradient)
+- Distinct count as a number with tooltip
+- Type-appropriate stats: numeric shows range, string shows length range, low-cardinality shows top values preview
+
+**Sparkline Histogram (for numeric columns):**
+- 10-bin histogram rendered as tiny inline SVG (40px tall, 120px wide)
+- Bins colored with a gradient
+- Tooltip on hover shows bin ranges and counts
+
+---
+
+## 9. Configuration File
+
+Optional `datum.yml` at project root for persistent configuration:
+
+```yaml
+# datum.yml
+version: 1
+
+# Site settings
+title: "Acme Analytics Documentation"
+theme: "auto"                      # light, dark, auto
+
+# Profiling settings
+profiling:
+  enabled: true
+  sample_size: 10000               # Rows to sample (null = full table)
+  cache: true                      # Cache profiles between runs
+  exclude_schemas:                 # Skip profiling for these schemas
+    - "raw"
+    - "staging_scratch"
+  top_values_threshold: 50         # Only compute top values for columns with <= N distinct values
+
+# Health scoring weights (must sum to 1.0)
+health:
+  weights:
+    documentation: 0.25
+    testing: 0.25
+    freshness: 0.15
+    complexity: 0.15
+    naming: 0.10
+    orphans: 0.10
+
+  # Naming convention rules
+  naming_rules:
+    staging: "^stg_"               # Regex: staging models must start with stg_
+    intermediate: "^int_"
+    marts_fact: "^fct_"
+    marts_dimension: "^dim_"
+
+  # Complexity thresholds
+  complexity:
+    high_sql_lines: 200
+    high_join_count: 8
+    high_cte_count: 10
+
+# AI settings
+ai:
+  enabled: false                   # Set to true and provide ANTHROPIC_API_KEY
+  model: "claude-sonnet-4-20250514"
+  max_requests_per_session: 20
+```
+
+---
+
+## 10. Build & Distribution Plan
+
+### 10.1 Python Package
+
+- Distribute via PyPI: `pip install docs-plus-plus`
+- The pre-built React frontend is included in the package as static assets (no Node.js required for users)
+- Entry point: `docs-plus-plus` CLI command via Click
+
+### 10.2 Frontend Build Process (Development Only)
+
+```bash
+# Developer workflow (not needed by end users)
+cd frontend/
+npm install
+npm run build        # Produces dist/ with bundled React app
+npm run copy-assets  # Copies dist/ into src/dbt_datum/static/
+```
+
+The `src/dbt_datum/static/` directory is included in the Python package and contains the pre-built frontend assets.
+
+### 10.3 Release Process
+
+```bash
+# 1. Build frontend
+cd frontend && npm run build && cd ..
+
+# 2. Copy built assets
+cp -r frontend/dist/* src/dbt_datum/static/
+
+# 3. Build Python package
+python -m build
+
+# 4. Publish
+twine upload dist/*
+```
+
+---
+
+## 11. Implementation Phases & Priority
+
+### Phase 1: MVP (Weeks 1-4)
+Build the core static site generator that serves as a drop-in replacement for `dbt docs serve`.
+
+**Week 1:**
+- [ ] Project scaffolding (pyproject.toml, directory structure, CLI skeleton)
+- [ ] Artifact loader: parse manifest.json, catalog.json
+- [ ] Data transformer: build unified DatumData JSON from artifacts
+
+**Week 2:**
+- [ ] React frontend scaffolding (Vite + React + TypeScript + Tailwind)
+- [ ] Sidebar navigation with project tree
+- [ ] Model detail page (description, columns, SQL viewer)
+
+**Week 3:**
+- [ ] Lineage DAG visualization (D3/dagre)
+- [ ] Full-text search (Fuse.js)
+- [ ] Cmd+K spotlight search
+- [ ] run_results.json parsing → test badges on models and columns
+
+**Week 4:**
+- [ ] sources.json parsing → freshness badges
+- [ ] Static site bundling (single HTML file mode)
+- [ ] `docs-plus-plus serve` local dev server
+- [ ] Polish, responsive layout, dark mode
+- [ ] Initial test suite with fixture artifacts
+
+### Phase 2: Profiling & Health (Weeks 5-8)
+Add column profiling and the health dashboard.
+
+**Week 5-6:**
+- [ ] Profiler engine: generate SQL for Snowflake, Postgres, DuckDB
+- [ ] Profile cache (skip unchanged models)
+- [ ] Column stats UI components (null bars, sparklines, top values)
+- [ ] Expanded column detail row with full stats
+
+**Week 7-8:**
+- [ ] Health scoring engine (Python)
+- [ ] Health dashboard page (React)
+- [ ] `docs-plus-plus health` CLI command with terminal output
+- [ ] datum.yml configuration file support
+
+### Phase 3: AI Chat (Weeks 9-12)
+Add the AI chat interface.
+
+**Week 9-10:**
+- [ ] AI context builder (compact project representation)
+- [ ] Chat panel UI (slide-out, streaming responses)
+- [ ] BYOK configuration (env var + UI input)
+
+**Week 11-12:**
+- [ ] Model name linking in AI responses
+- [ ] Suggested questions
+- [ ] PyPI packaging and publishing
+- [ ] README, documentation, demo GIF
+- [ ] Launch: dbt Slack, Reddit, LinkedIn, ProductHunt
+
+---
+
+## 12. Testing Strategy
+
+### 12.1 Python Tests (pytest)
+
+- **Unit tests:** Artifact parsing, health scoring, profiling SQL generation
+- **Integration tests:** End-to-end generate command with fixture artifacts
+- **Fixture data:** Include sample manifest.json, catalog.json, run_results.json, sources.json from a real dbt project (jaffle_shop or similar)
+
+### 12.2 Frontend Tests
+
+- **Component tests:** React Testing Library for key components
+- **Visual regression:** Optional, using Playwright screenshots
+
+### 12.3 Test Fixtures
+
+Include a complete set of dbt artifacts from the jaffle_shop project as test fixtures. Generate these once and commit them to the repo.
+
+---
+
+## 13. Open Questions / Decisions Needed
+
+1. **Package name:** `docs-plus-plus` vs `dbt-atlas` vs `dbt-prism` vs `dbt-scope` — need to check PyPI availability
+2. **Monorepo vs separate repos:** Keep Python + React in one repo (recommended for simplicity) or separate?
+3. **dbt adapter for profiling:** Use SQLAlchemy directly, or try to reuse dbt's own adapter connection? (SQLAlchemy is simpler and more reliable)
+4. **License:** MIT (recommended for maximum adoption in the dbt community)
+5. **Minimum dbt version:** 1.6+ (when manifest schema stabilized) or 1.8+?
+
+---
+
+## 14. Success Metrics
+
+- **Week 4:** Working MVP that generates a better docs site than `dbt docs serve` for any dbt project
+- **Week 8:** Column profiling and health dashboard functional
+- **Week 12:** AI chat working, package published to PyPI
+- **Month 3:** 100+ GitHub stars, 50+ weekly pip installs
+- **Month 6:** First paying users on a premium tier (if we choose to monetize)
+- **Month 12:** 500+ GitHub stars, 50-100 paid teams at $49-99/month
+
+---
+
+*This PRD should be used as the primary specification document when building with Claude Code. Each feature section (F1.1, F1.2, etc.) can be referenced as a discrete work unit. The data schema in Section 7 is the contract between the Python backend and React frontend — both sides should implement against these TypeScript interfaces.*

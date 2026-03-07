@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+.venv/
+
+# UV
+uv.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project
+dev/
+target/
+*.duckdb
+*.duckdb.wal
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Environment
+.env
+.env.local
+.coverage
