@@ -1,0 +1,3 @@
+# Build artifact - do not commit
+*
+!.gitignore

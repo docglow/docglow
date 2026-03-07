@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import fnmatch
 import os
 from dataclasses import dataclass, field
 from typing import Any
@@ -161,6 +162,8 @@ def build_datum_data(
     *,
     profiling_enabled: bool = False,
     ai_enabled: bool = False,
+    select: str | None = None,
+    exclude: str | None = None,
 ) -> dict[str, Any]:
     """Transform loaded artifacts into the unified DatumData payload.
 
@@ -193,6 +196,12 @@ def build_datum_data(
             snapshots[unique_id] = _transform_model(
                 node, catalog, run_results_by_id, test_nodes_by_model, reverse_deps
             )
+
+    # Apply --select / --exclude filtering
+    if select or exclude:
+        models, seeds, snapshots = _filter_resources(
+            models, seeds, snapshots, select=select, exclude=exclude,
+        )
 
     # Transform sources
     sources: dict[str, Any] = {}
@@ -319,6 +328,99 @@ def _build_reverse_dependency_map(manifest: Manifest) -> dict[str, list[str]]:
                 reverse[dep_id] = []
             reverse[dep_id].append(unique_id)
     return reverse
+
+
+def _filter_resources(
+    models: dict[str, Any],
+    seeds: dict[str, Any],
+    snapshots: dict[str, Any],
+    *,
+    select: str | None = None,
+    exclude: str | None = None,
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+    """Filter models/seeds/snapshots by --select and --exclude patterns.
+
+    Supports:
+      - Glob patterns matching model name: ``stg_*``, ``*orders*``
+      - Folder paths: ``staging/*``, ``marts/finance/*``
+      - ``+name`` prefix: include all upstream dependencies
+      - ``name+`` suffix: include all downstream dependents
+    """
+    all_resources = {**models, **seeds, **snapshots}
+
+    if select:
+        selected = _resolve_selection(select, all_resources)
+    else:
+        selected = set(all_resources.keys())
+
+    if exclude:
+        excluded = _resolve_selection(exclude, all_resources)
+        selected -= excluded
+
+    return (
+        {k: v for k, v in models.items() if k in selected},
+        {k: v for k, v in seeds.items() if k in selected},
+        {k: v for k, v in snapshots.items() if k in selected},
+    )
+
+
+def _resolve_selection(
+    pattern: str,
+    resources: dict[str, Any],
+) -> set[str]:
+    """Resolve a selection pattern to a set of unique_ids."""
+    include_upstream = pattern.startswith("+")
+    include_downstream = pattern.endswith("+")
+    clean = pattern.strip("+")
+
+    matched: set[str] = set()
+    for uid, data in resources.items():
+        name = data.get("name", "")
+        folder = data.get("folder", "")
+        path = data.get("path", "")
+
+        if fnmatch.fnmatch(name, clean) or fnmatch.fnmatch(folder, clean) or fnmatch.fnmatch(path, clean):
+            matched.add(uid)
+
+    if include_upstream:
+        upstream: set[str] = set()
+        for uid in matched:
+            _collect_upstream(uid, resources, upstream)
+        matched |= upstream
+
+    if include_downstream:
+        downstream: set[str] = set()
+        for uid in matched:
+            _collect_downstream(uid, resources, downstream)
+        matched |= downstream
+
+    return matched
+
+
+def _collect_upstream(
+    uid: str, resources: dict[str, Any], visited: set[str],
+) -> None:
+    """Recursively collect upstream dependencies."""
+    data = resources.get(uid)
+    if not data:
+        return
+    for dep in data.get("depends_on", []):
+        if dep not in visited and dep in resources:
+            visited.add(dep)
+            _collect_upstream(dep, resources, visited)
+
+
+def _collect_downstream(
+    uid: str, resources: dict[str, Any], visited: set[str],
+) -> None:
+    """Recursively collect downstream dependents."""
+    data = resources.get(uid)
+    if not data:
+        return
+    for ref in data.get("referenced_by", []):
+        if ref not in visited and ref in resources:
+            visited.add(ref)
+            _collect_downstream(ref, resources, visited)
 
 
 def _get_folder(path: str) -> str:

@@ -26,6 +26,8 @@ def generate_site(
     profiling_cache: bool = True,
     ai_enabled: bool = False,
     title: str | None = None,
+    select: str | None = None,
+    exclude: str | None = None,
 ) -> Path:
     """Generate the docs-plus-plus static site.
 
@@ -41,6 +43,8 @@ def generate_site(
         profiling_cache: Whether to cache profiling results.
         ai_enabled: Whether to enable the AI chat panel.
         title: Custom site title.
+        select: Only include models matching this pattern.
+        exclude: Exclude models matching this pattern.
 
     Returns:
         Path to the output directory.
@@ -56,6 +60,8 @@ def generate_site(
         artifacts,
         profiling_enabled=profiling_enabled,
         ai_enabled=ai_enabled,
+        select=select,
+        exclude=exclude,
     )
 
     # Run profiling if enabled

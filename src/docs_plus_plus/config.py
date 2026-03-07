@@ -1,7 +1,13 @@
 """Configuration management for docs-plus-plus."""
 
+from __future__ import annotations
+
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -65,3 +71,80 @@ class DatumConfig:
     project_dir: Path = field(default_factory=lambda: Path("."))
     target_dir: Path | None = None
     output_dir: Path | None = None
+
+
+def load_config(project_dir: Path) -> DatumConfig:
+    """Load configuration from datum.yml in the project directory.
+
+    Falls back to default config if no file is found.
+    """
+    for name in ("datum.yml", "datum.yaml"):
+        config_path = project_dir / name
+        if config_path.exists():
+            logger.info("Loading config from %s", config_path)
+            return _parse_config_file(config_path)
+
+    return DatumConfig()
+
+
+def _parse_config_file(path: Path) -> DatumConfig:
+    """Parse a datum.yml config file into a DatumConfig."""
+    try:
+        import yaml
+    except ImportError as e:
+        raise ImportError(
+            "pyyaml is required to load datum.yml config files. "
+            "Install it with: pip install pyyaml"
+        ) from e
+
+    raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+    if not isinstance(raw, dict):
+        logger.warning("Invalid config file %s — using defaults", path)
+        return DatumConfig()
+
+    return _build_config_from_dict(raw)
+
+
+def _build_config_from_dict(raw: dict[str, Any]) -> DatumConfig:
+    """Build a DatumConfig from a parsed YAML dict."""
+    health_raw = raw.get("health", {})
+    profiling_raw = raw.get("profiling", {})
+    ai_raw = raw.get("ai", {})
+
+    weights = HealthWeights(
+        **{k: v for k, v in health_raw.get("weights", {}).items()
+           if k in HealthWeights.__dataclass_fields__}
+    ) if health_raw.get("weights") else HealthWeights()
+
+    naming_rules = NamingRules(
+        **{k: v for k, v in health_raw.get("naming_rules", {}).items()
+           if k in NamingRules.__dataclass_fields__}
+    ) if health_raw.get("naming_rules") else NamingRules()
+
+    complexity = ComplexityThresholds(
+        **{k: v for k, v in health_raw.get("complexity", {}).items()
+           if k in ComplexityThresholds.__dataclass_fields__}
+    ) if health_raw.get("complexity") else ComplexityThresholds()
+
+    profiling = ProfilingConfig(
+        enabled=profiling_raw.get("enabled", False),
+        sample_size=profiling_raw.get("sample_size", 10000),
+        cache=profiling_raw.get("cache", True),
+        exclude_schemas=tuple(profiling_raw.get("exclude_schemas", ())),
+        top_values_threshold=profiling_raw.get("top_values_threshold", 50),
+    ) if profiling_raw else ProfilingConfig()
+
+    ai = AiConfig(
+        enabled=ai_raw.get("enabled", False),
+        model=ai_raw.get("model", "claude-sonnet-4-20250514"),
+        max_requests_per_session=ai_raw.get("max_requests_per_session", 20),
+    ) if ai_raw else AiConfig()
+
+    return DatumConfig(
+        version=raw.get("version", 1),
+        title=raw.get("title", "docs-plus-plus"),
+        theme=raw.get("theme", "auto"),
+        profiling=profiling,
+        health=HealthConfig(weights=weights, naming_rules=naming_rules, complexity=complexity),
+        ai=ai,
+    )

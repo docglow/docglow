@@ -120,11 +120,29 @@ class TestBuildAiContext:
         assert "columns" in ctx["models"][0]
         assert ctx["models"][0]["columns"] == ["id"]
 
-    def test_columns_excluded_for_large_projects(self):
+    def test_tier2_description_included_columns_excluded(self):
         models = {f"m{i}": _make_model(f"model_{i}") for i in range(201)}
         ctx = build_ai_context(models, {}, {}, METADATA, HEALTH)
 
         assert "columns" not in ctx["models"][0]
+        assert "description" in ctx["models"][0]
+
+    def test_tier3_description_and_columns_excluded(self):
+        models = {f"m{i}": _make_model(f"model_{i}") for i in range(501)}
+        ctx = build_ai_context(models, {}, {}, METADATA, HEALTH)
+
+        assert "columns" not in ctx["models"][0]
+        assert "description" not in ctx["models"][0]
+        assert "name" in ctx["models"][0]
+        assert "tags" in ctx["models"][0]
+
+    def test_tier3_source_columns_excluded(self):
+        models = {f"m{i}": _make_model(f"model_{i}") for i in range(501)}
+        sources = {"s1": _make_source("raw_orders")}
+        ctx = build_ai_context(models, sources, {}, METADATA, HEALTH)
+
+        assert "columns" not in ctx["sources"][0]
+        assert "description" in ctx["sources"][0]
 
     def test_test_status_aggregation(self):
         models = {

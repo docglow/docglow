@@ -64,7 +64,17 @@ def generate(
     _setup_logging(verbose)
 
     from docs_plus_plus.artifacts.loader import ArtifactLoadError
+    from docs_plus_plus.config import load_config
     from docs_plus_plus.generator.site import generate_site
+
+    # Load config file (datum.yml)
+    config = load_config(project_dir)
+
+    # CLI flags override config file values
+    if not ai and config.ai.enabled:
+        ai = True
+    if not title and config.title != "docs-plus-plus":
+        title = config.title
 
     # Parse profiling connection params
     profiling_connection = None
@@ -84,6 +94,8 @@ def generate(
             profiling_cache=not profile_no_cache,
             ai_enabled=ai,
             title=title,
+            select=select,
+            exclude=exclude,
         )
         console.print(f"\n[bold green]Site generated at {output_path}[/bold green]")
         if static:

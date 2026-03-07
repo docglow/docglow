@@ -21,7 +21,7 @@ def build_ai_context(
 
     compact_models = _build_compact_models(models, total_models)
     compact_seeds = _build_compact_models(seeds, total_models)
-    compact_sources = _build_compact_sources(sources)
+    compact_sources = _build_compact_sources(sources, total_models)
 
     return {
         "project_name": metadata.get("project_name", ""),
@@ -40,8 +40,15 @@ def _build_compact_models(
     models: dict[str, dict[str, Any]],
     total_count: int,
 ) -> list[dict[str, Any]]:
-    """Build compact model entries for AI context."""
+    """Build compact model entries for AI context.
+
+    Context size tiers:
+      - <=200 models: include columns + description (full detail)
+      - 201-500 models: include description, omit columns
+      - >500 models: omit both columns and description
+    """
     include_columns = total_count <= 200
+    include_description = total_count <= 500
 
     entries: list[dict[str, Any]] = []
     for model in models.values():
@@ -53,13 +60,15 @@ def _build_compact_models(
 
         entry: dict[str, Any] = {
             "name": model.get("name", ""),
-            "description": model.get("description", ""),
             "materialization": model.get("materialization", ""),
             "schema": model.get("schema", ""),
             "tags": model.get("tags", []),
             "depends_on": [d.split(".")[-1] for d in model.get("depends_on", [])],
             "referenced_by": [r.split(".")[-1] for r in model.get("referenced_by", [])],
         }
+
+        if include_description:
+            entry["description"] = model.get("description", "")
 
         if test_status:
             entry["test_status"] = test_status
@@ -78,16 +87,21 @@ def _build_compact_models(
 
 def _build_compact_sources(
     sources: dict[str, dict[str, Any]],
+    total_model_count: int,
 ) -> list[dict[str, Any]]:
     """Build compact source entries for AI context."""
+    include_columns = total_model_count <= 500
+
     entries: list[dict[str, Any]] = []
     for source in sources.values():
         entry: dict[str, Any] = {
             "name": f"{source.get('source_name', '')}.{source.get('name', '')}",
             "description": source.get("description", ""),
             "schema": source.get("schema", ""),
-            "columns": [c.get("name", "") for c in source.get("columns", [])],
         }
+
+        if include_columns:
+            entry["columns"] = [c.get("name", "") for c in source.get("columns", [])]
 
         if source.get("freshness_status"):
             entry["freshness_status"] = source["freshness_status"]

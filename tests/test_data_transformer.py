@@ -33,6 +33,7 @@ class TestBuildDatumData:
         expected_keys = {
             "metadata", "models", "sources", "seeds", "snapshots",
             "exposures", "metrics", "lineage", "health", "search_index",
+            "ai_context",
         }
         assert set(data.keys()) == expected_keys
 
