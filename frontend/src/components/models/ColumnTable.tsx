@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import type { DocglowColumn, ColumnProfile, TopValue, HistogramBin } from '../../types'
 import { TestBadge } from '../tests/TestBadge'
 import { formatNumber, formatPercent } from '../../utils/formatting'
@@ -179,9 +179,23 @@ function ProfileDetail({ profile }: { profile: ColumnProfile }) {
   )
 }
 
+/** Approximate monospace ch-width for the column name, capped at 30ch */
+const MAX_NAME_CH = 30
+const MIN_NAME_CH = 12
+const CH_PX = 7.2 // approximate px per monospace character at text-xs
+
 export function ColumnTable({ columns }: ColumnTableProps) {
   const [expandedCol, setExpandedCol] = useState<string | null>(null)
   const hasAnyProfile = columns.some(c => c.profile != null)
+
+  // Compute a consistent name column width based on the longest name (capped)
+  const nameColWidth = useMemo(() => {
+    if (columns.length === 0) return MIN_NAME_CH * CH_PX
+    const longest = Math.max(...columns.map(c => c.name.length))
+    const chars = Math.min(Math.max(longest, MIN_NAME_CH), MAX_NAME_CH)
+    // +4 for the expand chevron space, +32 for padding
+    return chars * CH_PX + 4 + 32
+  }, [columns])
 
   if (columns.length === 0) {
     return <div className="text-sm text-[var(--text-muted)]">No columns found.</div>
@@ -189,7 +203,19 @@ export function ColumnTable({ columns }: ColumnTableProps) {
 
   return (
     <div className="border border-[var(--border)] rounded-lg overflow-hidden">
-      <table className="w-full text-sm">
+      <table className="w-full text-sm table-fixed">
+        <colgroup>
+          <col style={{ width: nameColWidth }} />
+          <col style={{ width: 160 }} />
+          <col />
+          {hasAnyProfile && (
+            <>
+              <col style={{ width: 120 }} />
+              <col style={{ width: 80 }} />
+            </>
+          )}
+          <col style={{ width: 100 }} />
+        </colgroup>
         <thead className="bg-[var(--bg-surface)]">
           <tr>
             <th className="text-left px-4 py-2 font-medium">Column</th>
@@ -217,10 +243,14 @@ export function ColumnTable({ columns }: ColumnTableProps) {
                       ${isExpanded ? 'bg-[var(--bg-surface)]' : ''}`}
                     onClick={() => canExpand && setExpandedCol(isExpanded ? null : col.name)}
                   >
-                    <div className="px-4 py-2 font-mono text-xs font-medium min-w-[160px]">
+                    {/* Column name — fixed width, wraps for long names so Ctrl+F works */}
+                    <div
+                      className="px-4 py-2 font-mono text-xs font-medium shrink-0 flex items-start min-w-0"
+                      style={{ width: nameColWidth }}
+                    >
                       {canExpand && (
                         <svg
-                          className={`w-3 h-3 inline-block mr-1 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                          className={`w-3 h-3 shrink-0 mr-1 mt-0.5 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
                           fill="currentColor" viewBox="0 0 20 20"
                         >
                           <path fillRule="evenodd"
@@ -228,28 +258,38 @@ export function ColumnTable({ columns }: ColumnTableProps) {
                                 clipRule="evenodd" />
                         </svg>
                       )}
-                      {col.name}
+                      <span style={{ wordBreak: 'break-all' }}>
+                        {col.name}
+                      </span>
                     </div>
-                    <div className="px-4 py-2 font-mono text-xs text-[var(--text-muted)] min-w-[100px]">
+
+                    {/* Type — fixed width, left-aligned */}
+                    <div
+                      className="px-4 py-2 font-mono text-xs text-[var(--text-muted)] uppercase shrink-0"
+                      style={{ width: 160 }}
+                    >
                       {col.data_type || '—'}
                     </div>
+
+                    {/* Description — fills remaining space, wraps naturally */}
                     <div className="px-4 py-2 flex-1 min-w-0">
                       {col.description ? (
-                        <span className="text-sm truncate block">{col.description}</span>
+                        <span className="text-sm block">{col.description}</span>
                       ) : (
                         <span className="text-sm text-[var(--text-muted)] italic">No description</span>
                       )}
                     </div>
+
                     {hasAnyProfile && (
                       <>
-                        <div className="px-4 py-2 min-w-[120px]">
+                        <div className="px-4 py-2 shrink-0" style={{ width: 120 }}>
                           {col.profile ? (
                             <NullBar rate={col.profile.null_rate} />
                           ) : (
                             <span className="text-[var(--text-muted)]">—</span>
                           )}
                         </div>
-                        <div className="px-4 py-2 text-right min-w-[80px]">
+                        <div className="px-4 py-2 text-right shrink-0" style={{ width: 80 }}>
                           {col.profile ? (
                             <span className="text-xs" title={`${col.profile.distinct_count} distinct`}>
                               {formatNumber(col.profile.distinct_count)}
@@ -263,7 +303,8 @@ export function ColumnTable({ columns }: ColumnTableProps) {
                         </div>
                       </>
                     )}
-                    <div className="px-4 py-2 min-w-[100px]">
+
+                    <div className="px-4 py-2 shrink-0" style={{ width: 100 }}>
                       {col.tests.length > 0 ? (
                         <div className="flex gap-1 flex-wrap">
                           {col.tests.map((test, i) => (

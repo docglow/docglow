@@ -1,6 +1,7 @@
 import { useParams } from 'react-router-dom'
 import { useProjectStore } from '../stores/projectStore'
 import { ColumnTable } from '../components/models/ColumnTable'
+import { Markdown } from '../components/Markdown'
 
 export function SourcePage() {
   const { id } = useParams<{ id: string }>()
@@ -17,7 +18,7 @@ export function SourcePage() {
   }
 
   return (
-    <div className="max-w-5xl">
+    <div>
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-2">
           <h1 className="text-2xl font-bold">{source.source_name}.{source.name}</h1>
@@ -30,7 +31,7 @@ export function SourcePage() {
           {source.loader && <span>Loader: {source.loader}</span>}
         </div>
         {source.description && (
-          <p className="mt-3 text-sm leading-relaxed">{source.description}</p>
+          <Markdown content={source.description} className="mt-3 text-sm" />
         )}
       </div>
 

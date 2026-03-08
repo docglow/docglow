@@ -4,9 +4,84 @@ import { useProjectStore } from '../stores/projectStore'
 import { ColumnTable } from '../components/models/ColumnTable'
 import { SqlViewer } from '../components/models/SqlViewer'
 import { TestBadge } from '../components/tests/TestBadge'
-import { LineageGraph } from '../components/lineage/LineageGraph'
+import { LineageFlow } from '../components/lineage/LineageFlow'
+import { Markdown } from '../components/Markdown'
 import { materializationLabel } from '../utils/colors'
 import { getSubgraph } from '../utils/graph'
+
+const RESOURCE_TYPE_META: Record<string, { label: string; color: string; bg: string }> = {
+  model:    { label: 'M', color: '#2563eb', bg: '#2563eb18' },
+  source:   { label: 'S', color: '#16a34a', bg: '#16a34a18' },
+  seed:     { label: 'Se', color: '#6b7280', bg: '#6b728018' },
+  snapshot: { label: 'Sn', color: '#7c3aed', bg: '#7c3aed18' },
+  exposure: { label: 'E', color: '#d97706', bg: '#d9770618' },
+  metric:   { label: 'Mt', color: '#7c3aed', bg: '#7c3aed18' },
+}
+
+function parseDepId(id: string): { resourceType: string; name: string; navType: string } {
+  const resourceType = id.split('.')[0] ?? 'model'
+  const name = id.split('.').pop()!
+  const navType = resourceType === 'source' ? 'source' : 'model'
+  return { resourceType, name, navType }
+}
+
+function DependencyList({
+  label,
+  ids,
+  onNavigate,
+}: {
+  label: string
+  ids: string[]
+  onNavigate: (type: string, id: string) => void
+}) {
+  const sorted = useMemo(() => {
+    return [...ids]
+      .map(id => ({ id, ...parseDepId(id) }))
+      .sort((a, b) => {
+        // Sort by resource type first, then alphabetically by name
+        const typeOrder = ['source', 'model', 'seed', 'snapshot', 'exposure', 'metric']
+        const aIdx = typeOrder.indexOf(a.resourceType)
+        const bIdx = typeOrder.indexOf(b.resourceType)
+        if (aIdx !== bIdx) return aIdx - bIdx
+        return a.name.localeCompare(b.name)
+      })
+  }, [ids])
+
+  return (
+    <div className="flex-1 min-w-0">
+      <h3 className="font-medium text-[var(--text-muted)] mb-2">{label} ({ids.length})</h3>
+      <div className="flex flex-wrap gap-1">
+        {sorted.map(dep => {
+          const meta = RESOURCE_TYPE_META[dep.resourceType] ?? RESOURCE_TYPE_META.model
+          return (
+            <button
+              key={dep.id}
+              onClick={() => onNavigate(dep.navType, dep.id)}
+              title={`${dep.resourceType}: ${dep.id}`}
+              className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs
+                         hover:brightness-90 transition-all cursor-pointer"
+              style={{ background: meta.bg, color: meta.color }}
+            >
+              <span
+                className="inline-flex items-center justify-center rounded text-[9px] font-bold shrink-0"
+                style={{
+                  width: 18,
+                  height: 14,
+                  background: meta.color,
+                  color: '#fff',
+                  lineHeight: 1,
+                }}
+              >
+                {meta.label}
+              </span>
+              {dep.name}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 
 type Tab = 'columns' | 'sql' | 'lineage' | 'tests'
 
@@ -49,7 +124,7 @@ export function ModelPage() {
   })()
 
   return (
-    <div className="max-w-5xl">
+    <div>
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-2">
@@ -64,7 +139,7 @@ export function ModelPage() {
           <span>{model.path}</span>
         </div>
         {model.description && (
-          <p className="mt-3 text-sm leading-relaxed">{model.description}</p>
+          <Markdown content={model.description} className="mt-3 text-sm" />
         )}
         {model.tags.length > 0 && (
           <div className="flex gap-1 mt-2">
@@ -81,42 +156,18 @@ export function ModelPage() {
       {(model.depends_on.length > 0 || model.referenced_by.length > 0) && (
         <div className="mb-6 flex gap-8 text-sm">
           {model.depends_on.length > 0 && (
-            <div>
-              <h3 className="font-medium text-[var(--text-muted)] mb-1">Depends on</h3>
-              <div className="flex flex-wrap gap-1">
-                {model.depends_on.map(dep => {
-                  const name = dep.split('.').pop()!
-                  const type = dep.startsWith('source.') ? 'source' : 'model'
-                  return (
-                    <button key={dep}
-                            onClick={() => navigate(`/${type}/${encodeURIComponent(dep)}`)}
-                            className="px-2 py-0.5 rounded bg-primary/5 text-primary text-xs
-                                       hover:bg-primary/10 transition-colors cursor-pointer">
-                      {name}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
+            <DependencyList
+              label="Depends on"
+              ids={model.depends_on}
+              onNavigate={(type, id) => navigate(`/${type}/${encodeURIComponent(id)}`)}
+            />
           )}
           {model.referenced_by.length > 0 && (
-            <div>
-              <h3 className="font-medium text-[var(--text-muted)] mb-1">Referenced by</h3>
-              <div className="flex flex-wrap gap-1">
-                {model.referenced_by.map(ref => {
-                  const name = ref.split('.').pop()!
-                  const type = ref.startsWith('source.') ? 'source' : 'model'
-                  return (
-                    <button key={ref}
-                            onClick={() => navigate(`/${type}/${encodeURIComponent(ref)}`)}
-                            className="px-2 py-0.5 rounded bg-primary/5 text-primary text-xs
-                                       hover:bg-primary/10 transition-colors cursor-pointer">
-                      {name}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
+            <DependencyList
+              label="Referenced by"
+              ids={model.referenced_by}
+              onNavigate={(type, id) => navigate(`/${type}/${encodeURIComponent(id)}`)}
+            />
           )}
         </div>
       )}
@@ -169,7 +220,7 @@ export function ModelPage() {
 
       {activeTab === 'lineage' && (
         <div className="h-96">
-          <LineageGraph
+          <LineageFlow
             nodes={miniLineage.nodes}
             edges={miniLineage.edges}
             highlightId={decodedId}
