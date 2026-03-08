@@ -1,0 +1,2902 @@
+{
+  "metadata": {
+    "generated_at": "2026-03-07T05:25:10.028386Z",
+    "docglow_version": "0.1.0",
+    "dbt_version": "1.11.7",
+    "project_name": "jaffle_shop",
+    "project_id": "06e5b98c2db46f8a72cc4f66410e9b3b",
+    "target_name": "",
+    "artifact_versions": {
+      "manifest": "https://schemas.getdbt.com/dbt/manifest/v12.json",
+      "catalog": "https://schemas.getdbt.com/dbt/catalog/v1.json",
+      "run_results": "https://schemas.getdbt.com/dbt/run-results/v6.json",
+      "sources": null
+    },
+    "profiling_enabled": false,
+    "ai_enabled": false,
+    "hosted": false,
+    "workspace_slug": null,
+    "project_slug": null,
+    "api_base_url": null,
+    "published_at": null
+  },
+  "models": {
+    "model.jaffle_shop.metricflow_time_spine": {
+      "unique_id": "model.jaffle_shop.metricflow_time_spine",
+      "name": "metricflow_time_spine",
+      "description": "",
+      "schema": "main",
+      "database": "jaffle_shop",
+      "materialization": "table",
+      "tags": [],
+      "meta": {},
+      "path": "models/marts/metricflow_time_spine.sql",
+      "folder": "models/marts",
+      "raw_sql": "-- metricflow_time_spine.sql\nwith\n\ndays as (\n\n    --for BQ adapters use \"DATE('01/01/2000','mm/dd/yyyy')\"\n    {{ dbt_date.get_base_dates(n_dateparts=365*10, datepart=\"day\") }}\n\n),\n\ncast_to_date as (\n\n    select cast(date_day as date) as date_day\n\n    from days\n\n)\n\nselect * from cast_to_date",
+      "compiled_sql": "",
+      "columns": [
+        {
+          "name": "date_day",
+          "description": "",
+          "data_type": "DATE",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        }
+      ],
+      "depends_on": [],
+      "referenced_by": [],
+      "sources_used": [],
+      "test_results": [],
+      "last_run": {
+        "status": "success",
+        "execution_time": 0.09052848815917969,
+        "completed_at": "2026-03-07T05:25:00.167120Z"
+      },
+      "catalog_stats": {
+        "row_count": null,
+        "bytes": null,
+        "has_stats": false
+      }
+    },
+    "model.jaffle_shop.locations": {
+      "unique_id": "model.jaffle_shop.locations",
+      "name": "locations",
+      "description": "",
+      "schema": "main",
+      "database": "jaffle_shop",
+      "materialization": "table",
+      "tags": [],
+      "meta": {},
+      "path": "models/marts/locations.sql",
+      "folder": "models/marts",
+      "raw_sql": "with\n\nlocations as (\n\n    select * from {{ ref('stg_locations') }}\n\n)\n\nselect * from locations",
+      "compiled_sql": "",
+      "columns": [
+        {
+          "name": "location_id",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "location_name",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "tax_rate",
+          "description": "",
+          "data_type": "DOUBLE",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "opened_date",
+          "description": "",
+          "data_type": "DATE",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        }
+      ],
+      "depends_on": [
+        "model.jaffle_shop.stg_locations"
+      ],
+      "referenced_by": [
+        "semantic_model.jaffle_shop.locations"
+      ],
+      "sources_used": [],
+      "test_results": [],
+      "last_run": {
+        "status": "success",
+        "execution_time": 0.014861345291137695,
+        "completed_at": "2026-03-07T05:25:00.212402Z"
+      },
+      "catalog_stats": {
+        "row_count": null,
+        "bytes": null,
+        "has_stats": false
+      }
+    },
+    "model.jaffle_shop.orders": {
+      "unique_id": "model.jaffle_shop.orders",
+      "name": "orders",
+      "description": "Order overview data mart, offering key details for each order inlcluding if it's a customer's first order and a food vs. drink item breakdown. One row per order.",
+      "schema": "main",
+      "database": "jaffle_shop",
+      "materialization": "table",
+      "tags": [],
+      "meta": {},
+      "path": "models/marts/orders.sql",
+      "folder": "models/marts",
+      "raw_sql": "with\n\norders as (\n\n    select * from {{ ref('stg_orders') }}\n\n),\n\norder_items as (\n\n    select * from {{ ref('order_items') }}\n\n),\n\norder_items_summary as (\n\n    select\n        order_id,\n\n        sum(supply_cost) as order_cost,\n        sum(product_price) as order_items_subtotal,\n        count(order_item_id) as count_order_items,\n        sum(\n            case\n                when is_food_item then 1\n                else 0\n            end\n        ) as count_food_items,\n        sum(\n            case\n                when is_drink_item then 1\n                else 0\n            end\n        ) as count_drink_items\n\n    from order_items\n\n    group by 1\n\n),\n\ncompute_booleans as (\n\n    select\n        orders.*,\n\n        order_items_summary.order_cost,\n        order_items_summary.order_items_subtotal,\n        order_items_summary.count_food_items,\n        order_items_summary.count_drink_items,\n        order_items_summary.count_order_items,\n        order_items_summary.count_food_items > 0 as is_food_order,\n        order_items_summary.count_drink_items > 0 as is_drink_order\n\n    from orders\n\n    left join\n        order_items_summary\n        on orders.order_id = order_items_summary.order_id\n\n),\n\ncustomer_order_count as (\n\n    select\n        *,\n\n        row_number() over (\n            partition by customer_id\n            order by ordered_at asc\n        ) as customer_order_number\n\n    from compute_booleans\n\n)\n\nselect * from customer_order_count",
+      "compiled_sql": "",
+      "columns": [
+        {
+          "name": "order_id",
+          "description": "The unique key of the orders mart.",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [
+            {
+              "test_name": "relationships_order_items_order_id__order_id__ref_orders_",
+              "test_type": "relationships",
+              "status": "pass",
+              "config": {}
+            },
+            {
+              "test_name": "not_null_orders_order_id",
+              "test_type": "not_null",
+              "status": "pass",
+              "config": {}
+            },
+            {
+              "test_name": "unique_orders_order_id",
+              "test_type": "unique",
+              "status": "pass",
+              "config": {}
+            }
+          ],
+          "profile": null
+        },
+        {
+          "name": "location_id",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "customer_id",
+          "description": "The foreign key relating to the customer who placed the order.",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [
+            {
+              "test_name": "relationships_orders_customer_id__customer_id__ref_stg_customers_",
+              "test_type": "relationships",
+              "status": "pass",
+              "config": {}
+            }
+          ],
+          "profile": null
+        },
+        {
+          "name": "subtotal_cents",
+          "description": "",
+          "data_type": "INTEGER",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "tax_paid_cents",
+          "description": "",
+          "data_type": "INTEGER",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "order_total_cents",
+          "description": "",
+          "data_type": "INTEGER",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "subtotal",
+          "description": "",
+          "data_type": "DECIMAL(16,2)",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "tax_paid",
+          "description": "",
+          "data_type": "DECIMAL(16,2)",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "order_total",
+          "description": "The total amount of the order in USD including tax.",
+          "data_type": "DECIMAL(16,2)",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "ordered_at",
+          "description": "The timestamp the order was placed at.",
+          "data_type": "DATE",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "order_cost",
+          "description": "The sum of supply expenses to fulfill the order.",
+          "data_type": "DECIMAL(38,2)",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "order_items_subtotal",
+          "description": "",
+          "data_type": "DECIMAL(38,2)",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "count_food_items",
+          "description": "",
+          "data_type": "HUGEINT",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "count_drink_items",
+          "description": "",
+          "data_type": "HUGEINT",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "count_order_items",
+          "description": "",
+          "data_type": "BIGINT",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "is_food_order",
+          "description": "A boolean indicating if this order included any food items.",
+          "data_type": "BOOLEAN",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "is_drink_order",
+          "description": "A boolean indicating if this order included any drink items.",
+          "data_type": "BOOLEAN",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "customer_order_number",
+          "description": "",
+          "data_type": "BIGINT",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        }
+      ],
+      "depends_on": [
+        "model.jaffle_shop.stg_orders",
+        "model.jaffle_shop.order_items"
+      ],
+      "referenced_by": [
+        "model.jaffle_shop.customers",
+        "semantic_model.jaffle_shop.orders",
+        "unit_test.jaffle_shop.orders.test_order_items_compute_to_bools_correctly"
+      ],
+      "sources_used": [],
+      "test_results": [
+        {
+          "test_name": "relationships_order_items_order_id__order_id__ref_orders_",
+          "test_type": "relationships",
+          "column_name": "order_id",
+          "status": "pass",
+          "execution_time": 0.019552946090698242,
+          "failures": 0,
+          "message": null
+        },
+        {
+          "test_name": "not_null_orders_order_id",
+          "test_type": "not_null",
+          "column_name": "order_id",
+          "status": "pass",
+          "execution_time": 0.014256477355957031,
+          "failures": 0,
+          "message": null
+        },
+        {
+          "test_name": "unique_orders_order_id",
+          "test_type": "unique",
+          "column_name": "order_id",
+          "status": "pass",
+          "execution_time": 0.020386695861816406,
+          "failures": 0,
+          "message": null
+        },
+        {
+          "test_name": "relationships_orders_customer_id__customer_id__ref_stg_customers_",
+          "test_type": "relationships",
+          "column_name": "customer_id",
+          "status": "pass",
+          "execution_time": 0.021214008331298828,
+          "failures": 0,
+          "message": null
+        },
+        {
+          "test_name": "dbt_utils_expression_is_true_orders_order_items_subtotal_subtotal",
+          "test_type": "expression_is_true",
+          "column_name": null,
+          "status": "pass",
+          "execution_time": 0.01974654197692871,
+          "failures": 0,
+          "message": null
+        },
+        {
+          "test_name": "dbt_utils_expression_is_true_orders_order_total_subtotal_tax_paid",
+          "test_type": "expression_is_true",
+          "column_name": null,
+          "status": "pass",
+          "execution_time": 0.020233869552612305,
+          "failures": 0,
+          "message": null
+        }
+      ],
+      "last_run": {
+        "status": "success",
+        "execution_time": 0.010150432586669922,
+        "completed_at": "2026-03-07T05:25:00.282969Z"
+      },
+      "catalog_stats": {
+        "row_count": null,
+        "bytes": null,
+        "has_stats": false
+      }
+    },
+    "model.jaffle_shop.customers": {
+      "unique_id": "model.jaffle_shop.customers",
+      "name": "customers",
+      "description": "Customer overview data mart, offering key details for each unique customer. One row per customer.",
+      "schema": "main",
+      "database": "jaffle_shop",
+      "materialization": "table",
+      "tags": [],
+      "meta": {},
+      "path": "models/marts/customers.sql",
+      "folder": "models/marts",
+      "raw_sql": "with\n\ncustomers as (\n\n    select * from {{ ref('stg_customers') }}\n\n),\n\norders as (\n\n    select * from {{ ref('orders') }}\n\n),\n\ncustomer_orders_summary as (\n\n    select\n        orders.customer_id,\n\n        count(distinct orders.order_id) as count_lifetime_orders,\n        count(distinct orders.order_id) > 1 as is_repeat_buyer,\n        min(orders.ordered_at) as first_ordered_at,\n        max(orders.ordered_at) as last_ordered_at,\n        sum(orders.subtotal) as lifetime_spend_pretax,\n        sum(orders.tax_paid) as lifetime_tax_paid,\n        sum(orders.order_total) as lifetime_spend\n\n    from orders\n\n    group by 1\n\n),\n\njoined as (\n\n    select\n        customers.*,\n\n        customer_orders_summary.count_lifetime_orders,\n        customer_orders_summary.first_ordered_at,\n        customer_orders_summary.last_ordered_at,\n        customer_orders_summary.lifetime_spend_pretax,\n        customer_orders_summary.lifetime_tax_paid,\n        customer_orders_summary.lifetime_spend,\n\n        case\n            when customer_orders_summary.is_repeat_buyer then 'returning'\n            else 'new'\n        end as customer_type\n\n    from customers\n\n    left join customer_orders_summary\n        on customers.customer_id = customer_orders_summary.customer_id\n\n)\n\nselect * from joined",
+      "compiled_sql": "",
+      "columns": [
+        {
+          "name": "customer_id",
+          "description": "The unique key of the orders mart.",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [
+            {
+              "test_name": "not_null_customers_customer_id",
+              "test_type": "not_null",
+              "status": "pass",
+              "config": {}
+            },
+            {
+              "test_name": "unique_customers_customer_id",
+              "test_type": "unique",
+              "status": "pass",
+              "config": {}
+            }
+          ],
+          "profile": null
+        },
+        {
+          "name": "customer_name",
+          "description": "Customers' full name.",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "count_lifetime_orders",
+          "description": "Total number of orders a customer has ever placed.",
+          "data_type": "BIGINT",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "first_ordered_at",
+          "description": "The timestamp when a customer placed their first order.",
+          "data_type": "DATE",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "last_ordered_at",
+          "description": "The timestamp of a customer's most recent order.",
+          "data_type": "DATE",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "lifetime_spend_pretax",
+          "description": "The sum of all the pre-tax subtotals of every order a customer has placed.",
+          "data_type": "DECIMAL(38,2)",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "lifetime_tax_paid",
+          "description": "The sum of all the tax portion of every order a customer has placed.",
+          "data_type": "DECIMAL(38,2)",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "lifetime_spend",
+          "description": "The sum of all the order totals (including tax) that a customer has ever placed.",
+          "data_type": "DECIMAL(38,2)",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "customer_type",
+          "description": "Options are 'new' or 'returning', indicating if a customer has ordered more than once or has only placed their first order to date.",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [
+            {
+              "test_name": "accepted_values_customers_customer_type__new__returning",
+              "test_type": "accepted_values",
+              "status": "pass",
+              "config": {
+                "values": [
+                  "new",
+                  "returning"
+                ]
+              }
+            }
+          ],
+          "profile": null
+        }
+      ],
+      "depends_on": [
+        "model.jaffle_shop.stg_customers",
+        "model.jaffle_shop.orders"
+      ],
+      "referenced_by": [
+        "semantic_model.jaffle_shop.customers"
+      ],
+      "sources_used": [],
+      "test_results": [
+        {
+          "test_name": "not_null_customers_customer_id",
+          "test_type": "not_null",
+          "column_name": "customer_id",
+          "status": "pass",
+          "execution_time": 0.010183572769165039,
+          "failures": 0,
+          "message": null
+        },
+        {
+          "test_name": "unique_customers_customer_id",
+          "test_type": "unique",
+          "column_name": "customer_id",
+          "status": "pass",
+          "execution_time": 0.011283397674560547,
+          "failures": 0,
+          "message": null
+        },
+        {
+          "test_name": "accepted_values_customers_customer_type__new__returning",
+          "test_type": "accepted_values",
+          "column_name": "customer_type",
+          "status": "pass",
+          "execution_time": 0.009351968765258789,
+          "failures": 0,
+          "message": null
+        },
+        {
+          "test_name": "dbt_utils_expression_is_true_customers_lifetime_spend_pretax_lifetime_tax_paid_lifetime_spend",
+          "test_type": "expression_is_true",
+          "column_name": null,
+          "status": "pass",
+          "execution_time": 0.01039886474609375,
+          "failures": 0,
+          "message": null
+        }
+      ],
+      "last_run": {
+        "status": "success",
+        "execution_time": 0.012750387191772461,
+        "completed_at": "2026-03-07T05:25:00.300393Z"
+      },
+      "catalog_stats": {
+        "row_count": null,
+        "bytes": null,
+        "has_stats": false
+      }
+    },
+    "model.jaffle_shop.order_items": {
+      "unique_id": "model.jaffle_shop.order_items",
+      "name": "order_items",
+      "description": "",
+      "schema": "main",
+      "database": "jaffle_shop",
+      "materialization": "table",
+      "tags": [],
+      "meta": {},
+      "path": "models/marts/order_items.sql",
+      "folder": "models/marts",
+      "raw_sql": "with\n\norder_items as (\n\n    select * from {{ ref('stg_order_items') }}\n\n),\n\n\norders as (\n\n    select * from {{ ref('stg_orders') }}\n\n),\n\nproducts as (\n\n    select * from {{ ref('stg_products') }}\n\n),\n\nsupplies as (\n\n    select * from {{ ref('stg_supplies') }}\n\n),\n\norder_supplies_summary as (\n\n    select\n        product_id,\n\n        sum(supply_cost) as supply_cost\n\n    from supplies\n\n    group by 1\n\n),\n\njoined as (\n\n    select\n        order_items.*,\n\n        orders.ordered_at,\n\n        products.product_name,\n        products.product_price,\n        products.is_food_item,\n        products.is_drink_item,\n\n        order_supplies_summary.supply_cost\n\n    from order_items\n\n    left join orders on order_items.order_id = orders.order_id\n\n    left join products on order_items.product_id = products.product_id\n\n    left join order_supplies_summary\n        on order_items.product_id = order_supplies_summary.product_id\n\n)\n\nselect * from joined",
+      "compiled_sql": "",
+      "columns": [
+        {
+          "name": "order_item_id",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [
+            {
+              "test_name": "not_null_order_items_order_item_id",
+              "test_type": "not_null",
+              "status": "pass",
+              "config": {}
+            },
+            {
+              "test_name": "unique_order_items_order_item_id",
+              "test_type": "unique",
+              "status": "pass",
+              "config": {}
+            }
+          ],
+          "profile": null
+        },
+        {
+          "name": "order_id",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [
+            {
+              "test_name": "relationships_order_items_order_id__order_id__ref_orders_",
+              "test_type": "relationships",
+              "status": "pass",
+              "config": {}
+            }
+          ],
+          "profile": null
+        },
+        {
+          "name": "product_id",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "ordered_at",
+          "description": "",
+          "data_type": "DATE",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "product_name",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "product_price",
+          "description": "",
+          "data_type": "DECIMAL(16,2)",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "is_food_item",
+          "description": "",
+          "data_type": "BOOLEAN",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "is_drink_item",
+          "description": "",
+          "data_type": "BOOLEAN",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "supply_cost",
+          "description": "",
+          "data_type": "DECIMAL(38,2)",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        }
+      ],
+      "depends_on": [
+        "model.jaffle_shop.stg_order_items",
+        "model.jaffle_shop.stg_orders",
+        "model.jaffle_shop.stg_products",
+        "model.jaffle_shop.stg_supplies"
+      ],
+      "referenced_by": [
+        "model.jaffle_shop.orders",
+        "semantic_model.jaffle_shop.order_item",
+        "unit_test.jaffle_shop.order_items.test_supply_costs_sum_correctly"
+      ],
+      "sources_used": [],
+      "test_results": [
+        {
+          "test_name": "not_null_order_items_order_item_id",
+          "test_type": "not_null",
+          "column_name": "order_item_id",
+          "status": "pass",
+          "execution_time": 0.011707067489624023,
+          "failures": 0,
+          "message": null
+        },
+        {
+          "test_name": "unique_order_items_order_item_id",
+          "test_type": "unique",
+          "column_name": "order_item_id",
+          "status": "pass",
+          "execution_time": 0.006964206695556641,
+          "failures": 0,
+          "message": null
+        },
+        {
+          "test_name": "relationships_order_items_order_id__order_id__ref_orders_",
+          "test_type": "relationships",
+          "column_name": "order_id",
+          "status": "pass",
+          "execution_time": 0.019552946090698242,
+          "failures": 0,
+          "message": null
+        }
+      ],
+      "last_run": {
+        "status": "success",
+        "execution_time": 0.010059595108032227,
+        "completed_at": "2026-03-07T05:25:00.265024Z"
+      },
+      "catalog_stats": {
+        "row_count": null,
+        "bytes": null,
+        "has_stats": false
+      }
+    },
+    "model.jaffle_shop.supplies": {
+      "unique_id": "model.jaffle_shop.supplies",
+      "name": "supplies",
+      "description": "",
+      "schema": "main",
+      "database": "jaffle_shop",
+      "materialization": "table",
+      "tags": [],
+      "meta": {},
+      "path": "models/marts/supplies.sql",
+      "folder": "models/marts",
+      "raw_sql": "with\n\nsupplies as (\n\n    select * from {{ ref('stg_supplies') }}\n\n)\n\nselect * from supplies",
+      "compiled_sql": "",
+      "columns": [
+        {
+          "name": "supply_uuid",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "supply_id",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "product_id",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "supply_name",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "supply_cost",
+          "description": "",
+          "data_type": "DECIMAL(16,2)",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "is_perishable_supply",
+          "description": "",
+          "data_type": "BOOLEAN",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        }
+      ],
+      "depends_on": [
+        "model.jaffle_shop.stg_supplies"
+      ],
+      "referenced_by": [
+        "semantic_model.jaffle_shop.supplies"
+      ],
+      "sources_used": [],
+      "test_results": [],
+      "last_run": {
+        "status": "success",
+        "execution_time": 0.009471654891967773,
+        "completed_at": "2026-03-07T05:25:00.266114Z"
+      },
+      "catalog_stats": {
+        "row_count": null,
+        "bytes": null,
+        "has_stats": false
+      }
+    },
+    "model.jaffle_shop.products": {
+      "unique_id": "model.jaffle_shop.products",
+      "name": "products",
+      "description": "",
+      "schema": "main",
+      "database": "jaffle_shop",
+      "materialization": "table",
+      "tags": [],
+      "meta": {},
+      "path": "models/marts/products.sql",
+      "folder": "models/marts",
+      "raw_sql": "with\n\nproducts as (\n\n    select * from {{ ref('stg_products') }}\n\n)\n\nselect * from products",
+      "compiled_sql": "",
+      "columns": [
+        {
+          "name": "product_id",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "product_name",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "product_type",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "product_description",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "product_price",
+          "description": "",
+          "data_type": "DECIMAL(16,2)",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "is_food_item",
+          "description": "",
+          "data_type": "BOOLEAN",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "is_drink_item",
+          "description": "",
+          "data_type": "BOOLEAN",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        }
+      ],
+      "depends_on": [
+        "model.jaffle_shop.stg_products"
+      ],
+      "referenced_by": [
+        "semantic_model.jaffle_shop.products"
+      ],
+      "sources_used": [],
+      "test_results": [],
+      "last_run": {
+        "status": "success",
+        "execution_time": 0.018106698989868164,
+        "completed_at": "2026-03-07T05:25:00.251552Z"
+      },
+      "catalog_stats": {
+        "row_count": null,
+        "bytes": null,
+        "has_stats": false
+      }
+    },
+    "model.jaffle_shop.stg_orders": {
+      "unique_id": "model.jaffle_shop.stg_orders",
+      "name": "stg_orders",
+      "description": "Order data with basic cleaning and transformation applied, one row per order.",
+      "schema": "main",
+      "database": "jaffle_shop",
+      "materialization": "view",
+      "tags": [],
+      "meta": {},
+      "path": "models/staging/stg_orders.sql",
+      "folder": "models/staging",
+      "raw_sql": "with\n\nsource as (\n\n    select * from {{ source('ecom', 'raw_orders') }}\n\n),\n\nrenamed as (\n\n    select\n\n        ----------  ids\n        id as order_id,\n        store_id as location_id,\n        customer as customer_id,\n\n        ---------- numerics\n        subtotal as subtotal_cents,\n        tax_paid as tax_paid_cents,\n        order_total as order_total_cents,\n        {{ cents_to_dollars('subtotal') }} as subtotal,\n        {{ cents_to_dollars('tax_paid') }} as tax_paid,\n        {{ cents_to_dollars('order_total') }} as order_total,\n\n        ---------- timestamps\n        {{ dbt.date_trunc('day','ordered_at') }} as ordered_at\n\n    from source\n\n)\n\nselect * from renamed",
+      "compiled_sql": "",
+      "columns": [
+        {
+          "name": "order_id",
+          "description": "The unique key for each order.",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [
+            {
+              "test_name": "not_null_stg_orders_order_id",
+              "test_type": "not_null",
+              "status": "pass",
+              "config": {}
+            },
+            {
+              "test_name": "unique_stg_orders_order_id",
+              "test_type": "unique",
+              "status": "pass",
+              "config": {}
+            },
+            {
+              "test_name": "relationships_stg_order_items_order_id__order_id__ref_stg_orders_",
+              "test_type": "relationships",
+              "status": "pass",
+              "config": {}
+            }
+          ],
+          "profile": null
+        },
+        {
+          "name": "location_id",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "customer_id",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "subtotal_cents",
+          "description": "",
+          "data_type": "INTEGER",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "tax_paid_cents",
+          "description": "",
+          "data_type": "INTEGER",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "order_total_cents",
+          "description": "",
+          "data_type": "INTEGER",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "subtotal",
+          "description": "",
+          "data_type": "DECIMAL(16,2)",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "tax_paid",
+          "description": "",
+          "data_type": "DECIMAL(16,2)",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "order_total",
+          "description": "",
+          "data_type": "DECIMAL(16,2)",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "ordered_at",
+          "description": "",
+          "data_type": "DATE",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        }
+      ],
+      "depends_on": [
+        "source.jaffle_shop.ecom.raw_orders"
+      ],
+      "referenced_by": [
+        "model.jaffle_shop.order_items",
+        "model.jaffle_shop.orders"
+      ],
+      "sources_used": [
+        "source.jaffle_shop.ecom.raw_orders"
+      ],
+      "test_results": [
+        {
+          "test_name": "not_null_stg_orders_order_id",
+          "test_type": "not_null",
+          "column_name": "order_id",
+          "status": "pass",
+          "execution_time": 0.021120786666870117,
+          "failures": 0,
+          "message": null
+        },
+        {
+          "test_name": "unique_stg_orders_order_id",
+          "test_type": "unique",
+          "column_name": "order_id",
+          "status": "pass",
+          "execution_time": 0.016251564025878906,
+          "failures": 0,
+          "message": null
+        },
+        {
+          "test_name": "dbt_utils_expression_is_true_stg_orders_order_total_tax_paid_subtotal",
+          "test_type": "expression_is_true",
+          "column_name": null,
+          "status": "pass",
+          "execution_time": 0.01836252212524414,
+          "failures": 0,
+          "message": null
+        },
+        {
+          "test_name": "relationships_stg_order_items_order_id__order_id__ref_stg_orders_",
+          "test_type": "relationships",
+          "column_name": "order_id",
+          "status": "pass",
+          "execution_time": 0.021395444869995117,
+          "failures": 0,
+          "message": null
+        }
+      ],
+      "last_run": {
+        "status": "success",
+        "execution_time": 0.024724721908569336,
+        "completed_at": "2026-03-07T05:25:00.164235Z"
+      },
+      "catalog_stats": {
+        "row_count": null,
+        "bytes": null,
+        "has_stats": false
+      }
+    },
+    "model.jaffle_shop.stg_customers": {
+      "unique_id": "model.jaffle_shop.stg_customers",
+      "name": "stg_customers",
+      "description": "Customer data with basic cleaning and transformation applied, one row per customer.",
+      "schema": "main",
+      "database": "jaffle_shop",
+      "materialization": "view",
+      "tags": [],
+      "meta": {},
+      "path": "models/staging/stg_customers.sql",
+      "folder": "models/staging",
+      "raw_sql": "with\n\nsource as (\n\n    select * from {{ source('ecom', 'raw_customers') }}\n\n),\n\nrenamed as (\n\n    select\n\n        ----------  ids\n        id as customer_id,\n\n        ---------- text\n        name as customer_name\n\n    from source\n\n)\n\nselect * from renamed",
+      "compiled_sql": "",
+      "columns": [
+        {
+          "name": "customer_id",
+          "description": "The unique key for each customer.",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [
+            {
+              "test_name": "relationships_orders_customer_id__customer_id__ref_stg_customers_",
+              "test_type": "relationships",
+              "status": "pass",
+              "config": {}
+            },
+            {
+              "test_name": "not_null_stg_customers_customer_id",
+              "test_type": "not_null",
+              "status": "pass",
+              "config": {}
+            },
+            {
+              "test_name": "unique_stg_customers_customer_id",
+              "test_type": "unique",
+              "status": "pass",
+              "config": {}
+            }
+          ],
+          "profile": null
+        },
+        {
+          "name": "customer_name",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        }
+      ],
+      "depends_on": [
+        "source.jaffle_shop.ecom.raw_customers"
+      ],
+      "referenced_by": [
+        "model.jaffle_shop.customers"
+      ],
+      "sources_used": [
+        "source.jaffle_shop.ecom.raw_customers"
+      ],
+      "test_results": [
+        {
+          "test_name": "relationships_orders_customer_id__customer_id__ref_stg_customers_",
+          "test_type": "relationships",
+          "column_name": "customer_id",
+          "status": "pass",
+          "execution_time": 0.021214008331298828,
+          "failures": 0,
+          "message": null
+        },
+        {
+          "test_name": "not_null_stg_customers_customer_id",
+          "test_type": "not_null",
+          "column_name": "customer_id",
+          "status": "pass",
+          "execution_time": 0.023418903350830078,
+          "failures": 0,
+          "message": null
+        },
+        {
+          "test_name": "unique_stg_customers_customer_id",
+          "test_type": "unique",
+          "column_name": "customer_id",
+          "status": "pass",
+          "execution_time": 0.0241696834564209,
+          "failures": 0,
+          "message": null
+        }
+      ],
+      "last_run": {
+        "status": "success",
+        "execution_time": 0.040593862533569336,
+        "completed_at": "2026-03-07T05:25:00.136528Z"
+      },
+      "catalog_stats": {
+        "row_count": null,
+        "bytes": null,
+        "has_stats": false
+      }
+    },
+    "model.jaffle_shop.stg_locations": {
+      "unique_id": "model.jaffle_shop.stg_locations",
+      "name": "stg_locations",
+      "description": "List of open locations with basic cleaning and transformation applied, one row per location.",
+      "schema": "main",
+      "database": "jaffle_shop",
+      "materialization": "view",
+      "tags": [],
+      "meta": {},
+      "path": "models/staging/stg_locations.sql",
+      "folder": "models/staging",
+      "raw_sql": "with\n\nsource as (\n\n    select * from {{ source('ecom', 'raw_stores') }}\n\n),\n\nrenamed as (\n\n    select\n\n        ----------  ids\n        id as location_id,\n\n        ---------- text\n        name as location_name,\n\n        ---------- numerics\n        tax_rate,\n\n        ---------- timestamps\n        {{ dbt.date_trunc('day', 'opened_at') }} as opened_date\n\n    from source\n\n)\n\nselect * from renamed",
+      "compiled_sql": "",
+      "columns": [
+        {
+          "name": "location_id",
+          "description": "The unique key for each location.",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [
+            {
+              "test_name": "not_null_stg_locations_location_id",
+              "test_type": "not_null",
+              "status": "pass",
+              "config": {}
+            },
+            {
+              "test_name": "unique_stg_locations_location_id",
+              "test_type": "unique",
+              "status": "pass",
+              "config": {}
+            }
+          ],
+          "profile": null
+        },
+        {
+          "name": "location_name",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "tax_rate",
+          "description": "",
+          "data_type": "DOUBLE",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "opened_date",
+          "description": "",
+          "data_type": "DATE",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        }
+      ],
+      "depends_on": [
+        "source.jaffle_shop.ecom.raw_stores"
+      ],
+      "referenced_by": [
+        "model.jaffle_shop.locations",
+        "unit_test.jaffle_shop.stg_locations.test_does_location_opened_at_trunc_to_date"
+      ],
+      "sources_used": [
+        "source.jaffle_shop.ecom.raw_stores"
+      ],
+      "test_results": [
+        {
+          "test_name": "not_null_stg_locations_location_id",
+          "test_type": "not_null",
+          "column_name": "location_id",
+          "status": "pass",
+          "execution_time": 0.012253046035766602,
+          "failures": 0,
+          "message": null
+        },
+        {
+          "test_name": "unique_stg_locations_location_id",
+          "test_type": "unique",
+          "column_name": "location_id",
+          "status": "pass",
+          "execution_time": 0.011846065521240234,
+          "failures": 0,
+          "message": null
+        }
+      ],
+      "last_run": {
+        "status": "success",
+        "execution_time": 0.0420079231262207,
+        "completed_at": "2026-03-07T05:25:00.138313Z"
+      },
+      "catalog_stats": {
+        "row_count": null,
+        "bytes": null,
+        "has_stats": false
+      }
+    },
+    "model.jaffle_shop.stg_products": {
+      "unique_id": "model.jaffle_shop.stg_products",
+      "name": "stg_products",
+      "description": "Product (food and drink items that can be ordered) data with basic cleaning and transformation applied, one row per product.",
+      "schema": "main",
+      "database": "jaffle_shop",
+      "materialization": "view",
+      "tags": [],
+      "meta": {},
+      "path": "models/staging/stg_products.sql",
+      "folder": "models/staging",
+      "raw_sql": "with\n\nsource as (\n\n    select * from {{ source('ecom', 'raw_products') }}\n\n),\n\nrenamed as (\n\n    select\n\n        ----------  ids\n        sku as product_id,\n\n        ---------- text\n        name as product_name,\n        type as product_type,\n        description as product_description,\n\n\n        ---------- numerics\n        {{ cents_to_dollars('price') }} as product_price,\n\n        ---------- booleans\n        coalesce(type = 'jaffle', false) as is_food_item,\n\n        coalesce(type = 'beverage', false) as is_drink_item\n\n    from source\n\n)\n\nselect * from renamed",
+      "compiled_sql": "",
+      "columns": [
+        {
+          "name": "product_id",
+          "description": "The unique key for each product.",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [
+            {
+              "test_name": "not_null_stg_products_product_id",
+              "test_type": "not_null",
+              "status": "pass",
+              "config": {}
+            },
+            {
+              "test_name": "unique_stg_products_product_id",
+              "test_type": "unique",
+              "status": "pass",
+              "config": {}
+            }
+          ],
+          "profile": null
+        },
+        {
+          "name": "product_name",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "product_type",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "product_description",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "product_price",
+          "description": "",
+          "data_type": "DECIMAL(16,2)",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "is_food_item",
+          "description": "",
+          "data_type": "BOOLEAN",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "is_drink_item",
+          "description": "",
+          "data_type": "BOOLEAN",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        }
+      ],
+      "depends_on": [
+        "source.jaffle_shop.ecom.raw_products"
+      ],
+      "referenced_by": [
+        "model.jaffle_shop.order_items",
+        "model.jaffle_shop.products"
+      ],
+      "sources_used": [
+        "source.jaffle_shop.ecom.raw_products"
+      ],
+      "test_results": [
+        {
+          "test_name": "not_null_stg_products_product_id",
+          "test_type": "not_null",
+          "column_name": "product_id",
+          "status": "pass",
+          "execution_time": 0.011091947555541992,
+          "failures": 0,
+          "message": null
+        },
+        {
+          "test_name": "unique_stg_products_product_id",
+          "test_type": "unique",
+          "column_name": "product_id",
+          "status": "pass",
+          "execution_time": 0.013303756713867188,
+          "failures": 0,
+          "message": null
+        }
+      ],
+      "last_run": {
+        "status": "success",
+        "execution_time": 0.024834632873535156,
+        "completed_at": "2026-03-07T05:25:00.165285Z"
+      },
+      "catalog_stats": {
+        "row_count": null,
+        "bytes": null,
+        "has_stats": false
+      }
+    },
+    "model.jaffle_shop.stg_order_items": {
+      "unique_id": "model.jaffle_shop.stg_order_items",
+      "name": "stg_order_items",
+      "description": "Individual food and drink items that make up our orders, one row per item.",
+      "schema": "main",
+      "database": "jaffle_shop",
+      "materialization": "view",
+      "tags": [],
+      "meta": {},
+      "path": "models/staging/stg_order_items.sql",
+      "folder": "models/staging",
+      "raw_sql": "with\n\nsource as (\n\n    select * from {{ source('ecom', 'raw_items') }}\n\n),\n\nrenamed as (\n\n    select\n\n        ----------  ids\n        id as order_item_id,\n        order_id,\n        sku as product_id\n\n    from source\n\n)\n\nselect * from renamed",
+      "compiled_sql": "",
+      "columns": [
+        {
+          "name": "order_item_id",
+          "description": "The unique key for each order item.",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [
+            {
+              "test_name": "not_null_stg_order_items_order_item_id",
+              "test_type": "not_null",
+              "status": "pass",
+              "config": {}
+            },
+            {
+              "test_name": "unique_stg_order_items_order_item_id",
+              "test_type": "unique",
+              "status": "pass",
+              "config": {}
+            }
+          ],
+          "profile": null
+        },
+        {
+          "name": "order_id",
+          "description": "The corresponding order each order item belongs to",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [
+            {
+              "test_name": "not_null_stg_order_items_order_id",
+              "test_type": "not_null",
+              "status": "pass",
+              "config": {}
+            },
+            {
+              "test_name": "relationships_stg_order_items_order_id__order_id__ref_stg_orders_",
+              "test_type": "relationships",
+              "status": "pass",
+              "config": {}
+            }
+          ],
+          "profile": null
+        },
+        {
+          "name": "product_id",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        }
+      ],
+      "depends_on": [
+        "source.jaffle_shop.ecom.raw_items"
+      ],
+      "referenced_by": [
+        "model.jaffle_shop.order_items"
+      ],
+      "sources_used": [
+        "source.jaffle_shop.ecom.raw_items"
+      ],
+      "test_results": [
+        {
+          "test_name": "not_null_stg_order_items_order_item_id",
+          "test_type": "not_null",
+          "column_name": "order_item_id",
+          "status": "pass",
+          "execution_time": 0.012010812759399414,
+          "failures": 0,
+          "message": null
+        },
+        {
+          "test_name": "unique_stg_order_items_order_item_id",
+          "test_type": "unique",
+          "column_name": "order_item_id",
+          "status": "pass",
+          "execution_time": 0.013648271560668945,
+          "failures": 0,
+          "message": null
+        },
+        {
+          "test_name": "not_null_stg_order_items_order_id",
+          "test_type": "not_null",
+          "column_name": "order_id",
+          "status": "pass",
+          "execution_time": 0.02334427833557129,
+          "failures": 0,
+          "message": null
+        },
+        {
+          "test_name": "relationships_stg_order_items_order_id__order_id__ref_stg_orders_",
+          "test_type": "relationships",
+          "column_name": "order_id",
+          "status": "pass",
+          "execution_time": 0.021395444869995117,
+          "failures": 0,
+          "message": null
+        }
+      ],
+      "last_run": {
+        "status": "success",
+        "execution_time": 0.04065585136413574,
+        "completed_at": "2026-03-07T05:25:00.137537Z"
+      },
+      "catalog_stats": {
+        "row_count": null,
+        "bytes": null,
+        "has_stats": false
+      }
+    },
+    "model.jaffle_shop.stg_supplies": {
+      "unique_id": "model.jaffle_shop.stg_supplies",
+      "name": "stg_supplies",
+      "description": "List of our supply expenses data with basic cleaning and transformation applied.\nOne row per supply cost, not per supply. As supply costs fluctuate they receive a new row with a new UUID. Thus there can be multiple rows per supply_id.\n",
+      "schema": "main",
+      "database": "jaffle_shop",
+      "materialization": "view",
+      "tags": [],
+      "meta": {},
+      "path": "models/staging/stg_supplies.sql",
+      "folder": "models/staging",
+      "raw_sql": "with\n\nsource as (\n\n    select * from {{ source('ecom', 'raw_supplies') }}\n\n),\n\nrenamed as (\n\n    select\n\n        ----------  ids\n        {{ dbt_utils.generate_surrogate_key(['id', 'sku']) }} as supply_uuid,\n        id as supply_id,\n        sku as product_id,\n\n        ---------- text\n        name as supply_name,\n\n        ---------- numerics\n        {{ cents_to_dollars('cost') }} as supply_cost,\n\n        ---------- booleans\n        perishable as is_perishable_supply\n\n    from source\n\n)\n\nselect * from renamed",
+      "compiled_sql": "",
+      "columns": [
+        {
+          "name": "supply_uuid",
+          "description": "The unique key of our supplies per cost.",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [
+            {
+              "test_name": "not_null_stg_supplies_supply_uuid",
+              "test_type": "not_null",
+              "status": "pass",
+              "config": {}
+            },
+            {
+              "test_name": "unique_stg_supplies_supply_uuid",
+              "test_type": "unique",
+              "status": "pass",
+              "config": {}
+            }
+          ],
+          "profile": null
+        },
+        {
+          "name": "supply_id",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "product_id",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "supply_name",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "supply_cost",
+          "description": "",
+          "data_type": "DECIMAL(16,2)",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "is_perishable_supply",
+          "description": "",
+          "data_type": "BOOLEAN",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        }
+      ],
+      "depends_on": [
+        "source.jaffle_shop.ecom.raw_supplies"
+      ],
+      "referenced_by": [
+        "model.jaffle_shop.order_items",
+        "model.jaffle_shop.supplies"
+      ],
+      "sources_used": [
+        "source.jaffle_shop.ecom.raw_supplies"
+      ],
+      "test_results": [
+        {
+          "test_name": "not_null_stg_supplies_supply_uuid",
+          "test_type": "not_null",
+          "column_name": "supply_uuid",
+          "status": "pass",
+          "execution_time": 0.010527849197387695,
+          "failures": 0,
+          "message": null
+        },
+        {
+          "test_name": "unique_stg_supplies_supply_uuid",
+          "test_type": "unique",
+          "column_name": "supply_uuid",
+          "status": "pass",
+          "execution_time": 0.013833284378051758,
+          "failures": 0,
+          "message": null
+        }
+      ],
+      "last_run": {
+        "status": "success",
+        "execution_time": 0.025385379791259766,
+        "completed_at": "2026-03-07T05:25:00.166270Z"
+      },
+      "catalog_stats": {
+        "row_count": null,
+        "bytes": null,
+        "has_stats": false
+      }
+    }
+  },
+  "sources": {
+    "source.jaffle_shop.ecom.raw_customers": {
+      "unique_id": "source.jaffle_shop.ecom.raw_customers",
+      "name": "raw_customers",
+      "source_name": "ecom",
+      "description": "One record per person who has purchased one or more items",
+      "schema": "raw",
+      "database": "jaffle_shop",
+      "columns": [
+        {
+          "name": "id",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "name",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        }
+      ],
+      "tags": [],
+      "meta": {},
+      "loader": "",
+      "loaded_at_field": null,
+      "freshness_status": null,
+      "freshness_max_loaded_at": null,
+      "freshness_snapshotted_at": null
+    },
+    "source.jaffle_shop.ecom.raw_orders": {
+      "unique_id": "source.jaffle_shop.ecom.raw_orders",
+      "name": "raw_orders",
+      "source_name": "ecom",
+      "description": "One record per order (consisting of one or more order items)",
+      "schema": "raw",
+      "database": "jaffle_shop",
+      "columns": [
+        {
+          "name": "id",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "customer",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "ordered_at",
+          "description": "",
+          "data_type": "TIMESTAMP",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "store_id",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "subtotal",
+          "description": "",
+          "data_type": "INTEGER",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "tax_paid",
+          "description": "",
+          "data_type": "INTEGER",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "order_total",
+          "description": "",
+          "data_type": "INTEGER",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        }
+      ],
+      "tags": [],
+      "meta": {},
+      "loader": "",
+      "loaded_at_field": "ordered_at",
+      "freshness_status": null,
+      "freshness_max_loaded_at": null,
+      "freshness_snapshotted_at": null
+    },
+    "source.jaffle_shop.ecom.raw_items": {
+      "unique_id": "source.jaffle_shop.ecom.raw_items",
+      "name": "raw_items",
+      "source_name": "ecom",
+      "description": "Items included in an order",
+      "schema": "raw",
+      "database": "jaffle_shop",
+      "columns": [
+        {
+          "name": "id",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "order_id",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "sku",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        }
+      ],
+      "tags": [],
+      "meta": {},
+      "loader": "",
+      "loaded_at_field": null,
+      "freshness_status": null,
+      "freshness_max_loaded_at": null,
+      "freshness_snapshotted_at": null
+    },
+    "source.jaffle_shop.ecom.raw_stores": {
+      "unique_id": "source.jaffle_shop.ecom.raw_stores",
+      "name": "raw_stores",
+      "source_name": "ecom",
+      "description": "E-commerce data for the Jaffle Shop",
+      "schema": "raw",
+      "database": "jaffle_shop",
+      "columns": [
+        {
+          "name": "id",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "name",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "opened_at",
+          "description": "",
+          "data_type": "TIMESTAMP",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "tax_rate",
+          "description": "",
+          "data_type": "DOUBLE",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        }
+      ],
+      "tags": [],
+      "meta": {},
+      "loader": "",
+      "loaded_at_field": "opened_at",
+      "freshness_status": null,
+      "freshness_max_loaded_at": null,
+      "freshness_snapshotted_at": null
+    },
+    "source.jaffle_shop.ecom.raw_products": {
+      "unique_id": "source.jaffle_shop.ecom.raw_products",
+      "name": "raw_products",
+      "source_name": "ecom",
+      "description": "One record per SKU for items sold in stores",
+      "schema": "raw",
+      "database": "jaffle_shop",
+      "columns": [
+        {
+          "name": "sku",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "name",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "type",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "price",
+          "description": "",
+          "data_type": "INTEGER",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "description",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        }
+      ],
+      "tags": [],
+      "meta": {},
+      "loader": "",
+      "loaded_at_field": null,
+      "freshness_status": null,
+      "freshness_max_loaded_at": null,
+      "freshness_snapshotted_at": null
+    },
+    "source.jaffle_shop.ecom.raw_supplies": {
+      "unique_id": "source.jaffle_shop.ecom.raw_supplies",
+      "name": "raw_supplies",
+      "source_name": "ecom",
+      "description": "One record per supply per SKU of items sold in stores",
+      "schema": "raw",
+      "database": "jaffle_shop",
+      "columns": [
+        {
+          "name": "id",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "name",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "cost",
+          "description": "",
+          "data_type": "INTEGER",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "perishable",
+          "description": "",
+          "data_type": "BOOLEAN",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        },
+        {
+          "name": "sku",
+          "description": "",
+          "data_type": "VARCHAR",
+          "meta": {},
+          "tags": [],
+          "tests": [],
+          "profile": null
+        }
+      ],
+      "tags": [],
+      "meta": {},
+      "loader": "",
+      "loaded_at_field": null,
+      "freshness_status": null,
+      "freshness_max_loaded_at": null,
+      "freshness_snapshotted_at": null
+    }
+  },
+  "seeds": {},
+  "snapshots": {},
+  "exposures": {},
+  "metrics": {
+    "metric.jaffle_shop.revenue": {
+      "unique_id": "metric.jaffle_shop.revenue",
+      "name": "revenue",
+      "description": "Sum of the product revenue for each order item. Excludes tax.",
+      "label": "Revenue",
+      "type": "simple",
+      "depends_on": [
+        "semantic_model.jaffle_shop.order_item"
+      ],
+      "tags": []
+    },
+    "metric.jaffle_shop.order_cost": {
+      "unique_id": "metric.jaffle_shop.order_cost",
+      "name": "order_cost",
+      "description": "Sum of cost for each order item.",
+      "label": "Order Cost",
+      "type": "simple",
+      "depends_on": [
+        "semantic_model.jaffle_shop.orders"
+      ],
+      "tags": []
+    },
+    "metric.jaffle_shop.median_revenue": {
+      "unique_id": "metric.jaffle_shop.median_revenue",
+      "name": "median_revenue",
+      "description": "The median revenue for each order item. Excludes tax.",
+      "label": "Median Revenue",
+      "type": "simple",
+      "depends_on": [
+        "semantic_model.jaffle_shop.order_item"
+      ],
+      "tags": []
+    },
+    "metric.jaffle_shop.food_revenue": {
+      "unique_id": "metric.jaffle_shop.food_revenue",
+      "name": "food_revenue",
+      "description": "The revenue from food in each order",
+      "label": "Food Revenue",
+      "type": "simple",
+      "depends_on": [
+        "semantic_model.jaffle_shop.order_item"
+      ],
+      "tags": []
+    },
+    "metric.jaffle_shop.drink_revenue": {
+      "unique_id": "metric.jaffle_shop.drink_revenue",
+      "name": "drink_revenue",
+      "description": "The revenue from drinks in each order",
+      "label": "Drink Revenue",
+      "type": "simple",
+      "depends_on": [
+        "semantic_model.jaffle_shop.order_item"
+      ],
+      "tags": []
+    },
+    "metric.jaffle_shop.food_revenue_pct": {
+      "unique_id": "metric.jaffle_shop.food_revenue_pct",
+      "name": "food_revenue_pct",
+      "description": "The % of order revenue from food.",
+      "label": "Food Revenue %",
+      "type": "ratio",
+      "depends_on": [
+        "metric.jaffle_shop.food_revenue",
+        "metric.jaffle_shop.revenue"
+      ],
+      "tags": []
+    },
+    "metric.jaffle_shop.drink_revenue_pct": {
+      "unique_id": "metric.jaffle_shop.drink_revenue_pct",
+      "name": "drink_revenue_pct",
+      "description": "The % of order revenue from drinks.",
+      "label": "Drink Revenue %",
+      "type": "ratio",
+      "depends_on": [
+        "metric.jaffle_shop.drink_revenue",
+        "metric.jaffle_shop.revenue"
+      ],
+      "tags": []
+    },
+    "metric.jaffle_shop.revenue_growth_mom": {
+      "unique_id": "metric.jaffle_shop.revenue_growth_mom",
+      "name": "revenue_growth_mom",
+      "description": "Percentage growth of revenue compared to 1 month ago. Excluded tax",
+      "label": "Revenue Growth % M/M",
+      "type": "derived",
+      "depends_on": [
+        "metric.jaffle_shop.revenue"
+      ],
+      "tags": []
+    },
+    "metric.jaffle_shop.order_gross_profit": {
+      "unique_id": "metric.jaffle_shop.order_gross_profit",
+      "name": "order_gross_profit",
+      "description": "Gross profit from each order.",
+      "label": "Order Gross Profit",
+      "type": "derived",
+      "depends_on": [
+        "metric.jaffle_shop.revenue",
+        "metric.jaffle_shop.order_cost"
+      ],
+      "tags": []
+    },
+    "metric.jaffle_shop.cumulative_revenue": {
+      "unique_id": "metric.jaffle_shop.cumulative_revenue",
+      "name": "cumulative_revenue",
+      "description": "The cumulative revenue for all orders.",
+      "label": "Cumulative Revenue (All Time)",
+      "type": "cumulative",
+      "depends_on": [
+        "semantic_model.jaffle_shop.order_item"
+      ],
+      "tags": []
+    },
+    "metric.jaffle_shop.order_total": {
+      "unique_id": "metric.jaffle_shop.order_total",
+      "name": "order_total",
+      "description": "Sum of total order amonunt. Includes tax + revenue.",
+      "label": "Order Total",
+      "type": "simple",
+      "depends_on": [
+        "semantic_model.jaffle_shop.orders"
+      ],
+      "tags": []
+    },
+    "metric.jaffle_shop.new_customer_orders": {
+      "unique_id": "metric.jaffle_shop.new_customer_orders",
+      "name": "new_customer_orders",
+      "description": "New customer's first order count",
+      "label": "New Customers",
+      "type": "simple",
+      "depends_on": [
+        "semantic_model.jaffle_shop.orders"
+      ],
+      "tags": []
+    },
+    "metric.jaffle_shop.large_orders": {
+      "unique_id": "metric.jaffle_shop.large_orders",
+      "name": "large_orders",
+      "description": "Count of orders with order total over 20.",
+      "label": "Large Orders",
+      "type": "simple",
+      "depends_on": [
+        "semantic_model.jaffle_shop.orders"
+      ],
+      "tags": []
+    },
+    "metric.jaffle_shop.orders": {
+      "unique_id": "metric.jaffle_shop.orders",
+      "name": "orders",
+      "description": "Count of orders.",
+      "label": "Orders",
+      "type": "simple",
+      "depends_on": [
+        "semantic_model.jaffle_shop.orders"
+      ],
+      "tags": []
+    },
+    "metric.jaffle_shop.food_orders": {
+      "unique_id": "metric.jaffle_shop.food_orders",
+      "name": "food_orders",
+      "description": "Count of orders that contain food order items",
+      "label": "Food Orders",
+      "type": "simple",
+      "depends_on": [
+        "semantic_model.jaffle_shop.orders"
+      ],
+      "tags": []
+    },
+    "metric.jaffle_shop.drink_orders": {
+      "unique_id": "metric.jaffle_shop.drink_orders",
+      "name": "drink_orders",
+      "description": "Count of orders that contain drink order items",
+      "label": "Drink Orders",
+      "type": "simple",
+      "depends_on": [
+        "semantic_model.jaffle_shop.orders"
+      ],
+      "tags": []
+    },
+    "metric.jaffle_shop.lifetime_spend_pretax": {
+      "unique_id": "metric.jaffle_shop.lifetime_spend_pretax",
+      "name": "lifetime_spend_pretax",
+      "description": "Customer's lifetime spend before tax",
+      "label": "LTV Pre-tax",
+      "type": "simple",
+      "depends_on": [
+        "semantic_model.jaffle_shop.customers"
+      ],
+      "tags": []
+    },
+    "metric.jaffle_shop.count_lifetime_orders": {
+      "unique_id": "metric.jaffle_shop.count_lifetime_orders",
+      "name": "count_lifetime_orders",
+      "description": "Count of lifetime orders",
+      "label": "Count Lifetime Orders",
+      "type": "simple",
+      "depends_on": [
+        "semantic_model.jaffle_shop.customers"
+      ],
+      "tags": []
+    },
+    "metric.jaffle_shop.average_order_value": {
+      "unique_id": "metric.jaffle_shop.average_order_value",
+      "name": "average_order_value",
+      "description": "LTV pre-tax / number of orders",
+      "label": "Average Order Value",
+      "type": "derived",
+      "depends_on": [
+        "metric.jaffle_shop.count_lifetime_orders",
+        "metric.jaffle_shop.lifetime_spend_pretax"
+      ],
+      "tags": []
+    }
+  },
+  "lineage": {
+    "nodes": [
+      {
+        "id": "model.jaffle_shop.metricflow_time_spine",
+        "name": "metricflow_time_spine",
+        "resource_type": "model",
+        "materialization": "table",
+        "schema": "main",
+        "test_status": "none",
+        "has_description": false,
+        "folder": "models/marts",
+        "tags": []
+      },
+      {
+        "id": "model.jaffle_shop.locations",
+        "name": "locations",
+        "resource_type": "model",
+        "materialization": "table",
+        "schema": "main",
+        "test_status": "none",
+        "has_description": false,
+        "folder": "models/marts",
+        "tags": []
+      },
+      {
+        "id": "model.jaffle_shop.orders",
+        "name": "orders",
+        "resource_type": "model",
+        "materialization": "table",
+        "schema": "main",
+        "test_status": "pass",
+        "has_description": true,
+        "folder": "models/marts",
+        "tags": []
+      },
+      {
+        "id": "model.jaffle_shop.customers",
+        "name": "customers",
+        "resource_type": "model",
+        "materialization": "table",
+        "schema": "main",
+        "test_status": "pass",
+        "has_description": true,
+        "folder": "models/marts",
+        "tags": []
+      },
+      {
+        "id": "model.jaffle_shop.order_items",
+        "name": "order_items",
+        "resource_type": "model",
+        "materialization": "table",
+        "schema": "main",
+        "test_status": "pass",
+        "has_description": false,
+        "folder": "models/marts",
+        "tags": []
+      },
+      {
+        "id": "model.jaffle_shop.supplies",
+        "name": "supplies",
+        "resource_type": "model",
+        "materialization": "table",
+        "schema": "main",
+        "test_status": "none",
+        "has_description": false,
+        "folder": "models/marts",
+        "tags": []
+      },
+      {
+        "id": "model.jaffle_shop.products",
+        "name": "products",
+        "resource_type": "model",
+        "materialization": "table",
+        "schema": "main",
+        "test_status": "none",
+        "has_description": false,
+        "folder": "models/marts",
+        "tags": []
+      },
+      {
+        "id": "model.jaffle_shop.stg_orders",
+        "name": "stg_orders",
+        "resource_type": "model",
+        "materialization": "view",
+        "schema": "main",
+        "test_status": "pass",
+        "has_description": true,
+        "folder": "models/staging",
+        "tags": []
+      },
+      {
+        "id": "model.jaffle_shop.stg_customers",
+        "name": "stg_customers",
+        "resource_type": "model",
+        "materialization": "view",
+        "schema": "main",
+        "test_status": "pass",
+        "has_description": true,
+        "folder": "models/staging",
+        "tags": []
+      },
+      {
+        "id": "model.jaffle_shop.stg_locations",
+        "name": "stg_locations",
+        "resource_type": "model",
+        "materialization": "view",
+        "schema": "main",
+        "test_status": "pass",
+        "has_description": true,
+        "folder": "models/staging",
+        "tags": []
+      },
+      {
+        "id": "model.jaffle_shop.stg_products",
+        "name": "stg_products",
+        "resource_type": "model",
+        "materialization": "view",
+        "schema": "main",
+        "test_status": "pass",
+        "has_description": true,
+        "folder": "models/staging",
+        "tags": []
+      },
+      {
+        "id": "model.jaffle_shop.stg_order_items",
+        "name": "stg_order_items",
+        "resource_type": "model",
+        "materialization": "view",
+        "schema": "main",
+        "test_status": "pass",
+        "has_description": true,
+        "folder": "models/staging",
+        "tags": []
+      },
+      {
+        "id": "model.jaffle_shop.stg_supplies",
+        "name": "stg_supplies",
+        "resource_type": "model",
+        "materialization": "view",
+        "schema": "main",
+        "test_status": "pass",
+        "has_description": true,
+        "folder": "models/staging",
+        "tags": []
+      },
+      {
+        "id": "source.jaffle_shop.ecom.raw_customers",
+        "name": "ecom.raw_customers",
+        "resource_type": "source",
+        "materialization": "",
+        "schema": "raw",
+        "test_status": "none",
+        "has_description": true,
+        "folder": "",
+        "tags": []
+      },
+      {
+        "id": "source.jaffle_shop.ecom.raw_orders",
+        "name": "ecom.raw_orders",
+        "resource_type": "source",
+        "materialization": "",
+        "schema": "raw",
+        "test_status": "none",
+        "has_description": true,
+        "folder": "",
+        "tags": []
+      },
+      {
+        "id": "source.jaffle_shop.ecom.raw_items",
+        "name": "ecom.raw_items",
+        "resource_type": "source",
+        "materialization": "",
+        "schema": "raw",
+        "test_status": "none",
+        "has_description": true,
+        "folder": "",
+        "tags": []
+      },
+      {
+        "id": "source.jaffle_shop.ecom.raw_stores",
+        "name": "ecom.raw_stores",
+        "resource_type": "source",
+        "materialization": "",
+        "schema": "raw",
+        "test_status": "none",
+        "has_description": true,
+        "folder": "",
+        "tags": []
+      },
+      {
+        "id": "source.jaffle_shop.ecom.raw_products",
+        "name": "ecom.raw_products",
+        "resource_type": "source",
+        "materialization": "",
+        "schema": "raw",
+        "test_status": "none",
+        "has_description": true,
+        "folder": "",
+        "tags": []
+      },
+      {
+        "id": "source.jaffle_shop.ecom.raw_supplies",
+        "name": "ecom.raw_supplies",
+        "resource_type": "source",
+        "materialization": "",
+        "schema": "raw",
+        "test_status": "none",
+        "has_description": true,
+        "folder": "",
+        "tags": []
+      }
+    ],
+    "edges": [
+      {
+        "source": "model.jaffle_shop.stg_locations",
+        "target": "model.jaffle_shop.locations"
+      },
+      {
+        "source": "model.jaffle_shop.stg_orders",
+        "target": "model.jaffle_shop.orders"
+      },
+      {
+        "source": "model.jaffle_shop.order_items",
+        "target": "model.jaffle_shop.orders"
+      },
+      {
+        "source": "model.jaffle_shop.stg_customers",
+        "target": "model.jaffle_shop.customers"
+      },
+      {
+        "source": "model.jaffle_shop.orders",
+        "target": "model.jaffle_shop.customers"
+      },
+      {
+        "source": "model.jaffle_shop.stg_order_items",
+        "target": "model.jaffle_shop.order_items"
+      },
+      {
+        "source": "model.jaffle_shop.stg_orders",
+        "target": "model.jaffle_shop.order_items"
+      },
+      {
+        "source": "model.jaffle_shop.stg_products",
+        "target": "model.jaffle_shop.order_items"
+      },
+      {
+        "source": "model.jaffle_shop.stg_supplies",
+        "target": "model.jaffle_shop.order_items"
+      },
+      {
+        "source": "model.jaffle_shop.stg_supplies",
+        "target": "model.jaffle_shop.supplies"
+      },
+      {
+        "source": "model.jaffle_shop.stg_products",
+        "target": "model.jaffle_shop.products"
+      },
+      {
+        "source": "source.jaffle_shop.ecom.raw_orders",
+        "target": "model.jaffle_shop.stg_orders"
+      },
+      {
+        "source": "source.jaffle_shop.ecom.raw_customers",
+        "target": "model.jaffle_shop.stg_customers"
+      },
+      {
+        "source": "source.jaffle_shop.ecom.raw_stores",
+        "target": "model.jaffle_shop.stg_locations"
+      },
+      {
+        "source": "source.jaffle_shop.ecom.raw_products",
+        "target": "model.jaffle_shop.stg_products"
+      },
+      {
+        "source": "source.jaffle_shop.ecom.raw_items",
+        "target": "model.jaffle_shop.stg_order_items"
+      },
+      {
+        "source": "source.jaffle_shop.ecom.raw_supplies",
+        "target": "model.jaffle_shop.stg_supplies"
+      }
+    ]
+  },
+  "health": {
+    "score": {
+      "overall": 64.2,
+      "documentation": 41.0,
+      "testing": 40.4,
+      "freshness": 100.0,
+      "complexity": 100.0,
+      "naming": 46.2,
+      "orphans": 92.3,
+      "grade": "D"
+    },
+    "coverage": {
+      "models_documented": {
+        "total": 13,
+        "covered": 8,
+        "rate": 0.6154
+      },
+      "columns_documented": {
+        "total": 112,
+        "covered": 23,
+        "rate": 0.2054
+      },
+      "models_tested": {
+        "total": 13,
+        "covered": 9,
+        "rate": 0.6923
+      },
+      "columns_tested": {
+        "total": 112,
+        "covered": 13,
+        "rate": 0.1161
+      },
+      "by_folder": {
+        "models/marts": {
+          "total": 7,
+          "covered": 2,
+          "rate": 0.2857
+        },
+        "models/staging": {
+          "total": 6,
+          "covered": 6,
+          "rate": 1.0
+        }
+      },
+      "undocumented_models": [
+        {
+          "unique_id": "model.jaffle_shop.order_items",
+          "name": "order_items",
+          "folder": "models/marts",
+          "downstream_count": 3
+        },
+        {
+          "unique_id": "model.jaffle_shop.locations",
+          "name": "locations",
+          "folder": "models/marts",
+          "downstream_count": 1
+        },
+        {
+          "unique_id": "model.jaffle_shop.supplies",
+          "name": "supplies",
+          "folder": "models/marts",
+          "downstream_count": 1
+        },
+        {
+          "unique_id": "model.jaffle_shop.products",
+          "name": "products",
+          "folder": "models/marts",
+          "downstream_count": 1
+        },
+        {
+          "unique_id": "model.jaffle_shop.metricflow_time_spine",
+          "name": "metricflow_time_spine",
+          "folder": "models/marts",
+          "downstream_count": 0
+        }
+      ],
+      "untested_models": [
+        {
+          "unique_id": "model.jaffle_shop.locations",
+          "name": "locations",
+          "folder": "models/marts",
+          "downstream_count": 1
+        },
+        {
+          "unique_id": "model.jaffle_shop.supplies",
+          "name": "supplies",
+          "folder": "models/marts",
+          "downstream_count": 1
+        },
+        {
+          "unique_id": "model.jaffle_shop.products",
+          "name": "products",
+          "folder": "models/marts",
+          "downstream_count": 1
+        },
+        {
+          "unique_id": "model.jaffle_shop.metricflow_time_spine",
+          "name": "metricflow_time_spine",
+          "folder": "models/marts",
+          "downstream_count": 0
+        }
+      ]
+    },
+    "complexity": {
+      "high_count": 0,
+      "total": 13,
+      "compliance_rate": 1.0,
+      "models": []
+    },
+    "naming": {
+      "total_checked": 13,
+      "compliant_count": 6,
+      "compliance_rate": 0.4615,
+      "violations": [
+        {
+          "unique_id": "model.jaffle_shop.metricflow_time_spine",
+          "name": "metricflow_time_spine",
+          "folder": "models/marts",
+          "expected_pattern": "^fct_ or ^dim_",
+          "layer": "marts"
+        },
+        {
+          "unique_id": "model.jaffle_shop.locations",
+          "name": "locations",
+          "folder": "models/marts",
+          "expected_pattern": "^fct_ or ^dim_",
+          "layer": "marts"
+        },
+        {
+          "unique_id": "model.jaffle_shop.orders",
+          "name": "orders",
+          "folder": "models/marts",
+          "expected_pattern": "^fct_ or ^dim_",
+          "layer": "marts"
+        },
+        {
+          "unique_id": "model.jaffle_shop.customers",
+          "name": "customers",
+          "folder": "models/marts",
+          "expected_pattern": "^fct_ or ^dim_",
+          "layer": "marts"
+        },
+        {
+          "unique_id": "model.jaffle_shop.order_items",
+          "name": "order_items",
+          "folder": "models/marts",
+          "expected_pattern": "^fct_ or ^dim_",
+          "layer": "marts"
+        },
+        {
+          "unique_id": "model.jaffle_shop.supplies",
+          "name": "supplies",
+          "folder": "models/marts",
+          "expected_pattern": "^fct_ or ^dim_",
+          "layer": "marts"
+        },
+        {
+          "unique_id": "model.jaffle_shop.products",
+          "name": "products",
+          "folder": "models/marts",
+          "expected_pattern": "^fct_ or ^dim_",
+          "layer": "marts"
+        }
+      ]
+    },
+    "orphans": [
+      {
+        "unique_id": "model.jaffle_shop.metricflow_time_spine",
+        "name": "metricflow_time_spine",
+        "folder": "models/marts"
+      }
+    ]
+  },
+  "search_index": [
+    {
+      "unique_id": "model.jaffle_shop.metricflow_time_spine",
+      "name": "metricflow_time_spine",
+      "resource_type": "model",
+      "description": "",
+      "columns": "date_day",
+      "tags": "",
+      "sql_snippet": "-- metricflow_time_spine.sql\nwith\n\ndays as (\n\n    --for BQ adapters use \"DATE('01/01/2000','mm/dd/yyyy')\"\n    {{ dbt_date.get_base_dates(n_dateparts=365*10, datepart=\"day\") }}\n\n),\n\ncast_to_date as (\n\n    select cast(date_day as date) as date_day\n\n    from days\n\n)\n\nselect * from cast_to_date"
+    },
+    {
+      "unique_id": "model.jaffle_shop.locations",
+      "name": "locations",
+      "resource_type": "model",
+      "description": "",
+      "columns": "location_id, location_name, tax_rate, opened_date",
+      "tags": "",
+      "sql_snippet": "with\n\nlocations as (\n\n    select * from {{ ref('stg_locations') }}\n\n)\n\nselect * from locations"
+    },
+    {
+      "unique_id": "model.jaffle_shop.orders",
+      "name": "orders",
+      "resource_type": "model",
+      "description": "Order overview data mart, offering key details for each order inlcluding if it's a customer's first order and a food vs. drink item breakdown. One row per order.",
+      "columns": "order_id, location_id, customer_id, subtotal_cents, tax_paid_cents, order_total_cents, subtotal, tax_paid, order_total, ordered_at, order_cost, order_items_subtotal, count_food_items, count_drink_items, count_order_items, is_food_order, is_drink_order, customer_order_number",
+      "tags": "",
+      "sql_snippet": "with\n\norders as (\n\n    select * from {{ ref('stg_orders') }}\n\n),\n\norder_items as (\n\n    select * from {{ ref('order_items') }}\n\n),\n\norder_items_summary as (\n\n    select\n        order_id,\n\n        sum(supply_cost) as order_cost,\n        sum(product_price) as order_items_subtotal,\n        count(order_item_id) as count_order_items,\n        sum(\n            case\n                when is_food_item then 1\n                else 0\n            end\n        ) as count_food_items,\n        sum(\n            cas"
+    },
+    {
+      "unique_id": "model.jaffle_shop.customers",
+      "name": "customers",
+      "resource_type": "model",
+      "description": "Customer overview data mart, offering key details for each unique customer. One row per customer.",
+      "columns": "customer_id, customer_name, count_lifetime_orders, first_ordered_at, last_ordered_at, lifetime_spend_pretax, lifetime_tax_paid, lifetime_spend, customer_type",
+      "tags": "",
+      "sql_snippet": "with\n\ncustomers as (\n\n    select * from {{ ref('stg_customers') }}\n\n),\n\norders as (\n\n    select * from {{ ref('orders') }}\n\n),\n\ncustomer_orders_summary as (\n\n    select\n        orders.customer_id,\n\n        count(distinct orders.order_id) as count_lifetime_orders,\n        count(distinct orders.order_id) > 1 as is_repeat_buyer,\n        min(orders.ordered_at) as first_ordered_at,\n        max(orders.ordered_at) as last_ordered_at,\n        sum(orders.subtotal) as lifetime_spend_pretax,\n        sum(or"
+    },
+    {
+      "unique_id": "model.jaffle_shop.order_items",
+      "name": "order_items",
+      "resource_type": "model",
+      "description": "",
+      "columns": "order_item_id, order_id, product_id, ordered_at, product_name, product_price, is_food_item, is_drink_item, supply_cost",
+      "tags": "",
+      "sql_snippet": "with\n\norder_items as (\n\n    select * from {{ ref('stg_order_items') }}\n\n),\n\n\norders as (\n\n    select * from {{ ref('stg_orders') }}\n\n),\n\nproducts as (\n\n    select * from {{ ref('stg_products') }}\n\n),\n\nsupplies as (\n\n    select * from {{ ref('stg_supplies') }}\n\n),\n\norder_supplies_summary as (\n\n    select\n        product_id,\n\n        sum(supply_cost) as supply_cost\n\n    from supplies\n\n    group by 1\n\n),\n\njoined as (\n\n    select\n        order_items.*,\n\n        orders.ordered_at,\n\n        products.p"
+    },
+    {
+      "unique_id": "model.jaffle_shop.supplies",
+      "name": "supplies",
+      "resource_type": "model",
+      "description": "",
+      "columns": "supply_uuid, supply_id, product_id, supply_name, supply_cost, is_perishable_supply",
+      "tags": "",
+      "sql_snippet": "with\n\nsupplies as (\n\n    select * from {{ ref('stg_supplies') }}\n\n)\n\nselect * from supplies"
+    },
+    {
+      "unique_id": "model.jaffle_shop.products",
+      "name": "products",
+      "resource_type": "model",
+      "description": "",
+      "columns": "product_id, product_name, product_type, product_description, product_price, is_food_item, is_drink_item",
+      "tags": "",
+      "sql_snippet": "with\n\nproducts as (\n\n    select * from {{ ref('stg_products') }}\n\n)\n\nselect * from products"
+    },
+    {
+      "unique_id": "model.jaffle_shop.stg_orders",
+      "name": "stg_orders",
+      "resource_type": "model",
+      "description": "Order data with basic cleaning and transformation applied, one row per order.",
+      "columns": "order_id, location_id, customer_id, subtotal_cents, tax_paid_cents, order_total_cents, subtotal, tax_paid, order_total, ordered_at",
+      "tags": "",
+      "sql_snippet": "with\n\nsource as (\n\n    select * from {{ source('ecom', 'raw_orders') }}\n\n),\n\nrenamed as (\n\n    select\n\n        ----------  ids\n        id as order_id,\n        store_id as location_id,\n        customer as customer_id,\n\n        ---------- numerics\n        subtotal as subtotal_cents,\n        tax_paid as tax_paid_cents,\n        order_total as order_total_cents,\n        {{ cents_to_dollars('subtotal') }} as subtotal,\n        {{ cents_to_dollars('tax_paid') }} as tax_paid,\n        {{ cents_to_dollars("
+    },
+    {
+      "unique_id": "model.jaffle_shop.stg_customers",
+      "name": "stg_customers",
+      "resource_type": "model",
+      "description": "Customer data with basic cleaning and transformation applied, one row per customer.",
+      "columns": "customer_id, customer_name",
+      "tags": "",
+      "sql_snippet": "with\n\nsource as (\n\n    select * from {{ source('ecom', 'raw_customers') }}\n\n),\n\nrenamed as (\n\n    select\n\n        ----------  ids\n        id as customer_id,\n\n        ---------- text\n        name as customer_name\n\n    from source\n\n)\n\nselect * from renamed"
+    },
+    {
+      "unique_id": "model.jaffle_shop.stg_locations",
+      "name": "stg_locations",
+      "resource_type": "model",
+      "description": "List of open locations with basic cleaning and transformation applied, one row per location.",
+      "columns": "location_id, location_name, tax_rate, opened_date",
+      "tags": "",
+      "sql_snippet": "with\n\nsource as (\n\n    select * from {{ source('ecom', 'raw_stores') }}\n\n),\n\nrenamed as (\n\n    select\n\n        ----------  ids\n        id as location_id,\n\n        ---------- text\n        name as location_name,\n\n        ---------- numerics\n        tax_rate,\n\n        ---------- timestamps\n        {{ dbt.date_trunc('day', 'opened_at') }} as opened_date\n\n    from source\n\n)\n\nselect * from renamed"
+    },
+    {
+      "unique_id": "model.jaffle_shop.stg_products",
+      "name": "stg_products",
+      "resource_type": "model",
+      "description": "Product (food and drink items that can be ordered) data with basic cleaning and transformation applied, one row per product.",
+      "columns": "product_id, product_name, product_type, product_description, product_price, is_food_item, is_drink_item",
+      "tags": "",
+      "sql_snippet": "with\n\nsource as (\n\n    select * from {{ source('ecom', 'raw_products') }}\n\n),\n\nrenamed as (\n\n    select\n\n        ----------  ids\n        sku as product_id,\n\n        ---------- text\n        name as product_name,\n        type as product_type,\n        description as product_description,\n\n\n        ---------- numerics\n        {{ cents_to_dollars('price') }} as product_price,\n\n        ---------- booleans\n        coalesce(type = 'jaffle', false) as is_food_item,\n\n        coalesce(type = 'beverage', fal"
+    },
+    {
+      "unique_id": "model.jaffle_shop.stg_order_items",
+      "name": "stg_order_items",
+      "resource_type": "model",
+      "description": "Individual food and drink items that make up our orders, one row per item.",
+      "columns": "order_item_id, order_id, product_id",
+      "tags": "",
+      "sql_snippet": "with\n\nsource as (\n\n    select * from {{ source('ecom', 'raw_items') }}\n\n),\n\nrenamed as (\n\n    select\n\n        ----------  ids\n        id as order_item_id,\n        order_id,\n        sku as product_id\n\n    from source\n\n)\n\nselect * from renamed"
+    },
+    {
+      "unique_id": "model.jaffle_shop.stg_supplies",
+      "name": "stg_supplies",
+      "resource_type": "model",
+      "description": "List of our supply expenses data with basic cleaning and transformation applied.\nOne row per supply cost, not per supply. As supply costs fluctuate they receive a new row with a new UUID. Thus there can be multiple rows per supply_id.\n",
+      "columns": "supply_uuid, supply_id, product_id, supply_name, supply_cost, is_perishable_supply",
+      "tags": "",
+      "sql_snippet": "with\n\nsource as (\n\n    select * from {{ source('ecom', 'raw_supplies') }}\n\n),\n\nrenamed as (\n\n    select\n\n        ----------  ids\n        {{ dbt_utils.generate_surrogate_key(['id', 'sku']) }} as supply_uuid,\n        id as supply_id,\n        sku as product_id,\n\n        ---------- text\n        name as supply_name,\n\n        ---------- numerics\n        {{ cents_to_dollars('cost') }} as supply_cost,\n\n        ---------- booleans\n        perishable as is_perishable_supply\n\n    from source\n\n)\n\nselect * f"
+    },
+    {
+      "unique_id": "source.jaffle_shop.ecom.raw_customers",
+      "name": "raw_customers",
+      "resource_type": "source",
+      "description": "One record per person who has purchased one or more items",
+      "columns": "id, name",
+      "tags": "",
+      "sql_snippet": ""
+    },
+    {
+      "unique_id": "source.jaffle_shop.ecom.raw_orders",
+      "name": "raw_orders",
+      "resource_type": "source",
+      "description": "One record per order (consisting of one or more order items)",
+      "columns": "id, customer, ordered_at, store_id, subtotal, tax_paid, order_total",
+      "tags": "",
+      "sql_snippet": ""
+    },
+    {
+      "unique_id": "source.jaffle_shop.ecom.raw_items",
+      "name": "raw_items",
+      "resource_type": "source",
+      "description": "Items included in an order",
+      "columns": "id, order_id, sku",
+      "tags": "",
+      "sql_snippet": ""
+    },
+    {
+      "unique_id": "source.jaffle_shop.ecom.raw_stores",
+      "name": "raw_stores",
+      "resource_type": "source",
+      "description": "E-commerce data for the Jaffle Shop",
+      "columns": "id, name, opened_at, tax_rate",
+      "tags": "",
+      "sql_snippet": ""
+    },
+    {
+      "unique_id": "source.jaffle_shop.ecom.raw_products",
+      "name": "raw_products",
+      "resource_type": "source",
+      "description": "One record per SKU for items sold in stores",
+      "columns": "sku, name, type, price, description",
+      "tags": "",
+      "sql_snippet": ""
+    },
+    {
+      "unique_id": "source.jaffle_shop.ecom.raw_supplies",
+      "name": "raw_supplies",
+      "resource_type": "source",
+      "description": "One record per supply per SKU of items sold in stores",
+      "columns": "id, name, cost, perishable, sku",
+      "tags": "",
+      "sql_snippet": ""
+    }
+  ],
+  "ai_context": null,
+  "ai_key": null
+}

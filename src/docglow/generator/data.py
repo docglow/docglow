@@ -1,4 +1,4 @@
-"""Transform dbt artifacts into the unified DatumData JSON payload."""
+"""Transform dbt artifacts into the unified DocglowData JSON payload."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ from docglow.artifacts.run_results import RunResult, RunResults
 
 
 @dataclass(frozen=True)
-class DatumColumnTest:
+class DocglowColumnTest:
     test_name: str
     test_type: str
     status: str  # pass | fail | warn | error | not_run
@@ -24,18 +24,18 @@ class DatumColumnTest:
 
 
 @dataclass(frozen=True)
-class DatumColumn:
+class DocglowColumn:
     name: str
     description: str
     data_type: str
     meta: dict[str, Any]
     tags: list[str]
-    tests: list[DatumColumnTest]
+    tests: list[DocglowColumnTest]
     profile: None = None  # Populated in Phase 2
 
 
 @dataclass(frozen=True)
-class DatumTestResult:
+class DocglowTestResult:
     test_name: str
     test_type: str
     column_name: str | None
@@ -46,21 +46,21 @@ class DatumTestResult:
 
 
 @dataclass(frozen=True)
-class DatumLastRun:
+class DocglowLastRun:
     status: str | None
     execution_time: float | None
     completed_at: str | None
 
 
 @dataclass(frozen=True)
-class DatumCatalogStats:
+class DocglowCatalogStats:
     row_count: int | None
     bytes: int | None
     has_stats: bool
 
 
 @dataclass(frozen=True)
-class DatumModel:
+class DocglowModel:
     unique_id: str
     name: str
     description: str
@@ -73,24 +73,24 @@ class DatumModel:
     folder: str
     raw_sql: str
     compiled_sql: str
-    columns: list[DatumColumn]
+    columns: list[DocglowColumn]
     depends_on: list[str]
     referenced_by: list[str]
     sources_used: list[str]
-    test_results: list[DatumTestResult]
-    last_run: DatumLastRun | None
-    catalog_stats: DatumCatalogStats
+    test_results: list[DocglowTestResult]
+    last_run: DocglowLastRun | None
+    catalog_stats: DocglowCatalogStats
 
 
 @dataclass(frozen=True)
-class DatumSource:
+class DocglowSource:
     unique_id: str
     name: str
     source_name: str
     description: str
     schema: str
     database: str
-    columns: list[DatumColumn]
+    columns: list[DocglowColumn]
     tags: list[str]
     meta: dict[str, Any]
     loader: str
@@ -131,7 +131,7 @@ class SearchEntry:
 
 
 @dataclass(frozen=True)
-class DatumMetadata:
+class DocglowMetadata:
     generated_at: str
     docglow_version: str
     dbt_version: str
@@ -141,11 +141,16 @@ class DatumMetadata:
     artifact_versions: dict[str, str | None]
     profiling_enabled: bool
     ai_enabled: bool
+    hosted: bool = False
+    workspace_slug: str | None = None
+    project_slug: str | None = None
+    api_base_url: str | None = None
+    published_at: str | None = None
 
 
 @dataclass(frozen=True)
-class DatumData:
-    metadata: DatumMetadata
+class DocglowData:
+    metadata: DocglowMetadata
     models: dict[str, dict[str, Any]]
     sources: dict[str, dict[str, Any]]
     seeds: dict[str, dict[str, Any]]
@@ -166,7 +171,7 @@ def build_docglow_data(
     select: str | None = None,
     exclude: str | None = None,
 ) -> dict[str, Any]:
-    """Transform loaded artifacts into the unified DatumData payload.
+    """Transform loaded artifacts into the unified DocglowData payload.
 
     Returns a plain dict suitable for JSON serialization.
     """
@@ -274,6 +279,11 @@ def build_docglow_data(
         },
         "profiling_enabled": profiling_enabled,
         "ai_enabled": ai_enabled,
+        "hosted": False,
+        "workspace_slug": None,
+        "project_slug": None,
+        "api_base_url": None,
+        "published_at": None,
     }
 
     # Resolve AI key: explicit param > env var
@@ -443,7 +453,7 @@ def _transform_model(
     test_nodes_by_model: dict[str, list[ManifestNode]],
     reverse_deps: dict[str, list[str]],
 ) -> dict[str, Any]:
-    """Transform a manifest node + catalog data into a DatumModel dict."""
+    """Transform a manifest node + catalog data into a DocglowModel dict."""
     catalog_node = catalog.nodes.get(node.unique_id)
 
     # Merge column info from manifest + catalog
@@ -678,7 +688,7 @@ def _transform_source(
     catalog: Catalog,
     source_freshness: Any | None,
 ) -> dict[str, Any]:
-    """Transform a manifest source into a DatumSource dict."""
+    """Transform a manifest source into a DocglowSource dict."""
     catalog_node = catalog.sources.get(source.unique_id)
 
     # Merge columns

@@ -59,7 +59,7 @@ class AiConfig:
 
 
 @dataclass(frozen=True)
-class DatumConfig:
+class DocglowConfig:
     version: int = 1
     title: str = "docglow"
     theme: str = "auto"
@@ -73,7 +73,7 @@ class DatumConfig:
     output_dir: Path | None = None
 
 
-def load_config(project_dir: Path) -> DatumConfig:
+def load_config(project_dir: Path) -> DocglowConfig:
     """Load configuration from docglow.yml in the project directory.
 
     Falls back to default config if no file is found.
@@ -84,11 +84,11 @@ def load_config(project_dir: Path) -> DatumConfig:
             logger.info("Loading config from %s", config_path)
             return _parse_config_file(config_path)
 
-    return DatumConfig()
+    return DocglowConfig()
 
 
-def _parse_config_file(path: Path) -> DatumConfig:
-    """Parse a docglow.yml config file into a DatumConfig."""
+def _parse_config_file(path: Path) -> DocglowConfig:
+    """Parse a docglow.yml config file into a DocglowConfig."""
     try:
         import yaml
     except ImportError as e:
@@ -100,13 +100,13 @@ def _parse_config_file(path: Path) -> DatumConfig:
     raw = yaml.safe_load(path.read_text(encoding="utf-8"))
     if not isinstance(raw, dict):
         logger.warning("Invalid config file %s — using defaults", path)
-        return DatumConfig()
+        return DocglowConfig()
 
     return _build_config_from_dict(raw)
 
 
-def _build_config_from_dict(raw: dict[str, Any]) -> DatumConfig:
-    """Build a DatumConfig from a parsed YAML dict."""
+def _build_config_from_dict(raw: dict[str, Any]) -> DocglowConfig:
+    """Build a DocglowConfig from a parsed YAML dict."""
     health_raw = raw.get("health", {})
     profiling_raw = raw.get("profiling", {})
     ai_raw = raw.get("ai", {})
@@ -140,7 +140,7 @@ def _build_config_from_dict(raw: dict[str, Any]) -> DatumConfig:
         max_requests_per_session=ai_raw.get("max_requests_per_session", 20),
     ) if ai_raw else AiConfig()
 
-    return DatumConfig(
+    return DocglowConfig(
         version=raw.get("version", 1),
         title=raw.get("title", "docglow"),
         theme=raw.get("theme", "auto"),

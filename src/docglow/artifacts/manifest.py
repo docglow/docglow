@@ -114,7 +114,7 @@ class ManifestSource(BaseModel):
     loader: str = ""
     identifier: str | None = None
     loaded_at_field: str | None = None
-    freshness: FreshnessConfig = Field(default_factory=FreshnessConfig)
+    freshness: FreshnessConfig | None = Field(default_factory=FreshnessConfig)
     relation_name: str | None = None
 
 

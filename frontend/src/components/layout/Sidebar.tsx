@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useProjectStore } from '../../stores/projectStore'
-import type { DatumModel, DatumSource } from '../../types'
+import type { DocglowModel, DocglowSource } from '../../types'
 
 interface TreeNode {
   name: string
@@ -12,8 +12,8 @@ interface TreeNode {
 }
 
 function buildTree(
-  models: Record<string, DatumModel>,
-  sources: Record<string, DatumSource>,
+  models: Record<string, DocglowModel>,
+  sources: Record<string, DocglowSource>,
 ): TreeNode {
   const root: TreeNode = { name: 'root', path: '', children: new Map() }
 

@@ -1,4 +1,4 @@
-"""Tests for the data transformer (artifacts -> DatumData payload)."""
+"""Tests for the data transformer (artifacts -> DocglowData payload)."""
 
 from pathlib import Path
 
@@ -12,7 +12,7 @@ FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
 
 def _load_fixtures(tmp_path: Path) -> dict:
-    """Helper to load fixtures and build datum data."""
+    """Helper to load fixtures and build docglow data."""
     target = tmp_path / "target"
     target.mkdir()
     for name in ("manifest.json", "catalog.json", "run_results.json"):
@@ -24,7 +24,7 @@ def _load_fixtures(tmp_path: Path) -> dict:
     return build_docglow_data(artifacts)
 
 
-class TestBuildDatumData:
+class TestBuildDocglowData:
     """Test the full data transformation pipeline."""
 
     def test_top_level_keys(self, tmp_path: Path) -> None:

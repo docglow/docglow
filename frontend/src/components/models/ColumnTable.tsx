@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import type { DatumColumn, ColumnProfile, TopValue, HistogramBin } from '../../types'
+import type { DocglowColumn, ColumnProfile, TopValue, HistogramBin } from '../../types'
 import { TestBadge } from '../tests/TestBadge'
 import { formatNumber, formatPercent } from '../../utils/formatting'
 
 interface ColumnTableProps {
-  columns: DatumColumn[]
+  columns: DocglowColumn[]
 }
 
 function NullBar({ rate }: { rate: number }) {

@@ -10,11 +10,11 @@ import { HealthPage } from './pages/HealthPage'
 import { SearchPage } from './pages/SearchPage'
 import { useProjectStore } from './stores/projectStore'
 import { useSearchStore } from './stores/searchStore'
-import type { DatumData } from './types'
+import type { DocglowData } from './types'
 
 declare global {
   interface Window {
-    __DOCGLOW_DATA__?: DatumData
+    __DOCGLOW_DATA__?: DocglowData
   }
 }
 

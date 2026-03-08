@@ -1,21 +1,21 @@
 import { create } from 'zustand'
-import type { DatumData, DatumModel, DatumSource } from '../types'
+import type { DocglowData, DocglowModel, DocglowSource } from '../types'
 import { useChatStore } from './chatStore'
 
 interface ProjectState {
-  data: DatumData | null
+  data: DocglowData | null
   loading: boolean
   error: string | null
   theme: 'light' | 'dark'
 
-  loadData: (data: DatumData) => void
+  loadData: (data: DocglowData) => void
   fetchData: (url?: string) => Promise<void>
   setTheme: (theme: 'light' | 'dark') => void
   toggleTheme: () => void
 
-  getModel: (uniqueId: string) => DatumModel | undefined
-  getSource: (uniqueId: string) => DatumSource | undefined
-  getResource: (uniqueId: string) => DatumModel | DatumSource | undefined
+  getModel: (uniqueId: string) => DocglowModel | undefined
+  getSource: (uniqueId: string) => DocglowSource | undefined
+  getResource: (uniqueId: string) => DocglowModel | DocglowSource | undefined
 }
 
 function getInitialTheme(): 'light' | 'dark' {
@@ -31,7 +31,7 @@ function applyTheme(theme: 'light' | 'dark') {
   localStorage.setItem('dg-theme', theme)
 }
 
-function _applyEmbeddedAiKey(data: DatumData) {
+function _applyEmbeddedAiKey(data: DocglowData) {
   if (data.ai_key && !useChatStore.getState().apiKey) {
     useChatStore.getState().setApiKey(data.ai_key)
   }
@@ -59,7 +59,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         if (!response.ok) {
           throw new Error(`Failed to load data: ${response.status}`)
         }
-        const data: DatumData = await response.json()
+        const data: DocglowData = await response.json()
         set({ data, loading: false, error: null })
         _applyEmbeddedAiKey(data)
       } catch (err) {
