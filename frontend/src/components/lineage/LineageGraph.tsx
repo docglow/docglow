@@ -1,7 +1,8 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { LineageNode, LineageEdge } from '../../types'
 import { useLineageLayout, type LayoutNode } from '../../hooks/useLineage'
+import { getFullChain } from '../../utils/graphTraversal'
 
 interface LineageGraphProps {
   nodes: LineageNode[]
@@ -26,7 +27,7 @@ const TEST_STATUS_BORDER: Record<string, string> = {
   none: 'transparent',
 }
 
-function EdgePath({ points }: { points: { x: number; y: number }[] }) {
+function EdgePath({ points, highlighted }: { points: { x: number; y: number }[]; highlighted: boolean }) {
   if (points.length < 2) return null
 
   const d = points
@@ -37,9 +38,9 @@ function EdgePath({ points }: { points: { x: number; y: number }[] }) {
     <path
       d={d}
       fill="none"
-      stroke="var(--text-muted, #94a3b8)"
-      strokeWidth={1.5}
-      strokeOpacity={0.5}
+      stroke={highlighted ? '#2563eb' : 'var(--text-muted, #94a3b8)'}
+      strokeWidth={highlighted ? 2 : 1.5}
+      strokeOpacity={highlighted ? 0.8 : 0.3}
       markerEnd="url(#arrowhead)"
     />
   )
@@ -123,18 +124,12 @@ export function LineageGraph({ nodes, edges, highlightId, onNodeClick }: Lineage
   const [isPanning, setIsPanning] = useState(false)
   const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 })
 
-  // Build adjacency for highlighting
-  const adjacency = useCallback((nodeId: string | null): Set<string> => {
-    if (!nodeId) return new Set(nodes.map(n => n.id))
-    const connected = new Set([nodeId])
-    for (const e of edges) {
-      if (e.source === nodeId) connected.add(e.target)
-      if (e.target === nodeId) connected.add(e.source)
-    }
-    return connected
-  }, [nodes, edges])
-
-  const highlighted = adjacency(hoveredId ?? highlightId ?? null)
+  // Build full-chain highlighting (upstream + downstream)
+  const activeId = hoveredId ?? highlightId ?? null
+  const highlighted = useMemo(() => {
+    if (!activeId) return new Set(nodes.map(n => n.id))
+    return getFullChain(activeId, edges)
+  }, [activeId, nodes, edges])
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault()
@@ -222,7 +217,11 @@ export function LineageGraph({ nodes, edges, highlightId, onNodeClick }: Lineage
         </defs>
         <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
           {layout.edges.map((edge, i) => (
-            <EdgePath key={i} points={edge.points} />
+            <EdgePath
+              key={i}
+              points={edge.points}
+              highlighted={!!activeId && highlighted.has(edge.source) && highlighted.has(edge.target)}
+            />
           ))}
           {layout.nodes.map((node) => (
             <DagNode
@@ -237,6 +236,52 @@ export function LineageGraph({ nodes, edges, highlightId, onNodeClick }: Lineage
           ))}
         </g>
       </svg>
+
+      {/* Mini-map */}
+      {layout.width > 0 && layout.height > 0 && (
+        <div className="absolute top-3 right-3 border border-[var(--border)] rounded bg-[var(--bg)] overflow-hidden opacity-80 hover:opacity-100 transition-opacity"
+             style={{ width: 160, height: 100 }}>
+          <svg width="160" height="100" viewBox={`0 0 ${layout.width} ${layout.height}`} preserveAspectRatio="xMidYMid meet">
+            {layout.edges.map((edge, i) => {
+              if (edge.points.length < 2) return null
+              const d = edge.points.map((p, j) => `${j === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ')
+              return <path key={i} d={d} fill="none" stroke="var(--text-muted, #94a3b8)" strokeWidth={3} strokeOpacity={0.3} />
+            })}
+            {layout.nodes.map(node => (
+              <rect
+                key={node.id}
+                x={node.x}
+                y={node.y}
+                width={node.width}
+                height={node.height}
+                rx={3}
+                fill={RESOURCE_COLORS[node.resource_type] ?? '#6b7280'}
+                fillOpacity={0.6}
+              />
+            ))}
+            {containerRef.current && (() => {
+              const rect = containerRef.current!.getBoundingClientRect()
+              const vpW = rect.width / zoom
+              const vpH = rect.height / zoom
+              const vpX = -pan.x / zoom
+              const vpY = -pan.y / zoom
+              return (
+                <rect
+                  x={vpX}
+                  y={vpY}
+                  width={vpW}
+                  height={vpH}
+                  fill="none"
+                  stroke="var(--text, #0f172a)"
+                  strokeWidth={4}
+                  strokeOpacity={0.4}
+                  rx={2}
+                />
+              )
+            })()}
+          </svg>
+        </div>
+      )}
 
       {/* Zoom controls */}
       <div className="absolute bottom-3 right-3 flex gap-1">

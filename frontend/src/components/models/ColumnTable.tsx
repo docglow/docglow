@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { DatumColumn, ColumnProfile, TopValue } from '../../types'
+import type { DatumColumn, ColumnProfile, TopValue, HistogramBin } from '../../types'
 import { TestBadge } from '../tests/TestBadge'
 import { formatNumber, formatPercent } from '../../utils/formatting'
 
@@ -40,6 +40,28 @@ function TopValuesChart({ values, rowCount }: { values: TopValue[]; rowCount: nu
           )}
         </div>
       ))}
+    </div>
+  )
+}
+
+function Histogram({ bins }: { bins: HistogramBin[] }) {
+  const maxCount = Math.max(...bins.map(b => b.count))
+  if (maxCount === 0) return null
+  const barHeight = 32
+
+  return (
+    <div className="flex items-end gap-px" style={{ height: barHeight }} title="Value distribution">
+      {bins.map((bin, i) => {
+        const h = maxCount > 0 ? (bin.count / maxCount) * barHeight : 0
+        return (
+          <div
+            key={i}
+            className="flex-1 bg-primary/60 rounded-t-sm hover:bg-primary/80 transition-colors"
+            style={{ height: `${h}px`, minWidth: 4 }}
+            title={`${bin.low.toFixed(1)} – ${bin.high.toFixed(1)}: ${bin.count}`}
+          />
+        )
+      })}
     </div>
   )
 }
@@ -139,6 +161,13 @@ function ProfileDetail({ profile }: { profile: ColumnProfile }) {
           </>
         )}
       </div>
+
+      {profile.histogram && profile.histogram.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-[var(--border)]">
+          <div className="text-xs text-[var(--text-muted)] mb-1.5">Distribution</div>
+          <Histogram bins={profile.histogram} />
+        </div>
+      )}
 
       {profile.top_values && profile.top_values.length > 0 && (
         <div className="mt-3 pt-3 border-t border-[var(--border)]">

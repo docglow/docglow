@@ -90,6 +90,43 @@ def parse_top_values_rows(
     ]
 
 
+def parse_histogram_rows(
+    rows: list[dict[str, Any]],
+    col_min: float,
+    col_max: float,
+    num_bins: int = 10,
+) -> list[dict[str, Any]]:
+    """Parse histogram query results into a list of {low, high, count} bins.
+
+    Args:
+        rows: Query result rows with 'bucket' and 'freq' columns.
+        col_min: Minimum value of the column.
+        col_max: Maximum value of the column.
+        num_bins: Number of bins used in the query.
+
+    Returns:
+        List of histogram bin dicts with low, high, count.
+    """
+    if col_min is None or col_max is None or col_max <= col_min:
+        return []
+
+    bin_width = (col_max - col_min) / num_bins
+    freq_by_bucket: dict[int, int] = {}
+    for r in rows:
+        bucket = int(r.get("bucket", 0))
+        freq = int(r.get("freq", 0))
+        freq_by_bucket[bucket] = freq
+
+    bins: list[dict[str, Any]] = []
+    for i in range(1, num_bins + 1):
+        low = round(col_min + (i - 1) * bin_width, 6)
+        high = round(col_min + i * bin_width, 6)
+        count = freq_by_bucket.get(i, 0)
+        bins.append({"low": low, "high": high, "count": count})
+
+    return bins
+
+
 def _get_int(row: dict[str, Any], key: str, default: int = 0) -> int:
     val = row.get(key)
     if val is None:

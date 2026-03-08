@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { DatumData, DatumModel, DatumSource } from '../types'
+import { useChatStore } from './chatStore'
 
 interface ProjectState {
   data: DatumData | null
@@ -30,6 +31,12 @@ function applyTheme(theme: 'light' | 'dark') {
   localStorage.setItem('dpp-theme', theme)
 }
 
+function _applyEmbeddedAiKey(data: DatumData) {
+  if (data.ai_key && !useChatStore.getState().apiKey) {
+    useChatStore.getState().setApiKey(data.ai_key)
+  }
+}
+
 export const useProjectStore = create<ProjectState>((set, get) => {
   const initialTheme = getInitialTheme()
   applyTheme(initialTheme)
@@ -40,7 +47,10 @@ export const useProjectStore = create<ProjectState>((set, get) => {
     error: null,
     theme: initialTheme,
 
-    loadData: (data) => set({ data, loading: false, error: null }),
+    loadData: (data) => {
+      set({ data, loading: false, error: null })
+      _applyEmbeddedAiKey(data)
+    },
 
     fetchData: async (url = './datum-data.json') => {
       set({ loading: true, error: null })
@@ -51,6 +61,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         }
         const data: DatumData = await response.json()
         set({ data, loading: false, error: null })
+        _applyEmbeddedAiKey(data)
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to load project data'
         set({ loading: false, error: message })

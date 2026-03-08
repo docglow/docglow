@@ -37,6 +37,18 @@ function getStoredKey(): string {
   }
 }
 
+function getEmbeddedKey(): string {
+  try {
+    const datumData = (window as unknown as Record<string, unknown>).__DATUM_DATA__ as Record<string, unknown> | undefined
+    if (datumData?.ai_key && typeof datumData.ai_key === 'string') {
+      return datumData.ai_key
+    }
+  } catch {
+    // ignore
+  }
+  return ''
+}
+
 function storeKey(key: string) {
   try {
     if (key) {
@@ -91,7 +103,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   messages: [],
   streaming: false,
   streamContent: '',
-  apiKey: getStoredKey(),
+  apiKey: getStoredKey() || getEmbeddedKey(),
   requestCount: 0,
   maxRequests: MAX_REQUESTS,
   error: null,

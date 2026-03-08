@@ -40,6 +40,7 @@ def cli() -> None:
 @click.option("--exclude", type=str, default=None, help="Exclude matching models")
 @click.option("--static", is_flag=True, help="Bundle everything into single index.html")
 @click.option("--ai", is_flag=True, help="Enable AI chat panel")
+@click.option("--ai-key", type=str, default=None, help="Anthropic API key (or set ANTHROPIC_API_KEY env var)")
 @click.option("--title", type=str, default=None, help="Custom site title")
 @click.option("--theme", type=click.Choice(["light", "dark", "auto"]), default="auto")
 @click.option("--verbose", is_flag=True)
@@ -56,6 +57,7 @@ def generate(
     exclude: str | None,
     static: bool,
     ai: bool,
+    ai_key: str | None,
     title: str | None,
     theme: str,
     verbose: bool,
@@ -64,7 +66,19 @@ def generate(
     _setup_logging(verbose)
 
     from docs_plus_plus.artifacts.loader import ArtifactLoadError
+    from docs_plus_plus.config import load_config
     from docs_plus_plus.generator.site import generate_site
+
+    # Load config file (datum.yml)
+    config = load_config(project_dir)
+
+    # CLI flags override config file values
+    if not ai and config.ai.enabled:
+        ai = True
+    if ai_key:
+        ai = True  # --ai-key implies --ai
+    if not title and config.title != "docs-plus-plus":
+        title = config.title
 
     # Parse profiling connection params
     profiling_connection = None
@@ -83,7 +97,10 @@ def generate(
             profiling_sample_size=profile_sample_size,
             profiling_cache=not profile_no_cache,
             ai_enabled=ai,
+            ai_key=ai_key,
             title=title,
+            select=select,
+            exclude=exclude,
         )
         console.print(f"\n[bold green]Site generated at {output_path}[/bold green]")
         if static:
@@ -103,7 +120,9 @@ def generate(
 @click.option("--host", type=str, default="127.0.0.1")
 @click.option("--open/--no-open", default=True, help="Auto-open browser")
 @click.option("--dir", "serve_dir", type=click.Path(path_type=Path), default=None)
-def serve(port: int, host: str, open: bool, serve_dir: Path | None) -> None:
+@click.option("--watch", is_flag=True, help="Watch for artifact changes and auto-rebuild")
+@click.option("--project-dir", type=click.Path(exists=True, path_type=Path), default=".")
+def serve(port: int, host: str, open: bool, serve_dir: Path | None, watch: bool, project_dir: Path) -> None:
     """Serve the documentation site locally."""
     from docs_plus_plus.server.dev import start_server
 
@@ -114,6 +133,10 @@ def serve(port: int, host: str, open: bool, serve_dir: Path | None) -> None:
             "Run [bold]docs-plus-plus generate[/bold] first."
         )
         raise SystemExit(1)
+
+    if watch:
+        from docs_plus_plus.server.watcher import start_watcher
+        start_watcher(project_dir, resolved_dir, console)
 
     start_server(resolved_dir, host=host, port=port, open_browser=open)
 

@@ -10,6 +10,7 @@ export interface DatumData {
   health: HealthData
   search_index: SearchEntry[]
   ai_context: AiContext | null
+  ai_key: string | null
 }
 
 export interface DatumMetadata {
@@ -84,11 +85,18 @@ export interface ColumnProfile {
   max_length?: number | null
   avg_length?: number | null
   top_values?: TopValue[] | null
+  histogram?: HistogramBin[] | null
 }
 
 export interface TopValue {
   value: string
   frequency: number
+}
+
+export interface HistogramBin {
+  low: number
+  high: number
+  count: number
 }
 
 export interface TestResult {

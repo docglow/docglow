@@ -15,10 +15,15 @@ from docs_plus_plus.profiler.cache import (
 )
 from docs_plus_plus.profiler.queries import (
     build_column_specs,
+    build_histogram_query,
     build_stats_query,
     build_top_values_query,
 )
-from docs_plus_plus.profiler.stats import parse_stats_row, parse_top_values_rows
+from docs_plus_plus.profiler.stats import (
+    parse_histogram_rows,
+    parse_stats_row,
+    parse_top_values_rows,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -156,6 +161,24 @@ def profile_models(
                                 col_profile["top_values"] = parse_top_values_rows(tv_rows)
                             except Exception as e:
                                 logger.debug("Top values query failed for %s.%s: %s", table_name, col_spec.name, e)
+
+                        # Fetch histogram for numeric columns
+                        if col_spec.category == "numeric":
+                            col_min = col_profile.get("min")
+                            col_max = col_profile.get("max")
+                            if col_min is not None and col_max is not None and col_max > col_min:
+                                hist_sql = build_histogram_query(
+                                    schema, table_name, col_spec.name,
+                                    adapter=adapter,
+                                )
+                                try:
+                                    hist_result = conn.execute(text(hist_sql))
+                                    hist_rows = [dict(r) for r in hist_result.mappings()]
+                                    col_profile["histogram"] = parse_histogram_rows(
+                                        hist_rows, float(col_min), float(col_max),
+                                    )
+                                except Exception as e:
+                                    logger.debug("Histogram query failed for %s.%s: %s", table_name, col_spec.name, e)
 
                     all_profiles[model_id] = profiles
                     profiled_count += 1

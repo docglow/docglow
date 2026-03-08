@@ -142,6 +142,49 @@ def build_stats_query(
     return "\n".join(parts) + ";"
 
 
+def build_histogram_query(
+    schema: str,
+    table_name: str,
+    column_name: str,
+    adapter: str = "duckdb",
+    num_bins: int = 10,
+) -> str:
+    """Build a query to compute a 10-bin histogram for a numeric column.
+
+    Uses WIDTH_BUCKET to distribute values into equal-width bins.
+    """
+    q = _quote
+    cn = q(column_name, adapter)
+    table_ref = f'"{schema}"."{table_name}"' if schema else f'"{table_name}"'
+
+    if adapter == "duckdb":
+        return (
+            f"WITH bounds AS (\n"
+            f"  SELECT MIN({cn})::DOUBLE AS mn, MAX({cn})::DOUBLE AS mx\n"
+            f"  FROM {table_ref} WHERE {cn} IS NOT NULL\n"
+            f"), binned AS (\n"
+            f"  SELECT WIDTH_BUCKET({cn}::DOUBLE, bounds.mn, bounds.mx + 1e-9, {num_bins}) AS bucket\n"
+            f"  FROM {table_ref}, bounds\n"
+            f"  WHERE {cn} IS NOT NULL\n"
+            f")\n"
+            f"SELECT bucket, COUNT(*) AS freq\n"
+            f"FROM binned GROUP BY bucket ORDER BY bucket;"
+        )
+    # PostgreSQL / Snowflake fallback
+    return (
+        f"WITH bounds AS (\n"
+        f"  SELECT MIN({cn})::DOUBLE PRECISION AS mn, MAX({cn})::DOUBLE PRECISION AS mx\n"
+        f"  FROM {table_ref} WHERE {cn} IS NOT NULL\n"
+        f"), binned AS (\n"
+        f"  SELECT WIDTH_BUCKET({cn}::DOUBLE PRECISION, bounds.mn, bounds.mx + 1e-9, {num_bins}) AS bucket\n"
+        f"  FROM {table_ref}, bounds\n"
+        f"  WHERE {cn} IS NOT NULL\n"
+        f")\n"
+        f"SELECT bucket, COUNT(*) AS freq\n"
+        f"FROM binned GROUP BY bucket ORDER BY bucket;"
+    )
+
+
 def build_top_values_query(
     schema: str,
     table_name: str,
