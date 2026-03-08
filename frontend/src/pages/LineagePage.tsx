@@ -1,8 +1,10 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useProjectStore } from '../stores/projectStore'
 import { LineageFlow } from '../components/lineage/LineageFlow'
-import { FilterDropdown, type FilterState, type FilterMode } from '../components/ui/FilterDropdown'
+import { FilterDropdown } from '../components/ui/FilterDropdown'
 import { getSubgraph } from '../utils/graph'
+import { applyFilters, useFilterState, computeSubgraphOptions, RESOURCE_TYPES } from '../utils/lineageFilters'
+import type { LineageDirection } from '../utils/graph'
 import type { LineageNode, LineageEdge } from '../types'
 
 interface ModelSuggestion {
@@ -32,79 +34,11 @@ function computeSuggestions(nodes: LineageNode[], edges: LineageEdge[]): ModelSu
     .slice(0, 12)
 }
 
-const EMPTY_FILTER: FilterState = { mode: 'include', selected: new Set() }
-
-const RESOURCE_TYPES = ['model', 'source', 'seed', 'snapshot', 'exposure', 'metric']
-
-function applyFilters(
-  nodes: LineageNode[],
-  edges: LineageEdge[],
-  typeFilter: FilterState,
-  tagFilter: FilterState,
-  folderFilter: FilterState,
-): { nodes: LineageNode[]; edges: LineageEdge[] } {
-  let filtered = nodes
-
-  // Type filter
-  if (typeFilter.selected.size > 0) {
-    if (typeFilter.mode === 'include') {
-      filtered = filtered.filter(n => typeFilter.selected.has(n.resource_type))
-    } else {
-      filtered = filtered.filter(n => !typeFilter.selected.has(n.resource_type))
-    }
-  }
-
-  // Tag filter
-  if (tagFilter.selected.size > 0) {
-    if (tagFilter.mode === 'include') {
-      filtered = filtered.filter(n => n.tags.some(t => tagFilter.selected.has(t)))
-    } else {
-      filtered = filtered.filter(n => !n.tags.some(t => tagFilter.selected.has(t)))
-    }
-  }
-
-  // Folder filter
-  if (folderFilter.selected.size > 0) {
-    if (folderFilter.mode === 'include') {
-      filtered = filtered.filter(n => folderFilter.selected.has(n.folder))
-    } else {
-      filtered = filtered.filter(n => !folderFilter.selected.has(n.folder))
-    }
-  }
-
-  const nodeIds = new Set(filtered.map(n => n.id))
-  const filteredEdges = edges.filter(e => nodeIds.has(e.source) && nodeIds.has(e.target))
-
-  return { nodes: filtered, edges: filteredEdges }
-}
-
-function useFilterState(): [FilterState, (value: string) => void, (mode: FilterMode) => void, () => void] {
-  const [state, setState] = useState<FilterState>(EMPTY_FILTER)
-
-  const toggle = useCallback((value: string) => {
-    setState(prev => {
-      const next = new Set(prev.selected)
-      if (next.has(value)) next.delete(value)
-      else next.add(value)
-      return { ...prev, selected: next }
-    })
-  }, [])
-
-  const setMode = useCallback((mode: FilterMode) => {
-    setState(prev => ({ ...prev, mode }))
-  }, [])
-
-  const clear = useCallback(() => {
-    setState(EMPTY_FILTER)
-  }, [])
-
-  return [state, toggle, setMode, clear]
-}
-
 export function LineagePage() {
   const { data } = useProjectStore()
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [depth, setDepth] = useState(2)
+  const [direction, setDirection] = useState<LineageDirection>('both')
   const [search, setSearch] = useState('')
 
   const [typeFilter, toggleType, setTypeMode, clearTypes] = useFilterState()
@@ -130,28 +64,16 @@ export function LineagePage() {
   // Compute subgraph, then apply filters
   const subgraph = useMemo(() => {
     if (!data || !selectedNodeId) return null
-    const raw = getSubgraph(selectedNodeId, data.lineage.nodes, data.lineage.edges, depth)
+    const raw = getSubgraph(selectedNodeId, data.lineage.nodes, data.lineage.edges, depth, direction)
     return applyFilters(raw.nodes, raw.edges, typeFilter, tagFilter, folderFilter)
-  }, [data, selectedNodeId, depth, typeFilter, tagFilter, folderFilter])
+  }, [data, selectedNodeId, depth, direction, typeFilter, tagFilter, folderFilter])
 
   // Available options derived from the unfiltered subgraph
   const subgraphOptions = useMemo(() => {
     if (!data || !selectedNodeId) return { tags: [], folders: [], types: RESOURCE_TYPES }
-    const raw = getSubgraph(selectedNodeId, data.lineage.nodes, data.lineage.edges, depth)
-    const tags = new Set<string>()
-    const folders = new Set<string>()
-    const types = new Set<string>()
-    for (const n of raw.nodes) {
-      for (const t of n.tags) tags.add(t)
-      if (n.folder) folders.add(n.folder)
-      types.add(n.resource_type)
-    }
-    return {
-      tags: [...tags].sort(),
-      folders: [...folders].sort(),
-      types: [...types].sort(),
-    }
-  }, [data, selectedNodeId, depth])
+    const raw = getSubgraph(selectedNodeId, data.lineage.nodes, data.lineage.edges, depth, direction)
+    return computeSubgraphOptions(raw.nodes)
+  }, [data, selectedNodeId, depth, direction])
 
   const selectedNode = useMemo(() => {
     if (!data || !selectedNodeId) return null
@@ -211,6 +133,41 @@ export function LineagePage() {
               className="w-20 accent-[var(--primary)]"
             />
             <span className="text-xs font-medium w-4 text-center">{depth}</span>
+          </div>
+
+          <div className="h-4 w-px bg-[var(--border)]" />
+
+          {/* Direction toggle */}
+          <div className="flex items-center rounded overflow-hidden border border-[var(--border)]">
+            {(['upstream', 'both', 'downstream'] as const).map(dir => (
+              <button
+                key={dir}
+                onClick={() => setDirection(dir)}
+                className={`px-2 py-0.5 text-xs cursor-pointer transition-colors flex items-center gap-1
+                  ${direction === dir
+                    ? 'bg-primary text-white'
+                    : 'bg-[var(--bg)] text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-surface)]'
+                  }`}
+                title={dir === 'both' ? 'Show upstream & downstream' : `Show ${dir} only`}
+              >
+                {dir === 'upstream' && (
+                  <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                    <path d="M19 12H5M12 5l-7 7" />
+                  </svg>
+                )}
+                {dir === 'both' && (
+                  <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                    <path d="M5 12h14M8 8l-4 4 4 4M16 8l4 4-4 4" />
+                  </svg>
+                )}
+                {dir === 'downstream' && (
+                  <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                    <path d="M5 12h14M12 5l7 7" />
+                  </svg>
+                )}
+                {dir === 'upstream' ? 'Up' : dir === 'downstream' ? 'Down' : 'Both'}
+              </button>
+            ))}
           </div>
 
           <div className="h-4 w-px bg-[var(--border)]" />

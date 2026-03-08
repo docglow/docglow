@@ -46,14 +46,17 @@ export function getDownstream(
   return result
 }
 
+export type LineageDirection = 'both' | 'upstream' | 'downstream'
+
 export function getSubgraph(
   nodeId: string,
   nodes: LineageNode[],
   edges: LineageEdge[],
   depth: number = 2,
+  direction: LineageDirection = 'both',
 ): { nodes: LineageNode[]; edges: LineageEdge[] } {
-  const upstream = getUpstream(nodeId, edges, depth)
-  const downstream = getDownstream(nodeId, edges, depth)
+  const upstream = direction !== 'downstream' ? getUpstream(nodeId, edges, depth) : new Set<string>()
+  const downstream = direction !== 'upstream' ? getDownstream(nodeId, edges, depth) : new Set<string>()
   const relevantIds = new Set([nodeId, ...upstream, ...downstream])
 
   return {
