@@ -29,6 +29,8 @@ target/
 # Frontend
 frontend/node_modules/
 frontend/dist/
+frontend/playwright-report/
+frontend/test-results/
 
 # Environment
 .env

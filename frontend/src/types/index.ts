@@ -1,11 +1,11 @@
-export interface DatumData {
-  metadata: DatumMetadata
-  models: Record<string, DatumModel>
-  sources: Record<string, DatumSource>
-  seeds: Record<string, DatumModel>
-  snapshots: Record<string, DatumModel>
-  exposures: Record<string, DatumExposure>
-  metrics: Record<string, DatumMetric>
+export interface DocglowData {
+  metadata: DocglowMetadata
+  models: Record<string, DocglowModel>
+  sources: Record<string, DocglowSource>
+  seeds: Record<string, DocglowModel>
+  snapshots: Record<string, DocglowModel>
+  exposures: Record<string, DocglowExposure>
+  metrics: Record<string, DocglowMetric>
   lineage: LineageData
   health: HealthData
   search_index: SearchEntry[]
@@ -13,7 +13,7 @@ export interface DatumData {
   ai_key: string | null
 }
 
-export interface DatumMetadata {
+export interface DocglowMetadata {
   generated_at: string
   docglow_version: string
   dbt_version: string
@@ -28,9 +28,23 @@ export interface DatumMetadata {
   }
   profiling_enabled: boolean
   ai_enabled: boolean
+  hosted: boolean
+  workspace_slug: string | null
+  project_slug: string | null
+  api_base_url: string | null
+  published_at: string | null
+  features: HostedFeatures | null
 }
 
-export interface DatumModel {
+export interface HostedFeatures {
+  ai_chat: boolean
+  health_history: boolean
+  notifications: boolean
+  description_editing: boolean
+  max_viewers: number
+}
+
+export interface DocglowModel {
   unique_id: string
   name: string
   description: string
@@ -43,7 +57,7 @@ export interface DatumModel {
   folder: string
   raw_sql: string
   compiled_sql: string
-  columns: DatumColumn[]
+  columns: DocglowColumn[]
   depends_on: string[]
   referenced_by: string[]
   sources_used: string[]
@@ -52,7 +66,7 @@ export interface DatumModel {
   catalog_stats: CatalogStats
 }
 
-export interface DatumColumn {
+export interface DocglowColumn {
   name: string
   description: string
   data_type: string
@@ -121,14 +135,14 @@ export interface CatalogStats {
   has_stats: boolean
 }
 
-export interface DatumSource {
+export interface DocglowSource {
   unique_id: string
   name: string
   source_name: string
   description: string
   schema: string
   database: string
-  columns: DatumColumn[]
+  columns: DocglowColumn[]
   tags: string[]
   meta: Record<string, unknown>
   loader: string
@@ -138,7 +152,7 @@ export interface DatumSource {
   freshness_snapshotted_at: string | null
 }
 
-export interface DatumExposure {
+export interface DocglowExposure {
   unique_id: string
   name: string
   type: string
@@ -148,7 +162,7 @@ export interface DatumExposure {
   tags: string[]
 }
 
-export interface DatumMetric {
+export interface DocglowMetric {
   unique_id: string
   name: string
   description: string
@@ -320,4 +334,4 @@ export interface AiHealthSummary {
 }
 
 /** Union type for any resource that can be displayed */
-export type DatumResource = DatumModel | DatumSource
+export type DocglowResource = DocglowModel | DocglowSource

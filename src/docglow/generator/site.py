@@ -57,7 +57,7 @@ def generate_site(
     artifacts = load_artifacts(project_dir, target_dir)
 
     logger.info("Building data payload...")
-    datum_data = build_docglow_data(
+    docglow_data = build_docglow_data(
         artifacts,
         profiling_enabled=profiling_enabled,
         ai_enabled=ai_enabled,
@@ -69,7 +69,7 @@ def generate_site(
     # Run profiling if enabled
     if profiling_enabled and profiling_adapter and profiling_connection:
         _run_profiling(
-            datum_data,
+            docglow_data,
             adapter=profiling_adapter,
             connection_params=profiling_connection,
             sample_size=profiling_sample_size,
@@ -77,10 +77,10 @@ def generate_site(
         )
 
     if title:
-        datum_data["metadata"]["project_name"] = title
+        docglow_data["metadata"]["project_name"] = title
 
     logger.info("Bundling site...")
-    bundle_site(datum_data, resolved_output, static=static)
+    bundle_site(docglow_data, resolved_output, static=static)
 
     file_count = len(list(resolved_output.iterdir()))
     logger.info("Site generated at %s (%d files)", resolved_output, file_count)
@@ -89,18 +89,18 @@ def generate_site(
 
 
 def _run_profiling(
-    datum_data: dict[str, Any],
+    docglow_data: dict[str, Any],
     adapter: str,
     connection_params: dict[str, Any],
     sample_size: int | None,
     cache_dir: Path | None,
 ) -> None:
-    """Run profiling and apply results to datum_data models in-place."""
+    """Run profiling and apply results to data payload models in-place."""
     from docglow.profiler.engine import apply_profiles, profile_models
 
     logger.info("Running column profiling...")
     profiles = profile_models(
-        datum_data["models"],
+        docglow_data["models"],
         adapter=adapter,
         connection_params=connection_params,
         sample_size=sample_size,
@@ -108,5 +108,5 @@ def _run_profiling(
     )
 
     if profiles:
-        datum_data["models"] = apply_profiles(datum_data["models"], profiles)
-        datum_data["metadata"]["profiling_enabled"] = True
+        docglow_data["models"] = apply_profiles(docglow_data["models"], profiles)
+        docglow_data["metadata"]["profiling_enabled"] = True

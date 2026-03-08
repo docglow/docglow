@@ -31,10 +31,10 @@ class TestBundleSite:
     def test_bundle_separate_creates_data_file(self, tmp_path: Path) -> None:
         project = _setup_target(tmp_path)
         artifacts = load_artifacts(project)
-        datum_data = build_docglow_data(artifacts)
+        docglow_data = build_docglow_data(artifacts)
 
         output = tmp_path / "output"
-        bundle_site(datum_data, output, static=False)
+        bundle_site(docglow_data, output, static=False)
 
         data_file = output / "docglow-data.json"
         assert data_file.exists()
@@ -46,35 +46,35 @@ class TestBundleSite:
     def test_bundle_separate_copies_index(self, tmp_path: Path) -> None:
         project = _setup_target(tmp_path)
         artifacts = load_artifacts(project)
-        datum_data = build_docglow_data(artifacts)
+        docglow_data = build_docglow_data(artifacts)
 
         output = tmp_path / "output"
-        bundle_site(datum_data, output, static=False)
+        bundle_site(docglow_data, output, static=False)
 
         assert (output / "index.html").exists()
 
     def test_bundle_static_creates_single_file(self, tmp_path: Path) -> None:
         project = _setup_target(tmp_path)
         artifacts = load_artifacts(project)
-        datum_data = build_docglow_data(artifacts)
+        docglow_data = build_docglow_data(artifacts)
 
         output = tmp_path / "output_static"
-        bundle_site(datum_data, output, static=True)
+        bundle_site(docglow_data, output, static=True)
 
         index = output / "index.html"
         assert index.exists()
 
         html = index.read_text()
-        assert "window.__DATUM_DATA__=" in html
+        assert "window.__DOCGLOW_DATA__=" in html
         assert "jaffle_shop" in html
 
     def test_bundle_static_no_separate_data_file(self, tmp_path: Path) -> None:
         project = _setup_target(tmp_path)
         artifacts = load_artifacts(project)
-        datum_data = build_docglow_data(artifacts)
+        docglow_data = build_docglow_data(artifacts)
 
         output = tmp_path / "output_static"
-        bundle_site(datum_data, output, static=True)
+        bundle_site(docglow_data, output, static=True)
 
         assert not (output / "docglow-data.json").exists()
 
@@ -82,10 +82,10 @@ class TestBundleSite:
         """The output docglow-data.json is valid JSON with expected structure."""
         project = _setup_target(tmp_path)
         artifacts = load_artifacts(project)
-        datum_data = build_docglow_data(artifacts)
+        docglow_data = build_docglow_data(artifacts)
 
         output = tmp_path / "output"
-        bundle_site(datum_data, output, static=False)
+        bundle_site(docglow_data, output, static=False)
 
         data = json.loads((output / "docglow-data.json").read_text())
 
@@ -127,7 +127,7 @@ class TestGenerateSite:
         index = output / "index.html"
         assert index.exists()
         html = index.read_text()
-        assert "window.__DATUM_DATA__=" in html
+        assert "window.__DOCGLOW_DATA__=" in html
 
     def test_generate_custom_title(self, tmp_path: Path) -> None:
         project = _setup_target(tmp_path)

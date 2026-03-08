@@ -270,7 +270,7 @@ class TestHealthScore:
 class TestHealthIntegration:
     """Test health with real fixture data via build_docglow_data."""
 
-    def test_health_in_datum_data(self, tmp_path):
+    def test_health_in_data_data(self, tmp_path):
         from pathlib import Path
 
         from docglow.artifacts.loader import load_artifacts
@@ -285,9 +285,9 @@ class TestHealthIntegration:
                 (target / name).write_text(src.read_text())
 
         artifacts = load_artifacts(tmp_path)
-        datum = build_docglow_data(artifacts)
+        data = build_docglow_data(artifacts)
 
-        health = datum["health"]
+        health = data["health"]
         assert "score" in health
         assert health["score"]["overall"] > 0
         assert health["score"]["grade"] in ("A", "B", "C", "D", "F")
