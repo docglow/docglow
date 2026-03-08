@@ -3,7 +3,7 @@
 import pytest
 
 from docglow.config import (
-    DatumConfig,
+    DocglowConfig,
     HealthWeights,
     NamingRules,
     load_config,
@@ -14,7 +14,7 @@ from docglow.config import (
 class TestLoadConfig:
     def test_returns_defaults_when_no_file(self, tmp_path):
         config = load_config(tmp_path)
-        assert config == DatumConfig()
+        assert config == DocglowConfig()
 
     def test_loads_docglow_yml(self, tmp_path):
         (tmp_path / "docglow.yml").write_text("title: My Project\n")
@@ -35,7 +35,7 @@ class TestLoadConfig:
     def test_invalid_yaml_returns_defaults(self, tmp_path):
         (tmp_path / "docglow.yml").write_text("just a string\n")
         config = load_config(tmp_path)
-        assert config == DatumConfig()
+        assert config == DocglowConfig()
 
 
 class TestBuildConfigFromDict:

@@ -39,9 +39,9 @@ function getStoredKey(): string {
 
 function getEmbeddedKey(): string {
   try {
-    const datumData = (window as unknown as Record<string, unknown>).__DOCGLOW_DATA__ as Record<string, unknown> | undefined
-    if (datumData?.ai_key && typeof datumData.ai_key === 'string') {
-      return datumData.ai_key
+    const docglowData = (window as unknown as Record<string, unknown>).__DOCGLOW_DATA__ as Record<string, unknown> | undefined
+    if (docglowData?.ai_key && typeof docglowData.ai_key === 'string') {
+      return docglowData.ai_key
     }
   } catch {
     // ignore

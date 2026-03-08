@@ -35,29 +35,38 @@ def _find_frontend_dist() -> Path:
 
 
 def bundle_site(
-    datum_data: dict[str, Any],
+    docglow_data: dict[str, Any],
     output_dir: Path,
     *,
     static: bool = False,
+    data_only: bool = False,
 ) -> None:
     """Bundle the frontend with data into the output directory.
 
     Args:
-        datum_data: The unified data payload.
+        docglow_data: The unified data payload.
         output_dir: Directory to write output files.
         static: If True, embed data into a single index.html.
     """
-    frontend_dist = _find_frontend_dist()
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    if data_only:
+        data_path = output_dir / "docglow-data.json"
+        data_json = json.dumps(docglow_data, separators=(",", ":"))
+        data_path.write_text(data_json, encoding="utf-8")
+        logger.info("Data written to %s (%d bytes)", data_path, len(data_json))
+        return
+
+    frontend_dist = _find_frontend_dist()
+
     if static:
-        _bundle_static(datum_data, output_dir, frontend_dist)
+        _bundle_static(docglow_data, output_dir, frontend_dist)
     else:
-        _bundle_separate(datum_data, output_dir, frontend_dist)
+        _bundle_separate(docglow_data, output_dir, frontend_dist)
 
 
 def _bundle_separate(
-    datum_data: dict[str, Any],
+    docglow_data: dict[str, Any],
     output_dir: Path,
     frontend_dist: Path,
 ) -> None:
@@ -67,13 +76,13 @@ def _bundle_separate(
 
     # Write data file
     data_path = output_dir / "docglow-data.json"
-    data_json = json.dumps(datum_data, separators=(",", ":"))
+    data_json = json.dumps(docglow_data, separators=(",", ":"))
     data_path.write_text(data_json, encoding="utf-8")
     logger.info("Data written to %s (%d bytes)", data_path, len(data_json))
 
 
 def _bundle_static(
-    datum_data: dict[str, Any],
+    docglow_data: dict[str, Any],
     output_dir: Path,
     frontend_dist: Path,
 ) -> None:
@@ -81,8 +90,8 @@ def _bundle_static(
     index_path = frontend_dist / "index.html"
     html = index_path.read_text(encoding="utf-8")
 
-    data_json = json.dumps(datum_data, separators=(",", ":"))
-    data_script = f'<script>window.__DATUM_DATA__={data_json};</script>'
+    data_json = json.dumps(docglow_data, separators=(",", ":"))
+    data_script = f'<script>window.__DOCGLOW_DATA__={data_json};</script>'
 
     # Inject data script before closing </head> tag
     html = html.replace("</head>", f"{data_script}\n</head>")
