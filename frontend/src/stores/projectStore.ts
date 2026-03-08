@@ -20,7 +20,7 @@ interface ProjectState {
 
 function getInitialTheme(): 'light' | 'dark' {
   if (typeof window === 'undefined') return 'light'
-  const stored = localStorage.getItem('dpp-theme')
+  const stored = localStorage.getItem('dg-theme')
   if (stored === 'dark' || stored === 'light') return stored
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
@@ -28,7 +28,7 @@ function getInitialTheme(): 'light' | 'dark' {
 function applyTheme(theme: 'light' | 'dark') {
   if (typeof document === 'undefined') return
   document.documentElement.classList.toggle('dark', theme === 'dark')
-  localStorage.setItem('dpp-theme', theme)
+  localStorage.setItem('dg-theme', theme)
 }
 
 function _applyEmbeddedAiKey(data: DatumData) {
@@ -52,7 +52,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       _applyEmbeddedAiKey(data)
     },
 
-    fetchData: async (url = './datum-data.json') => {
+    fetchData: async (url = './docglow-data.json') => {
       set({ loading: true, error: null })
       try {
         const response = await fetch(url)

@@ -3,7 +3,7 @@
 import time
 from pathlib import Path
 
-from docs_plus_plus.server.watcher import _get_mtimes, WATCH_PATTERNS
+from docglow.server.watcher import _get_mtimes, WATCH_PATTERNS
 
 
 class TestGetMtimes:

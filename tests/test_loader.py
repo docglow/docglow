@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from docs_plus_plus.artifacts.loader import ArtifactLoadError, LoadedArtifacts, load_artifacts
+from docglow.artifacts.loader import ArtifactLoadError, LoadedArtifacts, load_artifacts
 
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"

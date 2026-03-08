@@ -6,20 +6,20 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from docs_plus_plus.profiler.cache import (
+from docglow.profiler.cache import (
     get_cached_profiles,
     is_cached,
     load_cache,
     save_cache,
     update_cache,
 )
-from docs_plus_plus.profiler.queries import (
+from docglow.profiler.queries import (
     build_column_specs,
     build_histogram_query,
     build_stats_query,
     build_top_values_query,
 )
-from docs_plus_plus.profiler.stats import (
+from docglow.profiler.stats import (
     parse_histogram_rows,
     parse_stats_row,
     parse_top_values_rows,
@@ -86,7 +86,7 @@ def profile_models(
     except ImportError as e:
         raise ProfilerError(
             "SQLAlchemy is required for profiling. "
-            "Install with: pip install docs-plus-plus[profiling]"
+            "Install with: pip install docglow[profiling]"
         ) from e
 
     cache: dict[str, Any] = {}

@@ -1,4 +1,4 @@
-"""Shared test fixtures for docs-plus-plus."""
+"""Shared test fixtures for docglow."""
 
 from pathlib import Path
 

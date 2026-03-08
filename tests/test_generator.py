@@ -5,10 +5,10 @@ from pathlib import Path
 
 import pytest
 
-from docs_plus_plus.artifacts.loader import load_artifacts
-from docs_plus_plus.generator.bundle import bundle_site
-from docs_plus_plus.generator.data import build_datum_data
-from docs_plus_plus.generator.site import generate_site
+from docglow.artifacts.loader import load_artifacts
+from docglow.generator.bundle import bundle_site
+from docglow.generator.data import build_docglow_data
+from docglow.generator.site import generate_site
 
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
@@ -31,12 +31,12 @@ class TestBundleSite:
     def test_bundle_separate_creates_data_file(self, tmp_path: Path) -> None:
         project = _setup_target(tmp_path)
         artifacts = load_artifacts(project)
-        datum_data = build_datum_data(artifacts)
+        datum_data = build_docglow_data(artifacts)
 
         output = tmp_path / "output"
         bundle_site(datum_data, output, static=False)
 
-        data_file = output / "datum-data.json"
+        data_file = output / "docglow-data.json"
         assert data_file.exists()
 
         loaded = json.loads(data_file.read_text())
@@ -46,7 +46,7 @@ class TestBundleSite:
     def test_bundle_separate_copies_index(self, tmp_path: Path) -> None:
         project = _setup_target(tmp_path)
         artifacts = load_artifacts(project)
-        datum_data = build_datum_data(artifacts)
+        datum_data = build_docglow_data(artifacts)
 
         output = tmp_path / "output"
         bundle_site(datum_data, output, static=False)
@@ -56,7 +56,7 @@ class TestBundleSite:
     def test_bundle_static_creates_single_file(self, tmp_path: Path) -> None:
         project = _setup_target(tmp_path)
         artifacts = load_artifacts(project)
-        datum_data = build_datum_data(artifacts)
+        datum_data = build_docglow_data(artifacts)
 
         output = tmp_path / "output_static"
         bundle_site(datum_data, output, static=True)
@@ -71,23 +71,23 @@ class TestBundleSite:
     def test_bundle_static_no_separate_data_file(self, tmp_path: Path) -> None:
         project = _setup_target(tmp_path)
         artifacts = load_artifacts(project)
-        datum_data = build_datum_data(artifacts)
+        datum_data = build_docglow_data(artifacts)
 
         output = tmp_path / "output_static"
         bundle_site(datum_data, output, static=True)
 
-        assert not (output / "datum-data.json").exists()
+        assert not (output / "docglow-data.json").exists()
 
     def test_data_json_valid(self, tmp_path: Path) -> None:
-        """The output datum-data.json is valid JSON with expected structure."""
+        """The output docglow-data.json is valid JSON with expected structure."""
         project = _setup_target(tmp_path)
         artifacts = load_artifacts(project)
-        datum_data = build_datum_data(artifacts)
+        datum_data = build_docglow_data(artifacts)
 
         output = tmp_path / "output"
         bundle_site(datum_data, output, static=False)
 
-        data = json.loads((output / "datum-data.json").read_text())
+        data = json.loads((output / "docglow-data.json").read_text())
 
         assert data["metadata"]["project_name"] == "jaffle_shop"
         assert len(data["models"]) > 0
@@ -108,15 +108,15 @@ class TestGenerateSite:
 
         assert result == output
         assert output.exists()
-        assert (output / "datum-data.json").exists()
+        assert (output / "docglow-data.json").exists()
 
     def test_generate_default_output_dir(self, tmp_path: Path) -> None:
         project = _setup_target(tmp_path)
 
         result = generate_site(project)
 
-        assert result == project / "target" / "datum"
-        assert (result / "datum-data.json").exists()
+        assert result == project / "target" / "docglow"
+        assert (result / "docglow-data.json").exists()
 
     def test_generate_static_mode(self, tmp_path: Path) -> None:
         project = _setup_target(tmp_path)
@@ -135,5 +135,5 @@ class TestGenerateSite:
 
         generate_site(project, output_dir=output, title="My Custom Docs")
 
-        data = json.loads((output / "datum-data.json").read_text())
+        data = json.loads((output / "docglow-data.json").read_text())
         assert data["metadata"]["project_name"] == "My Custom Docs"

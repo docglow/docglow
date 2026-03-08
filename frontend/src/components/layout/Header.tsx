@@ -6,7 +6,7 @@ export function Header() {
   const { data, theme, toggleTheme } = useProjectStore()
   const { setOpen } = useSearchStore()
 
-  const projectName = data?.metadata.project_name ?? 'docs-plus-plus'
+  const projectName = data?.metadata.project_name ?? 'docglow'
 
   return (
     <header className="h-14 border-b border-[var(--border)] bg-[var(--bg)] flex items-center px-4 gap-4 shrink-0">

@@ -9,7 +9,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).parent.parent
 FRONTEND_DIR = PROJECT_ROOT / "frontend"
 DIST_DIR = FRONTEND_DIR / "dist"
-STATIC_DIR = PROJECT_ROOT / "src" / "docs_plus_plus" / "static"
+STATIC_DIR = PROJECT_ROOT / "src" / "docglow" / "static"
 
 
 def main() -> None:

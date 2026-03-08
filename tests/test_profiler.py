@@ -8,20 +8,20 @@ from typing import Any
 
 import pytest
 
-from docs_plus_plus.profiler.cache import (
+from docglow.profiler.cache import (
     is_cached,
     load_cache,
     save_cache,
     update_cache,
 )
-from docs_plus_plus.profiler.queries import (
+from docglow.profiler.queries import (
     ColumnSpec,
     build_column_specs,
     build_stats_query,
     build_top_values_query,
     classify_column,
 )
-from docs_plus_plus.profiler.stats import parse_stats_row, parse_top_values_rows
+from docglow.profiler.stats import parse_stats_row, parse_top_values_rows
 
 
 class TestColumnClassification:

@@ -6,7 +6,7 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-from docs_plus_plus.config import ComplexityThresholds
+from docglow.config import ComplexityThresholds
 
 
 @dataclass(frozen=True)

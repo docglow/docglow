@@ -2,7 +2,7 @@
 
 import pytest
 
-from docs_plus_plus.ai.context import build_ai_context
+from docglow.ai.context import build_ai_context
 
 
 def _make_model(name, **overrides):

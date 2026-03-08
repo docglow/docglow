@@ -14,7 +14,7 @@ import type { DatumData } from './types'
 
 declare global {
   interface Window {
-    __DATUM_DATA__?: DatumData
+    __DOCGLOW_DATA__?: DatumData
   }
 }
 
@@ -23,8 +23,8 @@ function App() {
   const { initIndex } = useSearchStore()
 
   useEffect(() => {
-    if (window.__DATUM_DATA__) {
-      loadData(window.__DATUM_DATA__)
+    if (window.__DOCGLOW_DATA__) {
+      loadData(window.__DOCGLOW_DATA__)
     } else {
       fetchData()
     }

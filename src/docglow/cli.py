@@ -1,4 +1,4 @@
-"""CLI entry point for docs-plus-plus."""
+"""CLI entry point for docglow."""
 
 import logging
 from pathlib import Path
@@ -7,7 +7,7 @@ import click
 from rich.console import Console
 from rich.logging import RichHandler
 
-from docs_plus_plus import __version__
+from docglow import __version__
 
 console = Console()
 
@@ -22,9 +22,9 @@ def _setup_logging(verbose: bool) -> None:
 
 
 @click.group()
-@click.version_option(version=__version__, prog_name="docs-plus-plus")
+@click.version_option(version=__version__, prog_name="docglow")
 def cli() -> None:
-    """docs-plus-plus: Next-generation dbt documentation site generator."""
+    """docglow: Next-generation dbt documentation site generator."""
 
 
 @cli.command()
@@ -65,11 +65,11 @@ def generate(
     """Generate the documentation site."""
     _setup_logging(verbose)
 
-    from docs_plus_plus.artifacts.loader import ArtifactLoadError
-    from docs_plus_plus.config import load_config
-    from docs_plus_plus.generator.site import generate_site
+    from docglow.artifacts.loader import ArtifactLoadError
+    from docglow.config import load_config
+    from docglow.generator.site import generate_site
 
-    # Load config file (datum.yml)
+    # Load config file (docglow.yml)
     config = load_config(project_dir)
 
     # CLI flags override config file values
@@ -77,7 +77,7 @@ def generate(
         ai = True
     if ai_key:
         ai = True  # --ai-key implies --ai
-    if not title and config.title != "docs-plus-plus":
+    if not title and config.title != "docglow":
         title = config.title
 
     # Parse profiling connection params
@@ -106,7 +106,7 @@ def generate(
         if static:
             console.print("  Single-file mode: open index.html directly in a browser")
         else:
-            console.print("  Run [bold]docs-plus-plus serve[/bold] to view locally")
+            console.print("  Run [bold]docglow serve[/bold] to view locally")
     except ArtifactLoadError as e:
         console.print(f"[bold red]Error:[/bold red] {e}")
         raise SystemExit(1) from e
@@ -124,18 +124,18 @@ def generate(
 @click.option("--project-dir", type=click.Path(exists=True, path_type=Path), default=".")
 def serve(port: int, host: str, open: bool, serve_dir: Path | None, watch: bool, project_dir: Path) -> None:
     """Serve the documentation site locally."""
-    from docs_plus_plus.server.dev import start_server
+    from docglow.server.dev import start_server
 
-    resolved_dir = serve_dir or Path("target/datum")
+    resolved_dir = serve_dir or Path("target/docglow")
     if not resolved_dir.exists():
         console.print(
             f"[bold red]Error:[/bold red] Directory {resolved_dir} not found. "
-            "Run [bold]docs-plus-plus generate[/bold] first."
+            "Run [bold]docglow generate[/bold] first."
         )
         raise SystemExit(1)
 
     if watch:
-        from docs_plus_plus.server.watcher import start_watcher
+        from docglow.server.watcher import start_watcher
         start_watcher(project_dir, resolved_dir, console)
 
     start_server(resolved_dir, host=host, port=port, open_browser=open)
@@ -157,9 +157,9 @@ def health(
 
     from rich.table import Table
 
-    from docs_plus_plus.analyzer.health import compute_health, health_to_dict
-    from docs_plus_plus.artifacts.loader import ArtifactLoadError, load_artifacts
-    from docs_plus_plus.generator.data import build_datum_data
+    from docglow.analyzer.health import compute_health, health_to_dict
+    from docglow.artifacts.loader import ArtifactLoadError, load_artifacts
+    from docglow.generator.data import build_docglow_data
 
     try:
         artifacts = load_artifacts(project_dir, target_dir)
@@ -168,7 +168,7 @@ def health(
         raise SystemExit(1) from e
 
     # Build data to get transformed models/sources
-    datum = build_datum_data(artifacts)
+    datum = build_docglow_data(artifacts)
     health_data = datum["health"]
     score = health_data["score"]
 
@@ -182,7 +182,7 @@ def health(
     }.get(score["grade"], "white")
 
     console.print()
-    console.print(f"[bold]docs-plus-plus Project Health[/bold]")
+    console.print(f"[bold]docglow Project Health[/bold]")
     console.print(f"  Overall Score: [{grade_color}]{score['overall']:.0f}/100 ({score['grade']})[/{grade_color}]")
     console.print()
 
@@ -253,9 +253,9 @@ def profile(
 
     _setup_logging(verbose)
 
-    from docs_plus_plus.artifacts.loader import ArtifactLoadError, load_artifacts
-    from docs_plus_plus.generator.data import build_datum_data
-    from docs_plus_plus.profiler.engine import ProfilerError, apply_profiles, profile_models
+    from docglow.artifacts.loader import ArtifactLoadError, load_artifacts
+    from docglow.generator.data import build_docglow_data
+    from docglow.profiler.engine import ProfilerError, apply_profiles, profile_models
 
     try:
         artifacts = load_artifacts(project_dir, target_dir)
@@ -263,11 +263,11 @@ def profile(
         console.print(f"[bold red]Error:[/bold red] {e}")
         raise SystemExit(1) from e
 
-    datum = build_datum_data(artifacts)
+    datum = build_docglow_data(artifacts)
     models = datum["models"]
 
     connection_params = _parse_connection(adapter, connection)
-    output_dir = output or (project_dir / "target" / "datum")
+    output_dir = output or (project_dir / "target" / "docglow")
     output_dir.mkdir(parents=True, exist_ok=True)
 
     try:

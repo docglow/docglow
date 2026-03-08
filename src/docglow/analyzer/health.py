@@ -5,10 +5,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from docs_plus_plus.analyzer.complexity import ComplexityReport, analyze_complexity
-from docs_plus_plus.analyzer.coverage import CoverageReport, compute_coverage
-from docs_plus_plus.analyzer.naming import NamingReport, check_naming
-from docs_plus_plus.config import HealthConfig
+from docglow.analyzer.complexity import ComplexityReport, analyze_complexity
+from docglow.analyzer.coverage import CoverageReport, compute_coverage
+from docglow.analyzer.naming import NamingReport, check_naming
+from docglow.config import HealthConfig
 
 
 @dataclass(frozen=True)

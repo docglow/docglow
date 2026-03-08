@@ -6,9 +6,9 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from docs_plus_plus.artifacts.loader import load_artifacts
-from docs_plus_plus.generator.bundle import bundle_site
-from docs_plus_plus.generator.data import build_datum_data
+from docglow.artifacts.loader import load_artifacts
+from docglow.generator.bundle import bundle_site
+from docglow.generator.data import build_docglow_data
 
 logger = logging.getLogger(__name__)
 
@@ -30,12 +30,12 @@ def generate_site(
     select: str | None = None,
     exclude: str | None = None,
 ) -> Path:
-    """Generate the docs-plus-plus static site.
+    """Generate the docglow static site.
 
     Args:
         project_dir: Path to the dbt project root.
         target_dir: Path to the dbt target directory.
-        output_dir: Where to write the generated site. Defaults to target/datum.
+        output_dir: Where to write the generated site. Defaults to target/docglow.
         static: If True, bundle everything into a single index.html.
         profiling_enabled: Whether column profiling data is included.
         profiling_adapter: Database adapter (duckdb, postgres, snowflake).
@@ -50,14 +50,14 @@ def generate_site(
     Returns:
         Path to the output directory.
     """
-    resolved_output = output_dir or (project_dir / "target" / "datum")
+    resolved_output = output_dir or (project_dir / "target" / "docglow")
     resolved_output.mkdir(parents=True, exist_ok=True)
 
     logger.info("Loading dbt artifacts...")
     artifacts = load_artifacts(project_dir, target_dir)
 
     logger.info("Building data payload...")
-    datum_data = build_datum_data(
+    datum_data = build_docglow_data(
         artifacts,
         profiling_enabled=profiling_enabled,
         ai_enabled=ai_enabled,
@@ -96,7 +96,7 @@ def _run_profiling(
     cache_dir: Path | None,
 ) -> None:
     """Run profiling and apply results to datum_data models in-place."""
-    from docs_plus_plus.profiler.engine import apply_profiles, profile_models
+    from docglow.profiler.engine import apply_profiles, profile_models
 
     logger.info("Running column profiling...")
     profiles = profile_models(

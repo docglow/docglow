@@ -6,8 +6,8 @@ from unittest.mock import patch
 
 import pytest
 
-from docs_plus_plus.artifacts.loader import load_artifacts
-from docs_plus_plus.generator.data import build_datum_data
+from docglow.artifacts.loader import load_artifacts
+from docglow.generator.data import build_docglow_data
 
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
@@ -27,24 +27,24 @@ def _load_fixtures(tmp_path: Path) -> dict:
 class TestByok:
     def test_ai_key_none_when_ai_disabled(self, tmp_path):
         artifacts = _load_fixtures(tmp_path)
-        data = build_datum_data(artifacts, ai_enabled=False)
+        data = build_docglow_data(artifacts, ai_enabled=False)
         assert data["ai_key"] is None
 
     def test_ai_key_from_explicit_param(self, tmp_path):
         artifacts = _load_fixtures(tmp_path)
-        data = build_datum_data(artifacts, ai_enabled=True, ai_key="sk-test-123")
+        data = build_docglow_data(artifacts, ai_enabled=True, ai_key="sk-test-123")
         assert data["ai_key"] == "sk-test-123"
 
     def test_ai_key_from_env_var(self, tmp_path):
         artifacts = _load_fixtures(tmp_path)
         with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "sk-env-456"}):
-            data = build_datum_data(artifacts, ai_enabled=True)
+            data = build_docglow_data(artifacts, ai_enabled=True)
         assert data["ai_key"] == "sk-env-456"
 
     def test_explicit_key_takes_precedence(self, tmp_path):
         artifacts = _load_fixtures(tmp_path)
         with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "sk-env-456"}):
-            data = build_datum_data(artifacts, ai_enabled=True, ai_key="sk-explicit-789")
+            data = build_docglow_data(artifacts, ai_enabled=True, ai_key="sk-explicit-789")
         assert data["ai_key"] == "sk-explicit-789"
 
     def test_ai_key_none_when_no_key_available(self, tmp_path):
@@ -52,5 +52,5 @@ class TestByok:
         with patch.dict(os.environ, {}, clear=True):
             # Remove ANTHROPIC_API_KEY if set
             os.environ.pop("ANTHROPIC_API_KEY", None)
-            data = build_datum_data(artifacts, ai_enabled=True)
+            data = build_docglow_data(artifacts, ai_enabled=True)
         assert data["ai_key"] is None

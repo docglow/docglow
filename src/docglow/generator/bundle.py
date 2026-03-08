@@ -66,7 +66,7 @@ def _bundle_separate(
     _copy_frontend_assets(frontend_dist, output_dir)
 
     # Write data file
-    data_path = output_dir / "datum-data.json"
+    data_path = output_dir / "docglow-data.json"
     data_json = json.dumps(datum_data, separators=(",", ":"))
     data_path.write_text(data_json, encoding="utf-8")
     logger.info("Data written to %s (%d bytes)", data_path, len(data_json))

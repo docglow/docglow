@@ -1,4 +1,4 @@
-"""Configuration management for docs-plus-plus."""
+"""Configuration management for docglow."""
 
 from __future__ import annotations
 
@@ -61,7 +61,7 @@ class AiConfig:
 @dataclass(frozen=True)
 class DatumConfig:
     version: int = 1
-    title: str = "docs-plus-plus"
+    title: str = "docglow"
     theme: str = "auto"
     profiling: ProfilingConfig = field(default_factory=ProfilingConfig)
     health: HealthConfig = field(default_factory=HealthConfig)
@@ -74,11 +74,11 @@ class DatumConfig:
 
 
 def load_config(project_dir: Path) -> DatumConfig:
-    """Load configuration from datum.yml in the project directory.
+    """Load configuration from docglow.yml in the project directory.
 
     Falls back to default config if no file is found.
     """
-    for name in ("datum.yml", "datum.yaml"):
+    for name in ("docglow.yml", "docglow.yaml"):
         config_path = project_dir / name
         if config_path.exists():
             logger.info("Loading config from %s", config_path)
@@ -88,12 +88,12 @@ def load_config(project_dir: Path) -> DatumConfig:
 
 
 def _parse_config_file(path: Path) -> DatumConfig:
-    """Parse a datum.yml config file into a DatumConfig."""
+    """Parse a docglow.yml config file into a DatumConfig."""
     try:
         import yaml
     except ImportError as e:
         raise ImportError(
-            "pyyaml is required to load datum.yml config files. "
+            "pyyaml is required to load docglow.yml config files. "
             "Install it with: pip install pyyaml"
         ) from e
 
@@ -142,7 +142,7 @@ def _build_config_from_dict(raw: dict[str, Any]) -> DatumConfig:
 
     return DatumConfig(
         version=raw.get("version", 1),
-        title=raw.get("title", "docs-plus-plus"),
+        title=raw.get("title", "docglow"),
         theme=raw.get("theme", "auto"),
         profiling=profiling,
         health=HealthConfig(weights=weights, naming_rules=naming_rules, complexity=complexity),

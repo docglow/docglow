@@ -2,8 +2,8 @@
 
 import pytest
 
-from docs_plus_plus.profiler.queries import build_histogram_query
-from docs_plus_plus.profiler.stats import parse_histogram_rows
+from docglow.profiler.queries import build_histogram_query
+from docglow.profiler.stats import parse_histogram_rows
 
 
 class TestBuildHistogramQuery:

@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from docs_plus_plus.profiler.queries import ColumnSpec
+from docglow.profiler.queries import ColumnSpec
 
 
 @dataclass(frozen=True)

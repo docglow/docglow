@@ -15,7 +15,7 @@ export interface DatumData {
 
 export interface DatumMetadata {
   generated_at: string
-  docs_plus_plus_version: string
+  docglow_version: string
   dbt_version: string
   project_name: string
   project_id: string

@@ -7,10 +7,10 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 
-from docs_plus_plus.artifacts.catalog import Catalog
-from docs_plus_plus.artifacts.manifest import Manifest
-from docs_plus_plus.artifacts.run_results import RunResults
-from docs_plus_plus.artifacts.sources import SourceFreshness
+from docglow.artifacts.catalog import Catalog
+from docglow.artifacts.manifest import Manifest
+from docglow.artifacts.run_results import RunResults
+from docglow.artifacts.sources import SourceFreshness
 
 logger = logging.getLogger(__name__)
 

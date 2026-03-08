@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from docs_plus_plus.artifacts.loader import load_artifacts
-from docs_plus_plus.generator.data import build_datum_data
+from docglow.artifacts.loader import load_artifacts
+from docglow.generator.data import build_docglow_data
 
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
@@ -21,7 +21,7 @@ def _load_fixtures(tmp_path: Path) -> dict:
             (target / name).write_text(src.read_text())
 
     artifacts = load_artifacts(tmp_path)
-    return build_datum_data(artifacts)
+    return build_docglow_data(artifacts)
 
 
 class TestBuildDatumData:
@@ -43,7 +43,7 @@ class TestBuildDatumData:
 
         assert meta["project_name"] == "jaffle_shop"
         assert meta["dbt_version"] != ""
-        assert meta["docs_plus_plus_version"] == "0.1.0"
+        assert meta["docglow_version"] == "0.1.0"
         assert meta["profiling_enabled"] is False
         assert meta["ai_enabled"] is False
         assert "manifest" in meta["artifact_versions"]

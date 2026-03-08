@@ -26,7 +26,7 @@ interface ChatState {
   sendMessage: (content: string, aiContext: AiContext) => Promise<void>
 }
 
-const STORAGE_KEY = 'dpp-ai-key'
+const STORAGE_KEY = 'dg-ai-key'
 const MAX_REQUESTS = 20
 
 function getStoredKey(): string {
@@ -39,7 +39,7 @@ function getStoredKey(): string {
 
 function getEmbeddedKey(): string {
   try {
-    const datumData = (window as unknown as Record<string, unknown>).__DATUM_DATA__ as Record<string, unknown> | undefined
+    const datumData = (window as unknown as Record<string, unknown>).__DOCGLOW_DATA__ as Record<string, unknown> | undefined
     if (datumData?.ai_key && typeof datumData.ai_key === 'string') {
       return datumData.ai_key
     }

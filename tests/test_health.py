@@ -4,11 +4,11 @@ from typing import Any
 
 import pytest
 
-from docs_plus_plus.analyzer.complexity import analyze_complexity
-from docs_plus_plus.analyzer.coverage import compute_coverage
-from docs_plus_plus.analyzer.health import compute_health, health_to_dict
-from docs_plus_plus.analyzer.naming import check_naming
-from docs_plus_plus.config import ComplexityThresholds, NamingRules
+from docglow.analyzer.complexity import analyze_complexity
+from docglow.analyzer.coverage import compute_coverage
+from docglow.analyzer.health import compute_health, health_to_dict
+from docglow.analyzer.naming import check_naming
+from docglow.config import ComplexityThresholds, NamingRules
 
 
 def _make_model(
@@ -268,13 +268,13 @@ class TestHealthScore:
 
 
 class TestHealthIntegration:
-    """Test health with real fixture data via build_datum_data."""
+    """Test health with real fixture data via build_docglow_data."""
 
     def test_health_in_datum_data(self, tmp_path):
         from pathlib import Path
 
-        from docs_plus_plus.artifacts.loader import load_artifacts
-        from docs_plus_plus.generator.data import build_datum_data
+        from docglow.artifacts.loader import load_artifacts
+        from docglow.generator.data import build_docglow_data
 
         fixtures = Path(__file__).parent / "fixtures"
         target = tmp_path / "target"
@@ -285,7 +285,7 @@ class TestHealthIntegration:
                 (target / name).write_text(src.read_text())
 
         artifacts = load_artifacts(tmp_path)
-        datum = build_datum_data(artifacts)
+        datum = build_docglow_data(artifacts)
 
         health = datum["health"]
         assert "score" in health

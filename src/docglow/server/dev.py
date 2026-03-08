@@ -30,7 +30,7 @@ def start_server(
     server = HTTPServer((host, port), handler)
 
     url = f"http://{host}:{port}"
-    logger.info("Serving docs-plus-plus at %s", url)
+    logger.info("Serving docglow at %s", url)
     logger.info("Press Ctrl+C to stop")
 
     if open_browser:

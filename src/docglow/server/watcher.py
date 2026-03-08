@@ -33,8 +33,8 @@ def _get_mtimes(project_dir: Path) -> dict[str, float]:
 def _rebuild(project_dir: Path, output_dir: Path, console: Any) -> None:
     """Trigger a site rebuild."""
     try:
-        from docs_plus_plus.config import load_config
-        from docs_plus_plus.generator.site import generate_site
+        from docglow.config import load_config
+        from docglow.generator.site import generate_site
 
         config = load_config(project_dir)
         ai_enabled = config.ai.enabled

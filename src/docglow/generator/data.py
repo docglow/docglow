@@ -7,12 +7,12 @@ import os
 from dataclasses import dataclass, field
 from typing import Any
 
-from docs_plus_plus import __version__
-from docs_plus_plus.analyzer.health import compute_health, health_to_dict
-from docs_plus_plus.artifacts.catalog import Catalog, CatalogColumnInfo
-from docs_plus_plus.artifacts.loader import LoadedArtifacts
-from docs_plus_plus.artifacts.manifest import Manifest, ManifestNode, ManifestSource
-from docs_plus_plus.artifacts.run_results import RunResult, RunResults
+from docglow import __version__
+from docglow.analyzer.health import compute_health, health_to_dict
+from docglow.artifacts.catalog import Catalog, CatalogColumnInfo
+from docglow.artifacts.loader import LoadedArtifacts
+from docglow.artifacts.manifest import Manifest, ManifestNode, ManifestSource
+from docglow.artifacts.run_results import RunResult, RunResults
 
 
 @dataclass(frozen=True)
@@ -133,7 +133,7 @@ class SearchEntry:
 @dataclass(frozen=True)
 class DatumMetadata:
     generated_at: str
-    docs_plus_plus_version: str
+    docglow_version: str
     dbt_version: str
     project_name: str
     project_id: str
@@ -157,7 +157,7 @@ class DatumData:
     search_index: list[dict[str, Any]]
 
 
-def build_datum_data(
+def build_docglow_data(
     artifacts: LoadedArtifacts,
     *,
     profiling_enabled: bool = False,
@@ -250,7 +250,7 @@ def build_datum_data(
     # AI context (compact project summary for chat)
     ai_context: dict[str, Any] | None = None
     if ai_enabled:
-        from docs_plus_plus.ai.context import build_ai_context
+        from docglow.ai.context import build_ai_context
         ai_context = build_ai_context(models, sources, seeds, metadata={
             "project_name": manifest.metadata.project_name or "",
             "dbt_version": manifest.metadata.dbt_version,
@@ -259,7 +259,7 @@ def build_datum_data(
     # Metadata
     metadata = {
         "generated_at": manifest.metadata.generated_at,
-        "docs_plus_plus_version": __version__,
+        "docglow_version": __version__,
         "dbt_version": manifest.metadata.dbt_version,
         "project_name": manifest.metadata.project_name or "",
         "project_id": manifest.metadata.project_id or "",

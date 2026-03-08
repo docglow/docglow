@@ -2,7 +2,7 @@
 
 import pytest
 
-from docs_plus_plus.config import (
+from docglow.config import (
     DatumConfig,
     HealthWeights,
     NamingRules,
@@ -16,24 +16,24 @@ class TestLoadConfig:
         config = load_config(tmp_path)
         assert config == DatumConfig()
 
-    def test_loads_datum_yml(self, tmp_path):
-        (tmp_path / "datum.yml").write_text("title: My Project\n")
+    def test_loads_docglow_yml(self, tmp_path):
+        (tmp_path / "docglow.yml").write_text("title: My Project\n")
         config = load_config(tmp_path)
         assert config.title == "My Project"
 
-    def test_loads_datum_yaml(self, tmp_path):
-        (tmp_path / "datum.yaml").write_text("title: Alt Extension\n")
+    def test_loads_docglow_yaml(self, tmp_path):
+        (tmp_path / "docglow.yaml").write_text("title: Alt Extension\n")
         config = load_config(tmp_path)
         assert config.title == "Alt Extension"
 
     def test_yml_takes_precedence_over_yaml(self, tmp_path):
-        (tmp_path / "datum.yml").write_text("title: YML\n")
-        (tmp_path / "datum.yaml").write_text("title: YAML\n")
+        (tmp_path / "docglow.yml").write_text("title: YML\n")
+        (tmp_path / "docglow.yaml").write_text("title: YAML\n")
         config = load_config(tmp_path)
         assert config.title == "YML"
 
     def test_invalid_yaml_returns_defaults(self, tmp_path):
-        (tmp_path / "datum.yml").write_text("just a string\n")
+        (tmp_path / "docglow.yml").write_text("just a string\n")
         config = load_config(tmp_path)
         assert config == DatumConfig()
 
@@ -41,7 +41,7 @@ class TestLoadConfig:
 class TestBuildConfigFromDict:
     def test_empty_dict(self):
         config = _build_config_from_dict({})
-        assert config.title == "docs-plus-plus"
+        assert config.title == "docglow"
         assert config.health.weights == HealthWeights()
 
     def test_custom_health_weights(self):
