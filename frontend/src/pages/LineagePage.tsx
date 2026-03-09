@@ -221,6 +221,7 @@ export function LineagePage() {
             nodes={subgraph.nodes}
             edges={subgraph.edges}
             highlightId={selectedNodeId}
+            layerConfig={data.lineage.layer_config}
           />
         </div>
       </div>

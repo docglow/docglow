@@ -27,6 +27,8 @@ function parseDepId(id: string): { resourceType: string; name: string; navType: 
   return { resourceType, name, navType }
 }
 
+const DEPENDENCY_COLLAPSE_THRESHOLD = 20
+
 function DependencyList({
   label,
   ids,
@@ -36,6 +38,8 @@ function DependencyList({
   ids: string[]
   onNavigate: (type: string, id: string) => void
 }) {
+  const [expanded, setExpanded] = useState(false)
+
   const sorted = useMemo(() => {
     return [...ids]
       .map(id => ({ id, ...parseDepId(id) }))
@@ -49,11 +53,15 @@ function DependencyList({
       })
   }, [ids])
 
+  const isCollapsible = sorted.length > DEPENDENCY_COLLAPSE_THRESHOLD
+  const visible = isCollapsible && !expanded ? sorted.slice(0, DEPENDENCY_COLLAPSE_THRESHOLD) : sorted
+  const hiddenCount = sorted.length - DEPENDENCY_COLLAPSE_THRESHOLD
+
   return (
     <div className="flex-1 min-w-0">
       <h3 className="font-medium text-[var(--text-muted)] mb-2">{label} ({ids.length})</h3>
       <div className="flex flex-wrap gap-1">
-        {sorted.map(dep => {
+        {visible.map(dep => {
           const meta = RESOURCE_TYPE_META[dep.resourceType] ?? RESOURCE_TYPE_META.model
           return (
             <button
@@ -80,6 +88,16 @@ function DependencyList({
             </button>
           )
         })}
+        {isCollapsible && (
+          <button
+            onClick={() => setExpanded(prev => !prev)}
+            className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+                       bg-[var(--bg-surface)] text-[var(--text-muted)] hover:text-[var(--text)]
+                       border border-[var(--border)] cursor-pointer transition-colors"
+          >
+            {expanded ? 'Show less' : `+${hiddenCount} more`}
+          </button>
+        )}
       </div>
     </div>
   )
@@ -368,6 +386,8 @@ export function ModelPage() {
               nodes={filteredSubgraph.nodes}
               edges={filteredSubgraph.edges}
               highlightId={decodedId}
+              layerConfig={data?.lineage.layer_config}
+              onNavigateAway={() => setLineageFullscreen(false)}
             />
           </div>
         </div>
