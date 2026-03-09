@@ -7,6 +7,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from docglow.generator.layers import LineageLayerConfig, parse_layer_config
+
 logger = logging.getLogger(__name__)
 
 
@@ -66,6 +68,7 @@ class DocglowConfig:
     profiling: ProfilingConfig = field(default_factory=ProfilingConfig)
     health: HealthConfig = field(default_factory=HealthConfig)
     ai: AiConfig = field(default_factory=AiConfig)
+    lineage_layers: LineageLayerConfig = field(default_factory=LineageLayerConfig)
 
     # Runtime paths (not from config file)
     project_dir: Path = field(default_factory=lambda: Path("."))
@@ -110,6 +113,7 @@ def _build_config_from_dict(raw: dict[str, Any]) -> DocglowConfig:
     health_raw = raw.get("health", {})
     profiling_raw = raw.get("profiling", {})
     ai_raw = raw.get("ai", {})
+    lineage_raw = raw.get("lineage_layers", {})
 
     weights = HealthWeights(
         **{k: v for k, v in health_raw.get("weights", {}).items()
@@ -140,6 +144,8 @@ def _build_config_from_dict(raw: dict[str, Any]) -> DocglowConfig:
         max_requests_per_session=ai_raw.get("max_requests_per_session", 20),
     ) if ai_raw else AiConfig()
 
+    lineage_layers = parse_layer_config(lineage_raw) if lineage_raw else LineageLayerConfig()
+
     return DocglowConfig(
         version=raw.get("version", 1),
         title=raw.get("title", "docglow"),
@@ -147,4 +153,5 @@ def _build_config_from_dict(raw: dict[str, Any]) -> DocglowConfig:
         profiling=profiling,
         health=HealthConfig(weights=weights, naming_rules=naming_rules, complexity=complexity),
         ai=ai,
+        lineage_layers=lineage_layers,
     )

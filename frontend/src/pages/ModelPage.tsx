@@ -1,12 +1,107 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useProjectStore } from '../stores/projectStore'
 import { ColumnTable } from '../components/models/ColumnTable'
 import { SqlViewer } from '../components/models/SqlViewer'
 import { TestBadge } from '../components/tests/TestBadge'
-import { LineageGraph } from '../components/lineage/LineageGraph'
+import { LineageFlow } from '../components/lineage/LineageFlow'
+import { FilterDropdown } from '../components/ui/FilterDropdown'
+import { Markdown } from '../components/Markdown'
 import { materializationLabel } from '../utils/colors'
-import { getSubgraph } from '../utils/graph'
+import { getSubgraph, type LineageDirection } from '../utils/graph'
+import { applyFilters, useFilterState, computeSubgraphOptions } from '../utils/lineageFilters'
+
+const RESOURCE_TYPE_META: Record<string, { label: string; color: string; bg: string }> = {
+  model:    { label: 'M', color: '#2563eb', bg: '#2563eb18' },
+  source:   { label: 'S', color: '#16a34a', bg: '#16a34a18' },
+  seed:     { label: 'Se', color: '#6b7280', bg: '#6b728018' },
+  snapshot: { label: 'Sn', color: '#7c3aed', bg: '#7c3aed18' },
+  exposure: { label: 'E', color: '#d97706', bg: '#d9770618' },
+  metric:   { label: 'Mt', color: '#7c3aed', bg: '#7c3aed18' },
+}
+
+function parseDepId(id: string): { resourceType: string; name: string; navType: string } {
+  const resourceType = id.split('.')[0] ?? 'model'
+  const name = id.split('.').pop()!
+  const navType = resourceType === 'source' ? 'source' : 'model'
+  return { resourceType, name, navType }
+}
+
+const DEPENDENCY_COLLAPSE_THRESHOLD = 20
+
+function DependencyList({
+  label,
+  ids,
+  onNavigate,
+}: {
+  label: string
+  ids: string[]
+  onNavigate: (type: string, id: string) => void
+}) {
+  const [expanded, setExpanded] = useState(false)
+
+  const sorted = useMemo(() => {
+    return [...ids]
+      .map(id => ({ id, ...parseDepId(id) }))
+      .sort((a, b) => {
+        // Sort by resource type first, then alphabetically by name
+        const typeOrder = ['source', 'model', 'seed', 'snapshot', 'exposure', 'metric']
+        const aIdx = typeOrder.indexOf(a.resourceType)
+        const bIdx = typeOrder.indexOf(b.resourceType)
+        if (aIdx !== bIdx) return aIdx - bIdx
+        return a.name.localeCompare(b.name)
+      })
+  }, [ids])
+
+  const isCollapsible = sorted.length > DEPENDENCY_COLLAPSE_THRESHOLD
+  const visible = isCollapsible && !expanded ? sorted.slice(0, DEPENDENCY_COLLAPSE_THRESHOLD) : sorted
+  const hiddenCount = sorted.length - DEPENDENCY_COLLAPSE_THRESHOLD
+
+  return (
+    <div className="flex-1 min-w-0">
+      <h3 className="font-medium text-[var(--text-muted)] mb-2">{label} ({ids.length})</h3>
+      <div className="flex flex-wrap gap-1">
+        {visible.map(dep => {
+          const meta = RESOURCE_TYPE_META[dep.resourceType] ?? RESOURCE_TYPE_META.model
+          return (
+            <button
+              key={dep.id}
+              onClick={() => onNavigate(dep.navType, dep.id)}
+              title={`${dep.resourceType}: ${dep.id}`}
+              className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs
+                         hover:brightness-90 transition-all cursor-pointer"
+              style={{ background: meta.bg, color: meta.color }}
+            >
+              <span
+                className="inline-flex items-center justify-center rounded text-[9px] font-bold shrink-0"
+                style={{
+                  width: 18,
+                  height: 14,
+                  background: meta.color,
+                  color: '#fff',
+                  lineHeight: 1,
+                }}
+              >
+                {meta.label}
+              </span>
+              {dep.name}
+            </button>
+          )
+        })}
+        {isCollapsible && (
+          <button
+            onClick={() => setExpanded(prev => !prev)}
+            className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+                       bg-[var(--bg-surface)] text-[var(--text-muted)] hover:text-[var(--text)]
+                       border border-[var(--border)] cursor-pointer transition-colors"
+          >
+            {expanded ? 'Show less' : `+${hiddenCount} more`}
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
 
 type Tab = 'columns' | 'sql' | 'lineage' | 'tests'
 
@@ -20,10 +115,34 @@ export function ModelPage() {
   const decodedId = id ? decodeURIComponent(id) : ''
   const model = decodedId ? getModel(decodedId) : undefined
 
-  const miniLineage = useMemo(() => {
+  // Lineage state
+  const [depth, setDepth] = useState(2)
+  const [direction, setDirection] = useState<LineageDirection>('both')
+  const [lineageFullscreen, setLineageFullscreen] = useState(false)
+  const [typeFilter, toggleType, setTypeMode, clearTypes] = useFilterState()
+  const [tagFilter, toggleTag, setTagMode, clearTags] = useFilterState()
+  const [folderFilter, toggleFolder, setFolderMode, clearFolders] = useFilterState()
+
+  const rawSubgraph = useMemo(() => {
     if (!data || !decodedId) return { nodes: [], edges: [] }
-    return getSubgraph(decodedId, data.lineage.nodes, data.lineage.edges, 2)
-  }, [data, decodedId])
+    return getSubgraph(decodedId, data.lineage.nodes, data.lineage.edges, depth, direction)
+  }, [data, decodedId, depth, direction])
+
+  const filteredSubgraph = useMemo(() => {
+    return applyFilters(rawSubgraph.nodes, rawSubgraph.edges, typeFilter, tagFilter, folderFilter)
+  }, [rawSubgraph, typeFilter, tagFilter, folderFilter])
+
+  const subgraphOptions = useMemo(() => {
+    return computeSubgraphOptions(rawSubgraph.nodes)
+  }, [rawSubgraph.nodes])
+
+  const hasActiveFilters = typeFilter.selected.size > 0 || tagFilter.selected.size > 0 || folderFilter.selected.size > 0
+
+  const clearAllFilters = useCallback(() => {
+    clearTypes()
+    clearTags()
+    clearFolders()
+  }, [clearTypes, clearTags, clearFolders])
 
   if (!model) {
     return (
@@ -49,7 +168,7 @@ export function ModelPage() {
   })()
 
   return (
-    <div className="max-w-5xl">
+    <div>
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-2">
@@ -64,7 +183,7 @@ export function ModelPage() {
           <span>{model.path}</span>
         </div>
         {model.description && (
-          <p className="mt-3 text-sm leading-relaxed">{model.description}</p>
+          <Markdown content={model.description} className="mt-3 text-sm" />
         )}
         {model.tags.length > 0 && (
           <div className="flex gap-1 mt-2">
@@ -81,42 +200,18 @@ export function ModelPage() {
       {(model.depends_on.length > 0 || model.referenced_by.length > 0) && (
         <div className="mb-6 flex gap-8 text-sm">
           {model.depends_on.length > 0 && (
-            <div>
-              <h3 className="font-medium text-[var(--text-muted)] mb-1">Depends on</h3>
-              <div className="flex flex-wrap gap-1">
-                {model.depends_on.map(dep => {
-                  const name = dep.split('.').pop()!
-                  const type = dep.startsWith('source.') ? 'source' : 'model'
-                  return (
-                    <button key={dep}
-                            onClick={() => navigate(`/${type}/${encodeURIComponent(dep)}`)}
-                            className="px-2 py-0.5 rounded bg-primary/5 text-primary text-xs
-                                       hover:bg-primary/10 transition-colors cursor-pointer">
-                      {name}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
+            <DependencyList
+              label="Depends on"
+              ids={model.depends_on}
+              onNavigate={(type, id) => navigate(`/${type}/${encodeURIComponent(id)}`)}
+            />
           )}
           {model.referenced_by.length > 0 && (
-            <div>
-              <h3 className="font-medium text-[var(--text-muted)] mb-1">Referenced by</h3>
-              <div className="flex flex-wrap gap-1">
-                {model.referenced_by.map(ref => {
-                  const name = ref.split('.').pop()!
-                  const type = ref.startsWith('source.') ? 'source' : 'model'
-                  return (
-                    <button key={ref}
-                            onClick={() => navigate(`/${type}/${encodeURIComponent(ref)}`)}
-                            className="px-2 py-0.5 rounded bg-primary/5 text-primary text-xs
-                                       hover:bg-primary/10 transition-colors cursor-pointer">
-                      {name}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
+            <DependencyList
+              label="Referenced by"
+              ids={model.referenced_by}
+              onNavigate={(type, id) => navigate(`/${type}/${encodeURIComponent(id)}`)}
+            />
           )}
         </div>
       )}
@@ -168,12 +263,133 @@ export function ModelPage() {
       )}
 
       {activeTab === 'lineage' && (
-        <div className="h-96">
-          <LineageGraph
-            nodes={miniLineage.nodes}
-            edges={miniLineage.edges}
-            highlightId={decodedId}
-          />
+        <div className={lineageFullscreen
+          ? 'fixed inset-0 z-50 bg-[var(--bg)] flex flex-col'
+          : 'flex flex-col'
+        }>
+          {/* Lineage toolbar */}
+          <div className="flex items-center gap-2 mb-2 flex-wrap shrink-0 px-1">
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-[var(--text-muted)]">Depth</label>
+              <input
+                type="range"
+                min={1}
+                max={6}
+                value={depth}
+                onChange={e => setDepth(Number(e.target.value))}
+                className="w-20 accent-[var(--primary)]"
+              />
+              <span className="text-xs font-medium w-4 text-center">{depth}</span>
+            </div>
+
+            <div className="h-4 w-px bg-[var(--border)]" />
+
+            {/* Direction toggle */}
+            <div className="flex items-center rounded overflow-hidden border border-[var(--border)]">
+              {(['upstream', 'both', 'downstream'] as const).map(dir => (
+                <button
+                  key={dir}
+                  onClick={() => setDirection(dir)}
+                  className={`px-2 py-0.5 text-xs cursor-pointer transition-colors flex items-center gap-1
+                    ${direction === dir
+                      ? 'bg-primary text-white'
+                      : 'bg-[var(--bg)] text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-surface)]'
+                    }`}
+                  title={dir === 'both' ? 'Show upstream & downstream' : `Show ${dir} only`}
+                >
+                  {dir === 'upstream' && (
+                    <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                      <path d="M19 12H5M12 5l-7 7" />
+                    </svg>
+                  )}
+                  {dir === 'both' && (
+                    <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                      <path d="M5 12h14M8 8l-4 4 4 4M16 8l4 4-4 4" />
+                    </svg>
+                  )}
+                  {dir === 'downstream' && (
+                    <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                      <path d="M5 12h14M12 5l7 7" />
+                    </svg>
+                  )}
+                  {dir === 'upstream' ? 'Up' : dir === 'downstream' ? 'Down' : 'Both'}
+                </button>
+              ))}
+            </div>
+
+            <div className="h-4 w-px bg-[var(--border)]" />
+
+            <FilterDropdown
+              label="Types"
+              options={subgraphOptions.types}
+              filter={typeFilter}
+              onToggle={toggleType}
+              onSetMode={setTypeMode}
+              onClear={clearTypes}
+            />
+            {subgraphOptions.tags.length > 0 && (
+              <FilterDropdown
+                label="Tags"
+                options={subgraphOptions.tags}
+                filter={tagFilter}
+                onToggle={toggleTag}
+                onSetMode={setTagMode}
+                onClear={clearTags}
+              />
+            )}
+            {subgraphOptions.folders.length > 0 && (
+              <FilterDropdown
+                label="Folders"
+                options={subgraphOptions.folders}
+                filter={folderFilter}
+                onToggle={toggleFolder}
+                onSetMode={setFolderMode}
+                onClear={clearFolders}
+                displayLabel={(v) => v.split('/').pop() ?? v}
+              />
+            )}
+
+            {hasActiveFilters && (
+              <button
+                onClick={clearAllFilters}
+                className="px-2 py-1 text-xs rounded bg-danger/10 text-danger hover:bg-danger/20 cursor-pointer transition-colors"
+              >
+                Clear filters
+              </button>
+            )}
+
+            <span className="text-xs text-[var(--text-muted)] ml-auto">
+              {filteredSubgraph.nodes.length} nodes · {filteredSubgraph.edges.length} edges
+            </span>
+
+            {/* Fullscreen toggle */}
+            <button
+              onClick={() => setLineageFullscreen(f => !f)}
+              className="p-1 rounded hover:bg-[var(--bg-surface)] cursor-pointer transition-colors text-[var(--text-muted)] hover:text-[var(--text)]"
+              title={lineageFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+            >
+              {lineageFullscreen ? (
+                <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M8 3v3a2 2 0 01-2 2H3M21 8h-3a2 2 0 01-2-2V3M3 16h3a2 2 0 012 2v3M16 21v-3a2 2 0 012-2h3" />
+                </svg>
+              ) : (
+                <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+                </svg>
+              )}
+            </button>
+          </div>
+
+          {/* Graph area */}
+          <div className={lineageFullscreen ? 'flex-1 relative min-h-0' : 'relative'} style={lineageFullscreen ? undefined : { height: 'calc(100vh - 380px)', minHeight: 400 }}>
+            <LineageFlow
+              nodes={filteredSubgraph.nodes}
+              edges={filteredSubgraph.edges}
+              highlightId={decodedId}
+              layerConfig={data?.lineage.layer_config}
+              onNavigateAway={() => setLineageFullscreen(false)}
+            />
+          </div>
         </div>
       )}
 

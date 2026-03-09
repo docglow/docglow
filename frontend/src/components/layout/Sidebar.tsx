@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useProjectStore } from '../../stores/projectStore'
 import type { DocglowModel, DocglowSource } from '../../types'
@@ -67,12 +67,30 @@ function buildTree(
   return root
 }
 
-function TreeItem({ node, depth = 0 }: { node: TreeNode; depth?: number }) {
-  const [expanded, setExpanded] = useState(depth < 2)
+function collectFolderPaths(node: TreeNode): string[] {
+  const paths: string[] = []
+  if (node.children.size > 0 && !node.uniqueId) {
+    paths.push(node.path)
+    for (const child of node.children.values()) {
+      paths.push(...collectFolderPaths(child))
+    }
+  }
+  return paths
+}
+
+interface TreeItemProps {
+  node: TreeNode
+  depth?: number
+  expandedPaths: Set<string>
+  onToggle: (path: string) => void
+}
+
+function TreeItem({ node, depth = 0, expandedPaths, onToggle }: TreeItemProps) {
   const navigate = useNavigate()
   const { id } = useParams()
   const isLeaf = node.children.size === 0
   const isActive = node.uniqueId && id === encodeURIComponent(node.uniqueId)
+  const expanded = expandedPaths.has(node.path)
 
   const sortedChildren = useMemo(() => {
     return [...node.children.entries()].sort(([, a], [, b]) => {
@@ -102,7 +120,7 @@ function TreeItem({ node, depth = 0 }: { node: TreeNode; depth?: number }) {
   return (
     <div>
       <button
-        onClick={() => setExpanded(!expanded)}
+        onClick={() => onToggle(node.path)}
         className="w-full text-left px-2 py-1 text-sm font-medium rounded
                    hover:bg-[var(--bg-surface)] transition-colors cursor-pointer
                    flex items-center gap-1 text-[var(--text)]"
@@ -124,7 +142,7 @@ function TreeItem({ node, depth = 0 }: { node: TreeNode; depth?: number }) {
       {expanded && (
         <div>
           {sortedChildren.map(([key, child]) => (
-            <TreeItem key={key} node={child} depth={depth + 1} />
+            <TreeItem key={key} node={child} depth={depth + 1} expandedPaths={expandedPaths} onToggle={onToggle} />
           ))}
         </div>
       )}
@@ -141,16 +159,63 @@ export function Sidebar() {
     return buildTree(data.models, data.sources)
   }, [data])
 
+  // Only "models" expanded by default; sub-folders collapsed
+  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(() => new Set(['models']))
+
+  const allFolderPaths = useMemo(() => {
+    if (!tree) return []
+    return collectFolderPaths(tree)
+  }, [tree])
+
+  const togglePath = useCallback((path: string) => {
+    setExpandedPaths(prev => {
+      const next = new Set(prev)
+      if (next.has(path)) {
+        next.delete(path)
+      } else {
+        next.add(path)
+      }
+      return next
+    })
+  }, [])
+
+  const expandAll = useCallback(() => {
+    setExpandedPaths(new Set(allFolderPaths))
+  }, [allFolderPaths])
+
+  const collapseAll = useCallback(() => {
+    setExpandedPaths(new Set())
+  }, [])
+
   if (!tree) return null
 
   const modelCount = data ? Object.keys(data.models).length : 0
   const sourceCount = data ? Object.keys(data.sources).length : 0
 
   return (
-    <aside className="w-64 border-r border-[var(--border)] bg-[var(--bg)] overflow-y-auto shrink-0 flex flex-col">
+    <aside className="w-full h-full border-r border-[var(--border)] bg-[var(--bg)] overflow-y-auto flex flex-col">
+      <div className="flex items-center justify-end gap-1 px-2 pt-2 pb-1">
+        <button
+          onClick={expandAll}
+          className="px-1.5 py-0.5 text-xs text-[var(--text-muted)] hover:text-[var(--text)]
+                     hover:bg-[var(--bg-surface)] rounded transition-colors cursor-pointer"
+          title="Expand All"
+        >
+          Expand All
+        </button>
+        <span className="text-[var(--text-muted)] text-xs">/</span>
+        <button
+          onClick={collapseAll}
+          className="px-1.5 py-0.5 text-xs text-[var(--text-muted)] hover:text-[var(--text)]
+                     hover:bg-[var(--bg-surface)] rounded transition-colors cursor-pointer"
+          title="Collapse All"
+        >
+          Collapse All
+        </button>
+      </div>
       <nav className="py-2 flex-1">
         {[...tree.children.entries()].map(([key, node]) => (
-          <TreeItem key={key} node={node} depth={0} />
+          <TreeItem key={key} node={node} depth={0} expandedPaths={expandedPaths} onToggle={togglePath} />
         ))}
 
         <div className="mt-3 pt-3 border-t border-[var(--border)] px-2">
@@ -186,6 +251,18 @@ export function Sidebar() {
                 {data.health.score.grade}
               </span>
             )}
+          </button>
+          <button
+            onClick={() => navigate('/layers')}
+            className="w-full text-left px-2 py-1.5 text-sm rounded
+                       hover:bg-[var(--bg-surface)] transition-colors cursor-pointer
+                       flex items-center gap-2 text-[var(--text)]"
+          >
+            <svg className="w-4 h-4 text-[var(--text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>
+            Layers
           </button>
         </div>
       </nav>

@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from docglow.artifacts.loader import load_artifacts
+from docglow.config import load_config
 from docglow.generator.bundle import bundle_site
 from docglow.generator.data import build_docglow_data
 
@@ -56,6 +57,9 @@ def generate_site(
     logger.info("Loading dbt artifacts...")
     artifacts = load_artifacts(project_dir, target_dir)
 
+    # Load project config for layer ordering etc.
+    config = load_config(project_dir)
+
     logger.info("Building data payload...")
     docglow_data = build_docglow_data(
         artifacts,
@@ -64,6 +68,7 @@ def generate_site(
         ai_key=ai_key,
         select=select,
         exclude=exclude,
+        layer_config=config.lineage_layers,
     )
 
     # Run profiling if enabled

@@ -7,6 +7,7 @@ import { ModelPage } from './pages/ModelPage'
 import { SourcePage } from './pages/SourcePage'
 import { LineagePage } from './pages/LineagePage'
 import { HealthPage } from './pages/HealthPage'
+import { LayersPage } from './pages/LayersPage'
 import { SearchPage } from './pages/SearchPage'
 import { useProjectStore } from './stores/projectStore'
 import { useSearchStore } from './stores/searchStore'
@@ -67,6 +68,7 @@ function App() {
           <Route path="/source/:id" element={<SourcePage />} />
           <Route path="/lineage" element={<LineagePage />} />
           <Route path="/health" element={<HealthPage />} />
+          <Route path="/layers" element={<LayersPage />} />
           <Route path="/search" element={<SearchPage />} />
         </Route>
       </Routes>
