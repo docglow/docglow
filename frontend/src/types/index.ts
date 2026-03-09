@@ -172,9 +172,16 @@ export interface DocglowMetric {
   tags: string[]
 }
 
+export interface LayerDefinition {
+  name: string
+  rank: number
+  color: string
+}
+
 export interface LineageData {
   nodes: LineageNode[]
   edges: LineageEdge[]
+  layer_config?: LayerDefinition[]
 }
 
 export interface LineageNode {
@@ -187,6 +194,8 @@ export interface LineageNode {
   has_description: boolean
   folder: string
   tags: string[]
+  layer?: number
+  layer_auto?: boolean
 }
 
 export interface LineageEdge {
