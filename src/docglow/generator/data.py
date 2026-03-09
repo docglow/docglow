@@ -13,6 +13,7 @@ from docglow.artifacts.catalog import Catalog, CatalogColumnInfo
 from docglow.artifacts.loader import LoadedArtifacts
 from docglow.artifacts.manifest import Manifest, ManifestNode, ManifestSource
 from docglow.artifacts.run_results import RunResult, RunResults
+from docglow.generator.layers import LineageLayerConfig, resolve_all_layers, layers_to_dict
 
 
 @dataclass(frozen=True)
@@ -170,6 +171,7 @@ def build_docglow_data(
     ai_key: str | None = None,
     select: str | None = None,
     exclude: str | None = None,
+    layer_config: LineageLayerConfig | None = None,
 ) -> dict[str, Any]:
     """Transform loaded artifacts into the unified DocglowData payload.
 
@@ -243,7 +245,10 @@ def build_docglow_data(
         }
 
     # Build lineage graph
-    lineage = _build_lineage(manifest, models, sources, seeds, snapshots)
+    lineage = _build_lineage(
+        manifest, models, sources, seeds, snapshots,
+        layer_config=layer_config or LineageLayerConfig(),
+    )
 
     # Build search index
     search_index = _build_search_index(models, sources, seeds, snapshots)
@@ -752,6 +757,8 @@ def _build_lineage(
     sources: dict[str, Any],
     seeds: dict[str, Any],
     snapshots: dict[str, Any],
+    *,
+    layer_config: LineageLayerConfig,
 ) -> dict[str, Any]:
     """Build lineage graph nodes and edges."""
     nodes: list[dict[str, Any]] = []
@@ -768,6 +775,7 @@ def _build_lineage(
         has_description: bool,
         folder: str,
         tags: list[str],
+        meta: dict[str, Any] | None = None,
     ) -> None:
         if unique_id in seen_node_ids:
             return
@@ -782,6 +790,7 @@ def _build_lineage(
             "has_description": has_description,
             "folder": folder,
             "tags": tags,
+            "meta": meta or {},
         })
 
     def _get_test_status(model_data: dict[str, Any]) -> str:
@@ -814,6 +823,7 @@ def _build_lineage(
                 has_description=bool(data.get("description")),
                 folder=data.get("folder", ""),
                 tags=data.get("tags", []),
+                meta=data.get("meta", {}),
             )
             for dep in data.get("depends_on", []):
                 edges.append({"source": dep, "target": uid})
@@ -830,6 +840,7 @@ def _build_lineage(
             has_description=bool(data.get("description")),
             folder="",
             tags=data.get("tags", []),
+            meta=data.get("meta", {}),
         )
 
     # Add exposure nodes from manifest
@@ -848,7 +859,19 @@ def _build_lineage(
         for dep in exposure.depends_on.nodes:
             edges.append({"source": dep, "target": uid})
 
-    return {"nodes": nodes, "edges": edges}
+    # Resolve layer ranks for all nodes
+    layer_ranks, auto_assigned = resolve_all_layers(nodes, edges, layer_config)
+    for node in nodes:
+        node["layer"] = layer_ranks.get(node["id"])
+        node["layer_auto"] = node["id"] in auto_assigned
+        # Remove meta from lineage output (only needed for layer resolution)
+        node.pop("meta", None)
+
+    return {
+        "nodes": nodes,
+        "edges": edges,
+        "layer_config": layers_to_dict(layer_config),
+    }
 
 
 def _build_search_index(

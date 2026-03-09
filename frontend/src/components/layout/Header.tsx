@@ -11,7 +11,7 @@ export function Header() {
   return (
     <header className="h-14 border-b border-[var(--border)] bg-[var(--bg)] flex items-center px-4 gap-4 shrink-0">
       <div className="flex items-center gap-2 font-semibold text-primary">
-        <span className="text-lg">d++</span>
+        <span className="text-lg">Docglow</span>
         <span className="text-[var(--text)] font-medium">{projectName}</span>
       </div>
 
