@@ -25,6 +25,7 @@ const NODE_WIDTH = 180
 const NODE_HEIGHT = 44
 const FOLDER_NODE_WIDTH = 220
 const FOLDER_NODE_HEIGHT = 60
+const HIGHLIGHT_DEPTH_CAP = 4
 
 const RESOURCE_COLORS: Record<string, string> = {
   model: '#2563eb',
@@ -347,7 +348,18 @@ function LineageFlowInner({
   const [hoveredId, setHoveredId] = useState<string | null>(null)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [dragOverrides, setDragOverrides] = useState<Record<string, { x: number; y: number }>>({})
+
+  // Debounced hover setter — avoids BFS recomputation on fast mouse movement
+  const setHoveredIdDebounced = useCallback((id: string | null) => {
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current)
+    if (id === null) {
+      setHoveredId(null)
+      return
+    }
+    hoverTimerRef.current = setTimeout(() => setHoveredId(id), 60)
+  }, [])
 
   const centerOnHighlight = useCallback(() => {
     if (!highlightId) return
@@ -366,11 +378,24 @@ function LineageFlowInner({
     [nodes, edges, folderNodeIds],
   )
 
-  // Highlighting
+  // Highlighting — depth-capped with memoized cache
   const activeId = hoveredId ?? highlightId ?? null
+  const highlightCacheRef = useRef(new Map<string, Set<string>>())
+  const highlightCacheEdgesRef = useRef(edges)
+
+  // Clear cache when edges change
+  if (highlightCacheEdgesRef.current !== edges) {
+    highlightCacheEdgesRef.current = edges
+    highlightCacheRef.current = new Map()
+  }
+
   const highlightedSet = useMemo(() => {
     if (!activeId) return null
-    return getFullChain(activeId, edges)
+    const cached = highlightCacheRef.current.get(activeId)
+    if (cached) return cached
+    const result = getFullChain(activeId, edges, HIGHLIGHT_DEPTH_CAP)
+    highlightCacheRef.current.set(activeId, result)
+    return result
   }, [activeId, edges])
 
   // Compute layer bands from layout positions
@@ -524,6 +549,21 @@ function LineageFlowInner({
     })
   }, [])
 
+  // Shared marker definitions — avoids creating per-edge marker objects
+  const MARKER_HIGHLIGHTED = useMemo(() => ({
+    type: MarkerType.ArrowClosed as const,
+    color: '#2563eb',
+    width: 16,
+    height: 12,
+  }), [])
+
+  const MARKER_DEFAULT = useMemo(() => ({
+    type: MarkerType.ArrowClosed as const,
+    color: '#94a3b8',
+    width: 16,
+    height: 12,
+  }), [])
+
   // Build React Flow edges
   const rfEdges = useMemo((): Edge[] => {
     return layout.edges.map((e) => {
@@ -542,15 +582,10 @@ function LineageFlowInner({
           opacity: !highlightedSet ? 0.5 : isHighlighted ? 0.8 : 0.15,
           transition: 'opacity 0.15s ease, stroke 0.15s ease',
         },
-        markerEnd: {
-          type: MarkerType.ArrowClosed,
-          color: isHighlighted ? '#2563eb' : '#94a3b8',
-          width: 16,
-          height: 12,
-        },
+        markerEnd: isHighlighted ? MARKER_HIGHLIGHTED : MARKER_DEFAULT,
       }
     })
-  }, [layout.edges, highlightedSet])
+  }, [layout.edges, highlightedSet, MARKER_HIGHLIGHTED, MARKER_DEFAULT])
 
   // Fit view when data changes
   useEffect(() => {
@@ -560,12 +595,12 @@ function LineageFlowInner({
   }, [layout.nodes.length, layout.edges.length, fitView])
 
   const handleNodeMouseEnter: NodeMouseHandler = useCallback((_, node) => {
-    setHoveredId(node.id)
-  }, [])
+    setHoveredIdDebounced(node.id)
+  }, [setHoveredIdDebounced])
 
   const handleNodeMouseLeave: NodeMouseHandler = useCallback(() => {
-    setHoveredId(null)
-  }, [])
+    setHoveredIdDebounced(null)
+  }, [setHoveredIdDebounced])
 
   // Single click → open side panel; double click → navigate to detail page
   const handleNodeClick: NodeMouseHandler = useCallback((_, node) => {

@@ -61,19 +61,21 @@ export function LineagePage() {
       .slice(0, 20)
   }, [data, search])
 
-  // Compute subgraph, then apply filters
-  const subgraph = useMemo(() => {
+  // Compute raw subgraph once, then derive filtered view and filter options from it
+  const rawSubgraph = useMemo(() => {
     if (!data || !selectedNodeId) return null
-    const raw = getSubgraph(selectedNodeId, data.lineage.nodes, data.lineage.edges, depth, direction)
-    return applyFilters(raw.nodes, raw.edges, typeFilter, tagFilter, folderFilter)
-  }, [data, selectedNodeId, depth, direction, typeFilter, tagFilter, folderFilter])
-
-  // Available options derived from the unfiltered subgraph
-  const subgraphOptions = useMemo(() => {
-    if (!data || !selectedNodeId) return { tags: [], folders: [], types: RESOURCE_TYPES }
-    const raw = getSubgraph(selectedNodeId, data.lineage.nodes, data.lineage.edges, depth, direction)
-    return computeSubgraphOptions(raw.nodes)
+    return getSubgraph(selectedNodeId, data.lineage.nodes, data.lineage.edges, depth, direction)
   }, [data, selectedNodeId, depth, direction])
+
+  const subgraph = useMemo(() => {
+    if (!rawSubgraph) return null
+    return applyFilters(rawSubgraph.nodes, rawSubgraph.edges, typeFilter, tagFilter, folderFilter)
+  }, [rawSubgraph, typeFilter, tagFilter, folderFilter])
+
+  const subgraphOptions = useMemo(() => {
+    if (!rawSubgraph) return { tags: [], folders: [], types: RESOURCE_TYPES }
+    return computeSubgraphOptions(rawSubgraph.nodes)
+  }, [rawSubgraph])
 
   const selectedNode = useMemo(() => {
     if (!data || !selectedNodeId) return null
