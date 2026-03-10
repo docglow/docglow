@@ -1,45 +1,75 @@
 import type { LineageEdge } from '../types'
 
-/** Collect all upstream node IDs (recursive BFS backward). */
-export function getUpstream(nodeId: string, edges: LineageEdge[]): Set<string> {
-  const visited = new Set<string>()
-  const queue = [nodeId]
+/** Build adjacency index for fast traversal (avoids scanning all edges per BFS step). */
+function buildAdjacency(edges: LineageEdge[]): {
+  byTarget: Map<string, string[]>
+  bySource: Map<string, string[]>
+} {
+  const byTarget = new Map<string, string[]>()
+  const bySource = new Map<string, string[]>()
+  for (const e of edges) {
+    const t = byTarget.get(e.target)
+    if (t) t.push(e.source)
+    else byTarget.set(e.target, [e.source])
+    const s = bySource.get(e.source)
+    if (s) s.push(e.target)
+    else bySource.set(e.source, [e.target])
+  }
+  return { byTarget, bySource }
+}
 
-  while (queue.length > 0) {
-    const current = queue.shift()!
-    for (const e of edges) {
-      if (e.target === current && !visited.has(e.source)) {
-        visited.add(e.source)
-        queue.push(e.source)
+/** Collect upstream node IDs via BFS. Optional maxDepth caps traversal depth. */
+export function getUpstream(nodeId: string, edges: LineageEdge[], maxDepth?: number): Set<string> {
+  const { byTarget } = buildAdjacency(edges)
+  const visited = new Set<string>()
+  let frontier = [nodeId]
+  let depth = 0
+
+  while (frontier.length > 0 && (maxDepth == null || depth < maxDepth)) {
+    const next: string[] = []
+    for (const current of frontier) {
+      for (const source of (byTarget.get(current) ?? [])) {
+        if (!visited.has(source)) {
+          visited.add(source)
+          next.push(source)
+        }
       }
     }
+    frontier = next
+    depth++
   }
 
   return visited
 }
 
-/** Collect all downstream node IDs (recursive BFS forward). */
-export function getDownstream(nodeId: string, edges: LineageEdge[]): Set<string> {
+/** Collect downstream node IDs via BFS. Optional maxDepth caps traversal depth. */
+export function getDownstream(nodeId: string, edges: LineageEdge[], maxDepth?: number): Set<string> {
+  const { bySource } = buildAdjacency(edges)
   const visited = new Set<string>()
-  const queue = [nodeId]
+  let frontier = [nodeId]
+  let depth = 0
 
-  while (queue.length > 0) {
-    const current = queue.shift()!
-    for (const e of edges) {
-      if (e.source === current && !visited.has(e.target)) {
-        visited.add(e.target)
-        queue.push(e.target)
+  while (frontier.length > 0 && (maxDepth == null || depth < maxDepth)) {
+    const next: string[] = []
+    for (const current of frontier) {
+      for (const target of (bySource.get(current) ?? [])) {
+        if (!visited.has(target)) {
+          visited.add(target)
+          next.push(target)
+        }
       }
     }
+    frontier = next
+    depth++
   }
 
   return visited
 }
 
-/** Get full dependency chain: upstream + downstream + self. */
-export function getFullChain(nodeId: string, edges: LineageEdge[]): Set<string> {
-  const upstream = getUpstream(nodeId, edges)
-  const downstream = getDownstream(nodeId, edges)
+/** Get dependency chain: upstream + downstream + self, capped to maxDepth per direction. */
+export function getFullChain(nodeId: string, edges: LineageEdge[], maxDepth?: number): Set<string> {
+  const upstream = getUpstream(nodeId, edges, maxDepth)
+  const downstream = getDownstream(nodeId, edges, maxDepth)
   return new Set([nodeId, ...upstream, ...downstream])
 }
 
