@@ -6,7 +6,6 @@ import pytest
 
 from docglow.artifacts.loader import ArtifactLoadError, LoadedArtifacts, load_artifacts
 
-
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
 
@@ -53,9 +52,7 @@ class TestLoadArtifacts:
 
         result = load_artifacts(tmp_path)
 
-        models = {
-            k: v for k, v in result.manifest.nodes.items() if v.resource_type == "model"
-        }
+        models = {k: v for k, v in result.manifest.nodes.items() if v.resource_type == "model"}
         assert len(models) > 0
 
         # Check a known model
@@ -91,15 +88,12 @@ class TestLoadArtifacts:
 
         result = load_artifacts(tmp_path)
 
-        tests = {
-            k: v for k, v in result.manifest.nodes.items() if v.resource_type == "test"
-        }
+        tests = {k: v for k, v in result.manifest.nodes.items() if v.resource_type == "test"}
         assert len(tests) > 0
 
         # Find a not_null test
         not_null_tests = [
-            t for t in tests.values()
-            if t.test_metadata and t.test_metadata.name == "not_null"
+            t for t in tests.values() if t.test_metadata and t.test_metadata.name == "not_null"
         ]
         assert len(not_null_tests) > 0
         assert not_null_tests[0].column_name is not None
@@ -160,9 +154,7 @@ class TestLoadArtifacts:
         assert len(result.run_results.results) > 0
 
         # Check a test result
-        test_results = [
-            r for r in result.run_results.results if "test." in r.unique_id
-        ]
+        test_results = [r for r in result.run_results.results if "test." in r.unique_id]
         assert len(test_results) > 0
         assert test_results[0].status in ("success", "fail", "error", "warn", "pass")
 

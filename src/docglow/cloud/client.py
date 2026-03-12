@@ -27,8 +27,7 @@ class CloudClient:
             import httpx
         except ImportError as e:
             raise ImportError(
-                "httpx is required for cloud features. "
-                "Install it with: pip install docglow[cloud]"
+                "httpx is required for cloud features. Install it with: pip install docglow[cloud]"
             ) from e
 
         self._config = config
@@ -62,7 +61,8 @@ class CloudClient:
                 status_code=response.status_code,
             )
 
-        return response.json()
+        result: dict[str, Any] = response.json()
+        return result
 
     def get_publish_status(self, publish_id: str) -> dict[str, Any]:
         """Check the status of a publish operation."""
@@ -74,7 +74,8 @@ class CloudClient:
                 status_code=response.status_code,
             )
 
-        return response.json()
+        result: dict[str, Any] = response.json()
+        return result
 
     def get_workspace_info(self) -> dict[str, Any]:
         """Get workspace information and status."""
@@ -86,7 +87,8 @@ class CloudClient:
                 status_code=response.status_code,
             )
 
-        return response.json()
+        result: dict[str, Any] = response.json()
+        return result
 
     def close(self) -> None:
         """Close the HTTP client."""

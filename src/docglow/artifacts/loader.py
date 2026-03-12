@@ -6,6 +6,7 @@ import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from docglow.artifacts.catalog import Catalog
 from docglow.artifacts.manifest import Manifest
@@ -38,7 +39,7 @@ def _resolve_target_dir(project_dir: Path, target_dir: Path | None) -> Path:
     return project_dir / "target"
 
 
-def _load_json(path: Path) -> dict:
+def _load_json(path: Path) -> dict[str, Any]:
     """Load and parse a JSON file with clear error messages."""
     if not path.exists():
         raise ArtifactLoadError(f"File not found: {path}")
@@ -61,7 +62,7 @@ def _load_json(path: Path) -> dict:
     return data
 
 
-def _load_optional_json(path: Path, artifact_name: str) -> dict | None:
+def _load_optional_json(path: Path, artifact_name: str) -> dict[str, Any] | None:
     """Load an optional artifact, returning None with a warning if missing."""
     if not path.exists():
         logger.warning("%s not found at %s — skipping", artifact_name, path)
@@ -94,8 +95,7 @@ def load_artifacts(
 
     if not resolved_target.exists():
         raise ArtifactLoadError(
-            f"Target directory not found: {resolved_target}. "
-            "Have you run 'dbt docs generate'?"
+            f"Target directory not found: {resolved_target}. Have you run 'dbt docs generate'?"
         )
 
     # Required artifacts
@@ -109,9 +109,7 @@ def load_artifacts(
     _log_artifact_info("catalog.json", catalog.metadata.dbt_schema_version)
 
     # Optional artifacts
-    run_results_data = _load_optional_json(
-        resolved_target / "run_results.json", "run_results.json"
-    )
+    run_results_data = _load_optional_json(resolved_target / "run_results.json", "run_results.json")
     run_results = (
         RunResults.model_validate(run_results_data) if run_results_data is not None else None
     )
@@ -143,12 +141,8 @@ def _log_summary(
     source_freshness: SourceFreshness | None,
 ) -> None:
     """Log a summary of loaded artifacts."""
-    model_count = sum(
-        1 for n in manifest.nodes.values() if n.resource_type == "model"
-    )
-    test_count = sum(
-        1 for n in manifest.nodes.values() if n.resource_type == "test"
-    )
+    model_count = sum(1 for n in manifest.nodes.values() if n.resource_type == "model")
+    test_count = sum(1 for n in manifest.nodes.values() if n.resource_type == "test")
     source_count = len(manifest.sources)
     catalog_node_count = len(catalog.nodes) + len(catalog.sources)
     result_count = len(run_results.results) if run_results else 0

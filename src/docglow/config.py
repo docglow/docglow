@@ -115,34 +115,63 @@ def _build_config_from_dict(raw: dict[str, Any]) -> DocglowConfig:
     ai_raw = raw.get("ai", {})
     lineage_raw = raw.get("lineage_layers", {})
 
-    weights = HealthWeights(
-        **{k: v for k, v in health_raw.get("weights", {}).items()
-           if k in HealthWeights.__dataclass_fields__}
-    ) if health_raw.get("weights") else HealthWeights()
+    weights = (
+        HealthWeights(
+            **{
+                k: v
+                for k, v in health_raw.get("weights", {}).items()
+                if k in HealthWeights.__dataclass_fields__
+            }
+        )
+        if health_raw.get("weights")
+        else HealthWeights()
+    )
 
-    naming_rules = NamingRules(
-        **{k: v for k, v in health_raw.get("naming_rules", {}).items()
-           if k in NamingRules.__dataclass_fields__}
-    ) if health_raw.get("naming_rules") else NamingRules()
+    naming_rules = (
+        NamingRules(
+            **{
+                k: v
+                for k, v in health_raw.get("naming_rules", {}).items()
+                if k in NamingRules.__dataclass_fields__
+            }
+        )
+        if health_raw.get("naming_rules")
+        else NamingRules()
+    )
 
-    complexity = ComplexityThresholds(
-        **{k: v for k, v in health_raw.get("complexity", {}).items()
-           if k in ComplexityThresholds.__dataclass_fields__}
-    ) if health_raw.get("complexity") else ComplexityThresholds()
+    complexity = (
+        ComplexityThresholds(
+            **{
+                k: v
+                for k, v in health_raw.get("complexity", {}).items()
+                if k in ComplexityThresholds.__dataclass_fields__
+            }
+        )
+        if health_raw.get("complexity")
+        else ComplexityThresholds()
+    )
 
-    profiling = ProfilingConfig(
-        enabled=profiling_raw.get("enabled", False),
-        sample_size=profiling_raw.get("sample_size", 10000),
-        cache=profiling_raw.get("cache", True),
-        exclude_schemas=tuple(profiling_raw.get("exclude_schemas", ())),
-        top_values_threshold=profiling_raw.get("top_values_threshold", 50),
-    ) if profiling_raw else ProfilingConfig()
+    profiling = (
+        ProfilingConfig(
+            enabled=profiling_raw.get("enabled", False),
+            sample_size=profiling_raw.get("sample_size", 10000),
+            cache=profiling_raw.get("cache", True),
+            exclude_schemas=tuple(profiling_raw.get("exclude_schemas", ())),
+            top_values_threshold=profiling_raw.get("top_values_threshold", 50),
+        )
+        if profiling_raw
+        else ProfilingConfig()
+    )
 
-    ai = AiConfig(
-        enabled=ai_raw.get("enabled", False),
-        model=ai_raw.get("model", "claude-sonnet-4-20250514"),
-        max_requests_per_session=ai_raw.get("max_requests_per_session", 20),
-    ) if ai_raw else AiConfig()
+    ai = (
+        AiConfig(
+            enabled=ai_raw.get("enabled", False),
+            model=ai_raw.get("model", "claude-sonnet-4-20250514"),
+            max_requests_per_session=ai_raw.get("max_requests_per_session", 20),
+        )
+        if ai_raw
+        else AiConfig()
+    )
 
     lineage_layers = parse_layer_config(lineage_raw) if lineage_raw else LineageLayerConfig()
 

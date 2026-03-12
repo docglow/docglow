@@ -88,20 +88,22 @@ def analyze_complexity(
         if is_high:
             high_count += 1
 
-        results.append(ModelComplexity(
-            unique_id=uid,
-            name=model.get("name", ""),
-            folder=model.get("folder", ""),
-            sql_lines=sql_lines,
-            join_count=join_count,
-            cte_count=cte_count,
-            subquery_count=subquery_count,
-            downstream_count=downstream_count,
-            is_high_complexity=is_high,
-        ))
+        results.append(
+            ModelComplexity(
+                unique_id=uid,
+                name=model.get("name", ""),
+                folder=model.get("folder", ""),
+                sql_lines=sql_lines,
+                join_count=join_count,
+                cte_count=cte_count,
+                subquery_count=subquery_count,
+                downstream_count=downstream_count,
+                is_high_complexity=is_high,
+            )
+        )
 
     # Sort by complexity indicators (most complex first)
-    results.sort(key=lambda m: (m.sql_lines + m.join_count * 10 + m.cte_count * 5), reverse=True)
+    results.sort(key=lambda m: m.sql_lines + m.join_count * 10 + m.cte_count * 5, reverse=True)
 
     return ComplexityReport(
         models=results,

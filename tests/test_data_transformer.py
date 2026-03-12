@@ -2,11 +2,9 @@
 
 from pathlib import Path
 
-import pytest
-
+from docglow import __version__
 from docglow.artifacts.loader import load_artifacts
 from docglow.generator.data import build_docglow_data
-
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
@@ -31,9 +29,18 @@ class TestBuildDocglowData:
         data = _load_fixtures(tmp_path)
 
         expected_keys = {
-            "metadata", "models", "sources", "seeds", "snapshots",
-            "exposures", "metrics", "lineage", "health", "search_index",
-            "ai_context", "ai_key",
+            "metadata",
+            "models",
+            "sources",
+            "seeds",
+            "snapshots",
+            "exposures",
+            "metrics",
+            "lineage",
+            "health",
+            "search_index",
+            "ai_context",
+            "ai_key",
         }
         assert set(data.keys()) == expected_keys
 
@@ -43,7 +50,7 @@ class TestBuildDocglowData:
 
         assert meta["project_name"] == "jaffle_shop"
         assert meta["dbt_version"] != ""
-        assert meta["docglow_version"] == "0.1.0"
+        assert meta["docglow_version"] == __version__
         assert meta["profiling_enabled"] is False
         assert meta["ai_enabled"] is False
         assert "manifest" in meta["artifact_versions"]
@@ -62,10 +69,24 @@ class TestBuildDocglowData:
         orders = data["models"]["model.jaffle_shop.orders"]
 
         required_fields = [
-            "unique_id", "name", "description", "schema", "database",
-            "materialization", "tags", "meta", "path", "folder",
-            "raw_sql", "compiled_sql", "columns", "depends_on",
-            "referenced_by", "sources_used", "test_results", "last_run",
+            "unique_id",
+            "name",
+            "description",
+            "schema",
+            "database",
+            "materialization",
+            "tags",
+            "meta",
+            "path",
+            "folder",
+            "raw_sql",
+            "compiled_sql",
+            "columns",
+            "depends_on",
+            "referenced_by",
+            "sources_used",
+            "test_results",
+            "last_run",
             "catalog_stats",
         ]
         for field in required_fields:
@@ -220,7 +241,7 @@ class TestBuildDocglowData:
         for model_data in data["models"].values():
             for result in model_data["test_results"]:
                 assert result["status"] != "success", (
-                    f"Test status 'success' should be normalized to 'pass'"
+                    "Test status 'success' should be normalized to 'pass'"
                 )
 
     def test_no_test_nodes_in_models(self, tmp_path: Path) -> None:

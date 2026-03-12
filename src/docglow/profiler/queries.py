@@ -20,19 +20,50 @@ def classify_column(data_type: str) -> str:
         return "other"
 
     numeric_types = {
-        "INTEGER", "INT", "BIGINT", "SMALLINT", "TINYINT",
-        "FLOAT", "DOUBLE", "DECIMAL", "NUMBER", "NUMERIC", "REAL",
-        "INT2", "INT4", "INT8", "FLOAT4", "FLOAT8",
-        "HUGEINT", "UBIGINT", "UINTEGER", "USMALLINT", "UTINYINT",
+        "INTEGER",
+        "INT",
+        "BIGINT",
+        "SMALLINT",
+        "TINYINT",
+        "FLOAT",
+        "DOUBLE",
+        "DECIMAL",
+        "NUMBER",
+        "NUMERIC",
+        "REAL",
+        "INT2",
+        "INT4",
+        "INT8",
+        "FLOAT4",
+        "FLOAT8",
+        "HUGEINT",
+        "UBIGINT",
+        "UINTEGER",
+        "USMALLINT",
+        "UTINYINT",
     }
     date_types = {
-        "DATE", "TIMESTAMP", "DATETIME", "TIMESTAMPTZ",
-        "TIMESTAMP_NTZ", "TIMESTAMP_TZ", "TIMESTAMP_LTZ",
-        "TIMESTAMP WITH TIME ZONE", "TIMESTAMP WITHOUT TIME ZONE",
+        "DATE",
+        "TIMESTAMP",
+        "DATETIME",
+        "TIMESTAMPTZ",
+        "TIMESTAMP_NTZ",
+        "TIMESTAMP_TZ",
+        "TIMESTAMP_LTZ",
+        "TIMESTAMP WITH TIME ZONE",
+        "TIMESTAMP WITHOUT TIME ZONE",
     }
     string_types = {
-        "VARCHAR", "TEXT", "STRING", "CHAR", "CHARACTER VARYING",
-        "NVARCHAR", "NCHAR", "CLOB", "BPCHAR", "NAME",
+        "VARCHAR",
+        "TEXT",
+        "STRING",
+        "CHAR",
+        "CHARACTER VARYING",
+        "NVARCHAR",
+        "NCHAR",
+        "CLOB",
+        "BPCHAR",
+        "NAME",
     }
     boolean_types = {"BOOLEAN", "BOOL"}
 
@@ -102,29 +133,28 @@ def build_stats_query(
         parts.append(f'  , COUNT(DISTINCT {cn}) AS {prefix}__distinct_count"')
 
         if col.category == "numeric":
-            parts.append(f"  , MIN({cn}) AS {prefix}__min\"")
-            parts.append(f"  , MAX({cn}) AS {prefix}__max\"")
-            parts.append(f"  , AVG({cn})::DOUBLE AS {prefix}__mean\"")
+            parts.append(f'  , MIN({cn}) AS {prefix}__min"')
+            parts.append(f'  , MAX({cn}) AS {prefix}__max"')
+            parts.append(f'  , AVG({cn})::DOUBLE AS {prefix}__mean"')
             if adapter == "duckdb":
-                parts.append(f"  , MEDIAN({cn}::DOUBLE) AS {prefix}__median\"")
+                parts.append(f'  , MEDIAN({cn}::DOUBLE) AS {prefix}__median"')
             elif adapter == "snowflake":
-                parts.append(f"  , MEDIAN({cn}) AS {prefix}__median\"")
+                parts.append(f'  , MEDIAN({cn}) AS {prefix}__median"')
             else:
                 # PostgreSQL: use percentile_cont
                 parts.append(
-                    f"  , PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY {cn}) "
-                    f'AS {prefix}__median"'
+                    f'  , PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY {cn}) AS {prefix}__median"'
                 )
-            parts.append(f"  , STDDEV({cn})::DOUBLE AS {prefix}__stddev\"")
+            parts.append(f'  , STDDEV({cn})::DOUBLE AS {prefix}__stddev"')
 
         elif col.category == "date":
-            parts.append(f"  , MIN({cn})::VARCHAR AS {prefix}__min\"")
-            parts.append(f"  , MAX({cn})::VARCHAR AS {prefix}__max\"")
+            parts.append(f'  , MIN({cn})::VARCHAR AS {prefix}__min"')
+            parts.append(f'  , MAX({cn})::VARCHAR AS {prefix}__max"')
 
         elif col.category == "string":
-            parts.append(f"  , MIN(LENGTH({cn})) AS {prefix}__min_length\"")
-            parts.append(f"  , MAX(LENGTH({cn})) AS {prefix}__max_length\"")
-            parts.append(f"  , AVG(LENGTH({cn}))::DOUBLE AS {prefix}__avg_length\"")
+            parts.append(f'  , MIN(LENGTH({cn})) AS {prefix}__min_length"')
+            parts.append(f'  , MAX(LENGTH({cn})) AS {prefix}__max_length"')
+            parts.append(f'  , AVG(LENGTH({cn}))::DOUBLE AS {prefix}__avg_length"')
 
     # FROM clause
     table_ref = f'"{schema}"."{table_name}"' if schema else f'"{table_name}"'
@@ -163,7 +193,9 @@ def build_histogram_query(
             f"  SELECT MIN({cn})::DOUBLE AS mn, MAX({cn})::DOUBLE AS mx\n"
             f"  FROM {table_ref} WHERE {cn} IS NOT NULL\n"
             f"), binned AS (\n"
-            f"  SELECT WIDTH_BUCKET({cn}::DOUBLE, bounds.mn, bounds.mx + 1e-9, {num_bins}) AS bucket\n"
+            f"  SELECT WIDTH_BUCKET("
+            f"{cn}::DOUBLE, bounds.mn, bounds.mx + 1e-9, "
+            f"{num_bins}) AS bucket\n"
             f"  FROM {table_ref}, bounds\n"
             f"  WHERE {cn} IS NOT NULL\n"
             f")\n"
@@ -176,7 +208,9 @@ def build_histogram_query(
         f"  SELECT MIN({cn})::DOUBLE PRECISION AS mn, MAX({cn})::DOUBLE PRECISION AS mx\n"
         f"  FROM {table_ref} WHERE {cn} IS NOT NULL\n"
         f"), binned AS (\n"
-        f"  SELECT WIDTH_BUCKET({cn}::DOUBLE PRECISION, bounds.mn, bounds.mx + 1e-9, {num_bins}) AS bucket\n"
+        f"  SELECT WIDTH_BUCKET("
+        f"{cn}::DOUBLE PRECISION, bounds.mn, bounds.mx + 1e-9, "
+        f"{num_bins}) AS bucket\n"
         f"  FROM {table_ref}, bounds\n"
         f"  WHERE {cn} IS NOT NULL\n"
         f")\n"

@@ -1,7 +1,5 @@
 """Tests for AI context builder."""
 
-import pytest
-
 from docglow.ai.context import build_ai_context
 
 
@@ -20,8 +18,15 @@ def _make_model(name, **overrides):
         "raw_sql": "SELECT 1",
         "compiled_sql": "SELECT 1",
         "columns": [
-            {"name": "id", "description": "Primary key", "data_type": "integer",
-             "meta": {}, "tags": [], "tests": [], "profile": None},
+            {
+                "name": "id",
+                "description": "Primary key",
+                "data_type": "integer",
+                "meta": {},
+                "tags": [],
+                "tests": [],
+                "profile": None,
+            },
         ],
         "depends_on": [],
         "referenced_by": [],
@@ -43,8 +48,15 @@ def _make_source(name, source_name="raw", **overrides):
         "schema": "raw",
         "database": "db",
         "columns": [
-            {"name": "id", "description": "", "data_type": "integer",
-             "meta": {}, "tags": [], "tests": [], "profile": None},
+            {
+                "name": "id",
+                "description": "",
+                "data_type": "integer",
+                "meta": {},
+                "tags": [],
+                "tests": [],
+                "profile": None,
+            },
         ],
         "tags": [],
         "meta": {},
@@ -185,9 +197,7 @@ class TestBuildAiContext:
         assert "row_count" not in ctx["models"][0]
 
     def test_source_fields(self):
-        sources = {
-            "s1": _make_source("raw_orders", source_name="raw_db", freshness_status="pass")
-        }
+        sources = {"s1": _make_source("raw_orders", source_name="raw_db", freshness_status="pass")}
 
         ctx = build_ai_context({}, sources, {}, METADATA, HEALTH)
         s = ctx["sources"][0]

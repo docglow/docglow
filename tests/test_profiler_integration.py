@@ -72,10 +72,12 @@ def _make_model(
 class TestProfilerIntegration:
     def test_profile_numeric_columns(self, duckdb_path: str) -> None:
         models = {
-            "model.test.orders": _make_model(columns=[
-                {"name": "order_id", "data_type": "INTEGER"},
-                {"name": "amount", "data_type": "DECIMAL(10,2)"},
-            ]),
+            "model.test.orders": _make_model(
+                columns=[
+                    {"name": "order_id", "data_type": "INTEGER"},
+                    {"name": "amount", "data_type": "DECIMAL(10,2)"},
+                ]
+            ),
         }
 
         profiles = profile_models(
@@ -102,9 +104,11 @@ class TestProfilerIntegration:
 
     def test_profile_string_columns(self, duckdb_path: str) -> None:
         models = {
-            "model.test.orders": _make_model(columns=[
-                {"name": "status", "data_type": "VARCHAR"},
-            ]),
+            "model.test.orders": _make_model(
+                columns=[
+                    {"name": "status", "data_type": "VARCHAR"},
+                ]
+            ),
         }
 
         profiles = profile_models(
@@ -124,9 +128,11 @@ class TestProfilerIntegration:
 
     def test_profile_date_columns(self, duckdb_path: str) -> None:
         models = {
-            "model.test.orders": _make_model(columns=[
-                {"name": "order_date", "data_type": "DATE"},
-            ]),
+            "model.test.orders": _make_model(
+                columns=[
+                    {"name": "order_date", "data_type": "DATE"},
+                ]
+            ),
         }
 
         profiles = profile_models(
@@ -143,9 +149,11 @@ class TestProfilerIntegration:
 
     def test_profile_with_cache(self, duckdb_path: str, tmp_path: Path) -> None:
         models = {
-            "model.test.orders": _make_model(columns=[
-                {"name": "order_id", "data_type": "INTEGER"},
-            ]),
+            "model.test.orders": _make_model(
+                columns=[
+                    {"name": "order_id", "data_type": "INTEGER"},
+                ]
+            ),
         }
         cache_dir = tmp_path / "cache"
         cache_dir.mkdir()
@@ -172,10 +180,12 @@ class TestProfilerIntegration:
 
     def test_apply_profiles(self, duckdb_path: str) -> None:
         models = {
-            "model.test.orders": _make_model(columns=[
-                {"name": "order_id", "data_type": "INTEGER", "profile": None},
-                {"name": "status", "data_type": "VARCHAR", "profile": None},
-            ]),
+            "model.test.orders": _make_model(
+                columns=[
+                    {"name": "order_id", "data_type": "INTEGER", "profile": None},
+                    {"name": "status", "data_type": "VARCHAR", "profile": None},
+                ]
+            ),
         }
 
         profiles = profile_models(
@@ -217,14 +227,16 @@ class TestProfilerIntegration:
     def test_profile_all_column_types(self, duckdb_path: str) -> None:
         """Profile all column types in one model."""
         models = {
-            "model.test.orders": _make_model(columns=[
-                {"name": "order_id", "data_type": "INTEGER"},
-                {"name": "customer_id", "data_type": "INTEGER"},
-                {"name": "status", "data_type": "VARCHAR"},
-                {"name": "amount", "data_type": "DECIMAL(10,2)"},
-                {"name": "order_date", "data_type": "DATE"},
-                {"name": "is_active", "data_type": "BOOLEAN"},
-            ]),
+            "model.test.orders": _make_model(
+                columns=[
+                    {"name": "order_id", "data_type": "INTEGER"},
+                    {"name": "customer_id", "data_type": "INTEGER"},
+                    {"name": "status", "data_type": "VARCHAR"},
+                    {"name": "amount", "data_type": "DECIMAL(10,2)"},
+                    {"name": "order_date", "data_type": "DATE"},
+                    {"name": "is_active", "data_type": "BOOLEAN"},
+                ]
+            ),
         }
 
         profiles = profile_models(

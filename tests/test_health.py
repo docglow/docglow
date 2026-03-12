@@ -2,8 +2,6 @@
 
 from typing import Any
 
-import pytest
-
 from docglow.analyzer.complexity import analyze_complexity
 from docglow.analyzer.coverage import compute_coverage
 from docglow.analyzer.health import compute_health, health_to_dict
@@ -136,7 +134,8 @@ class TestComplexity:
         assert result.models[0].join_count == 0
 
     def test_complex_sql(self) -> None:
-        sql = "\n".join([f"-- line {i}" for i in range(250)]) + "\nSELECT * FROM a JOIN b JOIN c JOIN d JOIN e JOIN f JOIN g JOIN h JOIN i JOIN j"
+        joins = " JOIN ".join("abcdefghij")
+        sql = "\n".join([f"-- line {i}" for i in range(250)]) + f"\nSELECT * FROM {joins}"
         models = {"m1": _make_model(compiled_sql=sql)}
         result = analyze_complexity(models, {}, {}, ComplexityThresholds(high_sql_lines=200))
         assert result.high_complexity_count == 1
@@ -218,11 +217,14 @@ class TestHealthScore:
     def test_poor_health(self) -> None:
         models = {
             "m1": _make_model(
-                name="orders", folder="models/staging",
+                name="orders",
+                folder="models/staging",
                 columns=[{"name": "id", "description": "", "tests": []}],
             ),
             "m2": _make_model(
-                uid="m2", name="revenue", folder="models/marts",
+                uid="m2",
+                name="revenue",
+                folder="models/marts",
                 columns=[{"name": "id", "description": "", "tests": []}],
             ),
         }

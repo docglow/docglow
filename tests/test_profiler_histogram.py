@@ -1,7 +1,5 @@
 """Tests for histogram query building and parsing."""
 
-import pytest
-
 from docglow.profiler.queries import build_histogram_query
 from docglow.profiler.stats import parse_histogram_rows
 

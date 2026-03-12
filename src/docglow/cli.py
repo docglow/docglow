@@ -32,7 +32,11 @@ def cli() -> None:
 @click.option("--target-dir", type=click.Path(path_type=Path), default=None)
 @click.option("--output-dir", type=click.Path(path_type=Path), default=None)
 @click.option("--profile/--no-profile", default=False, help="Enable column profiling")
-@click.option("--profile-adapter", type=click.Choice(["duckdb", "postgres", "snowflake"]), default=None)
+@click.option(
+    "--profile-adapter",
+    type=click.Choice(["duckdb", "postgres", "snowflake"]),
+    default=None,
+)
 @click.option("--profile-connection", type=str, default=None, help="Connection string or DB path")
 @click.option("--profile-sample-size", type=int, default=None)
 @click.option("--profile-no-cache", is_flag=True, help="Skip profile caching")
@@ -40,7 +44,12 @@ def cli() -> None:
 @click.option("--exclude", type=str, default=None, help="Exclude matching models")
 @click.option("--static", is_flag=True, help="Bundle everything into single index.html")
 @click.option("--ai", is_flag=True, help="Enable AI chat panel")
-@click.option("--ai-key", type=str, default=None, help="Anthropic API key (or set ANTHROPIC_API_KEY env var)")
+@click.option(
+    "--ai-key",
+    type=str,
+    default=None,
+    help="Anthropic API key (or set ANTHROPIC_API_KEY env var)",
+)
 @click.option("--title", type=str, default=None, help="Custom site title")
 @click.option("--theme", type=click.Choice(["light", "dark", "auto"]), default="auto")
 @click.option("--verbose", is_flag=True)
@@ -122,7 +131,14 @@ def generate(
 @click.option("--dir", "serve_dir", type=click.Path(path_type=Path), default=None)
 @click.option("--watch", is_flag=True, help="Watch for artifact changes and auto-rebuild")
 @click.option("--project-dir", type=click.Path(exists=True, path_type=Path), default=".")
-def serve(port: int, host: str, open: bool, serve_dir: Path | None, watch: bool, project_dir: Path) -> None:
+def serve(
+    port: int,
+    host: str,
+    open: bool,
+    serve_dir: Path | None,
+    watch: bool,
+    project_dir: Path,
+) -> None:
     """Serve the documentation site locally."""
     from docglow.server.dev import start_server
 
@@ -136,6 +152,7 @@ def serve(port: int, host: str, open: bool, serve_dir: Path | None, watch: bool,
 
     if watch:
         from docglow.server.watcher import start_watcher
+
         start_watcher(project_dir, resolved_dir, console)
 
     start_server(resolved_dir, host=host, port=port, open_browser=open)
@@ -144,7 +161,12 @@ def serve(port: int, host: str, open: bool, serve_dir: Path | None, watch: bool,
 @cli.command()
 @click.option("--project-dir", type=click.Path(exists=True, path_type=Path), default=".")
 @click.option("--target-dir", type=click.Path(path_type=Path), default=None)
-@click.option("--format", "output_format", type=click.Choice(["table", "json", "markdown"]), default="table")
+@click.option(
+    "--format",
+    "output_format",
+    type=click.Choice(["table", "json", "markdown"]),
+    default="table",
+)
 @click.option("--select", type=str, default=None)
 def health(
     project_dir: Path,
@@ -157,7 +179,6 @@ def health(
 
     from rich.table import Table
 
-    from docglow.analyzer.health import compute_health, health_to_dict
     from docglow.artifacts.loader import ArtifactLoadError, load_artifacts
     from docglow.generator.data import build_docglow_data
 
@@ -178,12 +199,17 @@ def health(
 
     # Table or markdown output
     grade_color = {
-        "A": "green", "B": "blue", "C": "yellow", "D": "red", "F": "bold red",
+        "A": "green",
+        "B": "blue",
+        "C": "yellow",
+        "D": "red",
+        "F": "bold red",
     }.get(score["grade"], "white")
 
     console.print()
-    console.print(f"[bold]docglow Project Health[/bold]")
-    console.print(f"  Overall Score: [{grade_color}]{score['overall']:.0f}/100 ({score['grade']})[/{grade_color}]")
+    console.print("[bold]docglow Project Health[/bold]")
+    overall = f"{score['overall']:.0f}/100 ({score['grade']})"
+    console.print(f"  Overall Score: [{grade_color}]{overall}[/{grade_color}]")
     console.print()
 
     table = Table(show_header=True, header_style="bold")
@@ -207,7 +233,7 @@ def health(
     table.add_row(
         "Source Freshness",
         f"{score['freshness']:.0f}",
-        "No monitored sources" if score['freshness'] == 100.0 else "",
+        "No monitored sources" if score["freshness"] == 100.0 else "",
     )
     table.add_row(
         "Model Complexity",
@@ -217,7 +243,8 @@ def health(
     table.add_row(
         "Naming Conventions",
         f"{score['naming']:.0f}",
-        f"{health_data['naming']['compliant_count']}/{health_data['naming']['total_checked']} compliant",
+        f"{health_data['naming']['compliant_count']}"
+        f"/{health_data['naming']['total_checked']} compliant",
     )
     table.add_row(
         "Orphan Detection",
@@ -233,10 +260,20 @@ def health(
 @click.option("--project-dir", type=click.Path(exists=True, path_type=Path), default=".")
 @click.option("--target-dir", type=click.Path(path_type=Path), default=None)
 @click.option("--adapter", type=click.Choice(["duckdb", "postgres", "snowflake"]), required=True)
-@click.option("--connection", type=str, required=True, help="Connection string or path (e.g., path/to/db.duckdb)")
+@click.option(
+    "--connection",
+    type=str,
+    required=True,
+    help="Connection string or path (e.g., path/to/db.duckdb)",
+)
 @click.option("--sample-size", type=int, default=None, help="Max rows to sample per model")
 @click.option("--no-cache", is_flag=True, help="Skip profile caching")
-@click.option("--output", type=click.Path(path_type=Path), default=None, help="Output directory for profiles.json")
+@click.option(
+    "--output",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="Output directory for profiles.json",
+)
 @click.option("--verbose", is_flag=True)
 def profile(
     project_dir: Path,
@@ -255,7 +292,7 @@ def profile(
 
     from docglow.artifacts.loader import ArtifactLoadError, load_artifacts
     from docglow.generator.data import build_docglow_data
-    from docglow.profiler.engine import ProfilerError, apply_profiles, profile_models
+    from docglow.profiler.engine import ProfilerError, profile_models
 
     try:
         artifacts = load_artifacts(project_dir, target_dir)
@@ -296,7 +333,12 @@ def profile(
 
 
 @cli.command()
-@click.option("--token", envvar="DOCGLOW_TOKEN", default=None, help="API token (or set DOCGLOW_TOKEN env var)")
+@click.option(
+    "--token",
+    envvar="DOCGLOW_TOKEN",
+    default=None,
+    help="API token (or set DOCGLOW_TOKEN env var)",
+)
 @click.option("--project-dir", type=click.Path(exists=True, path_type=Path), default=".")
 @click.option("--target-dir", type=click.Path(path_type=Path), default=None)
 @click.option("--no-wait", is_flag=True, help="Don't wait for processing to complete")
@@ -324,6 +366,7 @@ def publish(
     config = load_cloud_config()
     if token:
         from dataclasses import replace
+
         config = replace(config, token=token)
 
     if not config.token:
@@ -335,20 +378,21 @@ def publish(
 
     try:
         from docglow.cloud.client import CloudApiError
+
         result = run_publish(config, project_dir, target_dir, no_wait=no_wait)
         status = result.get("status", "unknown")
 
         if status == "complete":
             site_url = result.get("site_url", "")
             health_score = result.get("health_score")
-            console.print(f"\n[bold green]Published successfully![/bold green]")
+            console.print("\n[bold green]Published successfully![/bold green]")
             if site_url:
                 console.print(f"  Site: {site_url}")
             if health_score is not None:
                 console.print(f"  Health score: {health_score}")
         else:
             publish_id = result.get("publish_id", "")
-            console.print(f"\n[bold blue]Upload complete[/bold blue]")
+            console.print("\n[bold blue]Upload complete[/bold blue]")
             console.print(f"  Publish ID: {publish_id}")
             console.print(f"  Status: {status}")
     except FileNotFoundError as e:
@@ -395,6 +439,7 @@ def status(token: str | None, verbose: bool) -> None:
     config = load_cloud_config()
     if token:
         from dataclasses import replace
+
         config = replace(config, token=token)
 
     if not config.token:
@@ -451,7 +496,7 @@ def setup() -> None:
 
     save_cloud_config(workspace_slug=workspace, project_slug=project)
     console.print("\n[bold green]Setup complete![/bold green]")
-    console.print(f"  Config saved to ~/.docglow/config.json")
+    console.print("  Config saved to ~/.docglow/config.json")
 
 
 def _parse_connection(adapter: str, connection: str) -> dict[str, str]:

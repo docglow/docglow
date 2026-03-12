@@ -68,34 +68,40 @@ def check_naming(
 
         if layer == "staging":
             if not re.match(rules.staging, name):
-                violations.append(NamingViolation(
-                    unique_id=uid,
-                    name=name,
-                    folder=folder,
-                    expected_pattern=rules.staging,
-                    layer=layer,
-                ))
+                violations.append(
+                    NamingViolation(
+                        unique_id=uid,
+                        name=name,
+                        folder=folder,
+                        expected_pattern=rules.staging,
+                        layer=layer,
+                    )
+                )
         elif layer == "intermediate":
             if not re.match(rules.intermediate, name):
-                violations.append(NamingViolation(
-                    unique_id=uid,
-                    name=name,
-                    folder=folder,
-                    expected_pattern=rules.intermediate,
-                    layer=layer,
-                ))
+                violations.append(
+                    NamingViolation(
+                        unique_id=uid,
+                        name=name,
+                        folder=folder,
+                        expected_pattern=rules.intermediate,
+                        layer=layer,
+                    )
+                )
         elif layer == "marts":
             # Marts models should start with fct_ or dim_
             matches_fact = re.match(rules.marts_fact, name)
             matches_dim = re.match(rules.marts_dimension, name)
             if not matches_fact and not matches_dim:
-                violations.append(NamingViolation(
-                    unique_id=uid,
-                    name=name,
-                    folder=folder,
-                    expected_pattern=f"{rules.marts_fact} or {rules.marts_dimension}",
-                    layer=layer,
-                ))
+                violations.append(
+                    NamingViolation(
+                        unique_id=uid,
+                        name=name,
+                        folder=folder,
+                        expected_pattern=f"{rules.marts_fact} or {rules.marts_dimension}",
+                        layer=layer,
+                    )
+                )
 
     compliant = total_checked - len(violations)
     return NamingReport(

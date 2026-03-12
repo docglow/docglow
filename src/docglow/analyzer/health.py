@@ -48,15 +48,13 @@ def _compute_freshness_score(
     sources: dict[str, dict[str, Any]],
 ) -> float:
     """Compute freshness score from source freshness data."""
-    monitored = [
-        s for s in sources.values()
-        if s.get("freshness_status") is not None
-    ]
+    monitored = [s for s in sources.values() if s.get("freshness_status") is not None]
     if not monitored:
         return 100.0  # No monitored sources = not applicable, full score
 
     passing = sum(
-        1 for s in monitored
+        1
+        for s in monitored
         if s.get("freshness_status") in ("pass", "runtime error")
         # "runtime error" means freshness was checked but source had issues,
         # still counts as "monitored"
@@ -78,11 +76,13 @@ def _find_orphans(
     for uid, model in all_models.items():
         referenced_by = model.get("referenced_by", [])
         if len(referenced_by) == 0:
-            orphans.append({
-                "unique_id": uid,
-                "name": model.get("name", ""),
-                "folder": model.get("folder", ""),
-            })
+            orphans.append(
+                {
+                    "unique_id": uid,
+                    "name": model.get("name", ""),
+                    "folder": model.get("folder", ""),
+                }
+            )
 
     return orphans
 
@@ -104,22 +104,16 @@ def compute_health(
     coverage = compute_coverage(models, sources, seeds, snapshots)
 
     # Documentation score: avg of model + column coverage
-    doc_score = (
-        (coverage.models_documented.rate + coverage.columns_documented.rate) / 2
-    ) * 100.0
+    doc_score = ((coverage.models_documented.rate + coverage.columns_documented.rate) / 2) * 100.0
 
     # Test score: avg of model + column test coverage
-    test_score = (
-        (coverage.models_tested.rate + coverage.columns_tested.rate) / 2
-    ) * 100.0
+    test_score = ((coverage.models_tested.rate + coverage.columns_tested.rate) / 2) * 100.0
 
     # Freshness score
     freshness_score = _compute_freshness_score(sources)
 
     # Complexity analysis
-    complexity = analyze_complexity(
-        models, seeds, snapshots, config.complexity
-    )
+    complexity = analyze_complexity(models, seeds, snapshots, config.complexity)
     complexity_score = complexity.compliance_rate * 100.0
 
     # Naming analysis

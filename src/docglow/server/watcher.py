@@ -58,10 +58,7 @@ def _watch_loop(project_dir: Path, output_dir: Path, console: Any) -> None:
         current_mtimes = _get_mtimes(project_dir)
 
         if current_mtimes != last_mtimes:
-            changed = [
-                p for p in current_mtimes
-                if current_mtimes.get(p) != last_mtimes.get(p)
-            ]
+            changed = [p for p in current_mtimes if current_mtimes.get(p) != last_mtimes.get(p)]
             names = [Path(p).name for p in changed]
             console.print(f"[yellow]Detected changes in: {', '.join(names)}[/yellow]")
             _rebuild(project_dir, output_dir, console)

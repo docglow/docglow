@@ -65,22 +65,26 @@ def compute_coverage(
             models_with_desc += 1
             folder_documented[folder] = folder_documented.get(folder, 0) + 1
         else:
-            undocumented.append({
-                "unique_id": uid,
-                "name": model.get("name", ""),
-                "folder": folder,
-                "downstream_count": downstream_count,
-            })
+            undocumented.append(
+                {
+                    "unique_id": uid,
+                    "name": model.get("name", ""),
+                    "folder": folder,
+                    "downstream_count": downstream_count,
+                }
+            )
 
         if has_tests:
             models_with_tests += 1
         else:
-            untested.append({
-                "unique_id": uid,
-                "name": model.get("name", ""),
-                "folder": folder,
-                "downstream_count": downstream_count,
-            })
+            untested.append(
+                {
+                    "unique_id": uid,
+                    "name": model.get("name", ""),
+                    "folder": folder,
+                    "downstream_count": downstream_count,
+                }
+            )
 
         for col in model.get("columns", []):
             total_columns += 1

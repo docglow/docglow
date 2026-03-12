@@ -29,8 +29,7 @@ def _find_frontend_dist() -> Path:
         return dev_dist
 
     raise FileNotFoundError(
-        "Built frontend assets not found. "
-        "Run 'npm run build' in the frontend/ directory first."
+        "Built frontend assets not found. Run 'npm run build' in the frontend/ directory first."
     )
 
 
@@ -91,7 +90,7 @@ def _bundle_static(
     html = index_path.read_text(encoding="utf-8")
 
     data_json = json.dumps(docglow_data, separators=(",", ":"))
-    data_script = f'<script>window.__DOCGLOW_DATA__={data_json};</script>'
+    data_script = f"<script>window.__DOCGLOW_DATA__={data_json};</script>"
 
     # Inject data script before closing </head> tag
     html = html.replace("</head>", f"{data_script}\n</head>")
