@@ -2,7 +2,7 @@
 
 Next-generation documentation site generator for [dbt Core](https://github.com/dbt-labs/dbt-core) projects.
 
-Docglow replaces the default `dbt docs generate` + `dbt docs serve` workflow with a modern, interactive single-page application featuring lineage exploration, column-level docs, test results, and project health scoring — at a fraction of the cost of enterprise data catalogs.
+Docglow replaces the default `dbt docs serve` workflow with a modern, interactive single-page application featuring lineage exploration, documentation serving, and project health scoring.
 
 ## Install
 
@@ -24,7 +24,6 @@ docglow serve --dir ./site
 
 - **Interactive lineage explorer** — drag, filter, and explore upstream/downstream dependencies with configurable depth and layer visualization
 - **Column-level documentation** — searchable column tables with descriptions, types, and test status
-- **Test results dashboard** — per-model test outcomes with pass/fail/warn indicators
 - **Project health score** — coverage metrics for descriptions, tests, and documentation completeness
 - **Full-text search** — instant search across all models, sources, and columns
 - **Single static site** — no backend required, deploy anywhere (S3, GitHub Pages, Netlify, etc.)
@@ -37,7 +36,6 @@ docglow serve --dir ./site
 | `docglow serve` | Serve the generated site locally |
 | `docglow health` | Show project health score and coverage metrics |
 | `docglow profile` | Run column-level profiling (requires `docglow[profiling]`) |
-| `docglow publish` | Publish to docglow.dev (requires `docglow[cloud]`) |
 
 ## Configuration
 
