@@ -13,7 +13,7 @@ from docglow.artifacts.catalog import Catalog, CatalogColumnInfo
 from docglow.artifacts.loader import LoadedArtifacts
 from docglow.artifacts.manifest import Manifest, ManifestNode, ManifestSource
 from docglow.artifacts.run_results import RunResult, RunResults
-from docglow.generator.layers import LineageLayerConfig, resolve_all_layers, layers_to_dict
+from docglow.generator.layers import LineageLayerConfig, layers_to_dict, resolve_all_layers
 
 
 @dataclass(frozen=True)
@@ -208,15 +208,17 @@ def build_docglow_data(
     # Apply --select / --exclude filtering
     if select or exclude:
         models, seeds, snapshots = _filter_resources(
-            models, seeds, snapshots, select=select, exclude=exclude,
+            models,
+            seeds,
+            snapshots,
+            select=select,
+            exclude=exclude,
         )
 
     # Transform sources
     sources: dict[str, Any] = {}
     for unique_id, source in manifest.sources.items():
-        sources[unique_id] = _transform_source(
-            source, catalog, artifacts.source_freshness
-        )
+        sources[unique_id] = _transform_source(source, catalog, artifacts.source_freshness)
 
     # Transform exposures
     exposures: dict[str, Any] = {}
@@ -246,7 +248,11 @@ def build_docglow_data(
 
     # Build lineage graph
     lineage = _build_lineage(
-        manifest, models, sources, seeds, snapshots,
+        manifest,
+        models,
+        sources,
+        seeds,
+        snapshots,
         layer_config=layer_config or LineageLayerConfig(),
     )
 
@@ -261,10 +267,17 @@ def build_docglow_data(
     ai_context: dict[str, Any] | None = None
     if ai_enabled:
         from docglow.ai.context import build_ai_context
-        ai_context = build_ai_context(models, sources, seeds, metadata={
-            "project_name": manifest.metadata.project_name or "",
-            "dbt_version": manifest.metadata.dbt_version,
-        }, health=health)
+
+        ai_context = build_ai_context(
+            models,
+            sources,
+            seeds,
+            metadata={
+                "project_name": manifest.metadata.project_name or "",
+                "dbt_version": manifest.metadata.dbt_version,
+            },
+            health=health,
+        )
 
     # Metadata
     metadata = {
@@ -277,9 +290,7 @@ def build_docglow_data(
         "artifact_versions": {
             "manifest": manifest.metadata.dbt_schema_version,
             "catalog": catalog.metadata.dbt_schema_version,
-            "run_results": (
-                run_results.metadata.dbt_schema_version if run_results else None
-            ),
+            "run_results": (run_results.metadata.dbt_schema_version if run_results else None),
             "sources": None,
         },
         "profiling_enabled": profiling_enabled,
@@ -401,7 +412,12 @@ def _resolve_selection(
         folder = data.get("folder", "")
         path = data.get("path", "")
 
-        if fnmatch.fnmatch(name, clean) or fnmatch.fnmatch(folder, clean) or fnmatch.fnmatch(path, clean):
+        matches_filter = (
+            fnmatch.fnmatch(name, clean)
+            or fnmatch.fnmatch(folder, clean)
+            or fnmatch.fnmatch(path, clean)
+        )
+        if matches_filter:
             matched.add(uid)
 
     if include_upstream:
@@ -420,7 +436,9 @@ def _resolve_selection(
 
 
 def _collect_upstream(
-    uid: str, resources: dict[str, Any], visited: set[str],
+    uid: str,
+    resources: dict[str, Any],
+    visited: set[str],
 ) -> None:
     """Recursively collect upstream dependencies."""
     data = resources.get(uid)
@@ -433,7 +451,9 @@ def _collect_upstream(
 
 
 def _collect_downstream(
-    uid: str, resources: dict[str, Any], visited: set[str],
+    uid: str,
+    resources: dict[str, Any],
+    visited: set[str],
 ) -> None:
     """Recursively collect downstream dependents."""
     data = resources.get(uid)
@@ -465,9 +485,7 @@ def _transform_model(
     columns = _merge_columns(node, catalog_node, run_results_by_id, test_nodes_by_model)
 
     # Build test results for this model
-    test_results = _build_test_results(
-        node.unique_id, test_nodes_by_model, run_results_by_id
-    )
+    test_results = _build_test_results(node.unique_id, test_nodes_by_model, run_results_by_id)
 
     # Model run result
     model_result = run_results_by_id.get(node.unique_id)
@@ -491,27 +509,27 @@ def _transform_model(
         row_count_entry = catalog_node.stats.get("row_count")
         if row_count_entry and row_count_entry.value is not None:
             try:
-                catalog_stats["row_count"] = int(row_count_entry.value)  # type: ignore[arg-type]
+                catalog_stats["row_count"] = int(row_count_entry.value)  # type: ignore[call-overload]
             except (ValueError, TypeError):
                 pass
         bytes_entry = catalog_node.stats.get("bytes")
         if bytes_entry and bytes_entry.value is not None:
             try:
-                catalog_stats["bytes"] = int(bytes_entry.value)  # type: ignore[arg-type]
+                catalog_stats["bytes"] = int(bytes_entry.value)  # type: ignore[call-overload]
             except (ValueError, TypeError):
                 pass
 
     # Extract source refs
     sources_used = [
-        f"source.{node.package_name}.{s[0]}.{s[1]}" if isinstance(s, (list, tuple)) and len(s) >= 2
+        f"source.{node.package_name}.{s[0]}.{s[1]}"
+        if isinstance(s, (list, tuple)) and len(s) >= 2
         else str(s)
         for s in node.sources
     ]
 
     # Filter reverse deps to exclude tests
     referenced_by = [
-        ref for ref in reverse_deps.get(node.unique_id, [])
-        if not ref.startswith("test.")
+        ref for ref in reverse_deps.get(node.unique_id, []) if not ref.startswith("test.")
     ]
 
     return {
@@ -528,9 +546,7 @@ def _transform_model(
         "raw_sql": node.raw_code,
         "compiled_sql": node.compiled_code or "",
         "columns": columns,
-        "depends_on": [
-            d for d in node.depends_on.nodes if not d.startswith("test.")
-        ],
+        "depends_on": [d for d in node.depends_on.nodes if not d.startswith("test.")],
         "referenced_by": referenced_by,
         "sources_used": sources_used,
         "test_results": test_results,
@@ -573,24 +589,24 @@ def _merge_columns(
             seen.add(col_name.lower())
 
     # Build column tests map
-    column_tests = _build_column_tests(
-        node.unique_id, test_nodes_by_model, run_results_by_id
-    )
+    column_tests = _build_column_tests(node.unique_id, test_nodes_by_model, run_results_by_id)
 
     columns: list[dict[str, Any]] = []
     for col_name in all_column_names:
         catalog_col = catalog_columns.get(col_name) or catalog_columns.get(col_name.lower())
         manifest_col = manifest_columns.get(col_name) or manifest_columns.get(col_name.lower())
 
-        columns.append({
-            "name": col_name,
-            "description": manifest_col.description if manifest_col else "",
-            "data_type": catalog_col.type if catalog_col else "",
-            "meta": dict(manifest_col.meta) if manifest_col else {},
-            "tags": list(manifest_col.tags) if manifest_col else [],
-            "tests": column_tests.get(col_name.lower(), []),
-            "profile": None,
-        })
+        columns.append(
+            {
+                "name": col_name,
+                "description": manifest_col.description if manifest_col else "",
+                "data_type": catalog_col.type if catalog_col else "",
+                "meta": dict(manifest_col.meta) if manifest_col else {},
+                "tags": list(manifest_col.tags) if manifest_col else [],
+                "tests": column_tests.get(col_name.lower(), []),
+                "profile": None,
+            }
+        )
 
     return columns
 
@@ -660,15 +676,17 @@ def _build_test_results(
             failures = run_result.failures or 0
             message = run_result.message
 
-        results.append({
-            "test_name": test_node.name,
-            "test_type": test_type,
-            "column_name": test_node.column_name,
-            "status": status,
-            "execution_time": execution_time,
-            "failures": failures,
-            "message": message,
-        })
+        results.append(
+            {
+                "test_name": test_node.name,
+                "test_type": test_type,
+                "column_name": test_node.column_name,
+                "status": status,
+                "execution_time": execution_time,
+                "failures": failures,
+                "message": message,
+            }
+        )
 
     return results
 
@@ -709,15 +727,17 @@ def _transform_source(
         lower_name = col.name.lower()
         if lower_name not in seen:
             manifest_col = source.columns.get(col.name) or source.columns.get(col.name.lower())
-            columns.append({
-                "name": col.name,
-                "description": manifest_col.description if manifest_col else "",
-                "data_type": col.type if hasattr(col, "type") else "",
-                "meta": dict(manifest_col.meta) if manifest_col else {},
-                "tags": list(manifest_col.tags) if manifest_col else [],
-                "tests": [],
-                "profile": None,
-            })
+            columns.append(
+                {
+                    "name": col.name,
+                    "description": manifest_col.description if manifest_col else "",
+                    "data_type": col.type if hasattr(col, "type") else "",
+                    "meta": dict(manifest_col.meta) if manifest_col else {},
+                    "tags": list(manifest_col.tags) if manifest_col else [],
+                    "tests": [],
+                    "profile": None,
+                }
+            )
             seen.add(lower_name)
 
     # Freshness info
@@ -780,18 +800,20 @@ def _build_lineage(
         if unique_id in seen_node_ids:
             return
         seen_node_ids.add(unique_id)
-        nodes.append({
-            "id": unique_id,
-            "name": name,
-            "resource_type": resource_type,
-            "materialization": materialization,
-            "schema": schema,
-            "test_status": test_status,
-            "has_description": has_description,
-            "folder": folder,
-            "tags": tags,
-            "meta": meta or {},
-        })
+        nodes.append(
+            {
+                "id": unique_id,
+                "name": name,
+                "resource_type": resource_type,
+                "materialization": materialization,
+                "schema": schema,
+                "test_status": test_status,
+                "has_description": has_description,
+                "folder": folder,
+                "tags": tags,
+                "meta": meta or {},
+            }
+        )
 
     def _get_test_status(model_data: dict[str, Any]) -> str:
         test_results = model_data.get("test_results", [])
@@ -893,14 +915,16 @@ def _build_search_index(
             column_names = [c["name"] for c in data.get("columns", [])]
             sql = data.get("compiled_sql", "") or data.get("raw_sql", "")
 
-            entries.append({
-                "unique_id": uid,
-                "name": data.get("name", ""),
-                "resource_type": resource_type,
-                "description": data.get("description", ""),
-                "columns": ", ".join(column_names),
-                "tags": ", ".join(data.get("tags", [])),
-                "sql_snippet": sql[:500],
-            })
+            entries.append(
+                {
+                    "unique_id": uid,
+                    "name": data.get("name", ""),
+                    "resource_type": resource_type,
+                    "description": data.get("description", ""),
+                    "columns": ", ".join(column_names),
+                    "tags": ", ".join(data.get("tags", [])),
+                    "sql_snippet": sql[:500],
+                }
+            )
 
     return entries

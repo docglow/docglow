@@ -1,9 +1,8 @@
 """Tests for the file watcher."""
 
 import time
-from pathlib import Path
 
-from docglow.server.watcher import _get_mtimes, WATCH_PATTERNS
+from docglow.server.watcher import _get_mtimes
 
 
 class TestGetMtimes:

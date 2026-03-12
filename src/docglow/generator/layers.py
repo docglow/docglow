@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import fnmatch
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -87,12 +87,12 @@ def parse_layer_config(raw: dict[str, Any]) -> LineageLayerConfig:
     if layers_raw is not None:
         layers = tuple(
             LayerDefinition(
-                name=l["name"],
-                rank=l["rank"],
-                color=l.get("color", "#e2e8f0"),
+                name=layer["name"],
+                rank=layer["rank"],
+                color=layer.get("color", "#e2e8f0"),
             )
-            for l in layers_raw
-            if isinstance(l, dict) and "name" in l and "rank" in l
+            for layer in layers_raw
+            if isinstance(layer, dict) and "name" in layer and "rank" in layer
         )
 
     rules = DEFAULT_RULES
@@ -175,7 +175,7 @@ def resolve_node_layer(
     if resource_type in ("source", "seed"):
         return _layer_name_to_rank("source", config.layers) or 0
     if resource_type == "exposure":
-        max_rank = max((l.rank for l in config.layers), default=4)
+        max_rank = max((layer.rank for layer in config.layers), default=4)
         return max_rank
 
     return None
@@ -254,7 +254,7 @@ def resolve_all_layers(
 
     # Fallback: any still-unresolved nodes get the middle rank
     if unresolved:
-        all_ranks = [l.rank for l in config.layers]
+        all_ranks = [layer.rank for layer in config.layers]
         middle = all_ranks[len(all_ranks) // 2] if all_ranks else 2
         for node_id in unresolved:
             result[node_id] = middle
@@ -265,6 +265,5 @@ def resolve_all_layers(
 def layers_to_dict(config: LineageLayerConfig) -> list[dict[str, Any]]:
     """Convert layer definitions to a JSON-serializable list."""
     return [
-        {"name": l.name, "rank": l.rank, "color": l.color}
-        for l in config.layers
+        {"name": layer.name, "rank": layer.rank, "color": layer.color} for layer in config.layers
     ]

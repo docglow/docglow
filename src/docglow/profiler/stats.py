@@ -85,8 +85,7 @@ def parse_top_values_rows(
 ) -> list[dict[str, Any]]:
     """Parse top values query results into a list of {value, frequency} dicts."""
     return [
-        {"value": str(r.get("value", "")), "frequency": int(r.get("frequency", 0))}
-        for r in rows
+        {"value": str(r.get("value", "")), "frequency": int(r.get("frequency", 0))} for r in rows
     ]
 
 

@@ -31,7 +31,8 @@ def load_cache(cache_dir: Path) -> dict[str, Any]:
     if not cache_path.exists():
         return {}
     try:
-        return json.loads(cache_path.read_text())
+        result: dict[str, Any] = json.loads(cache_path.read_text())
+        return result
     except (json.JSONDecodeError, OSError) as e:
         logger.warning("Failed to load profile cache: %s", e)
         return {}
@@ -55,7 +56,8 @@ def is_cached(
     if entry is None:
         return False
     current_hash = _schema_hash(columns, row_count)
-    return entry.get("schema_hash") == current_hash
+    matches: bool = entry.get("schema_hash") == current_hash
+    return matches
 
 
 def get_cached_profiles(
@@ -66,7 +68,8 @@ def get_cached_profiles(
     entry = cache.get(model_id)
     if entry is None:
         return None
-    return entry.get("profiles")
+    profiles: dict[str, dict[str, Any]] | None = entry.get("profiles")
+    return profiles
 
 
 def update_cache(

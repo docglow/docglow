@@ -4,11 +4,8 @@ import os
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
-
 from docglow.artifacts.loader import load_artifacts
 from docglow.generator.data import build_docglow_data
-
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 

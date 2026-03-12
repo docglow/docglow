@@ -50,10 +50,7 @@ def _get_connection_url(adapter: str, connection_params: dict[str, Any]) -> str:
         password = connection_params.get("password", "")
         database = connection_params.get("database", "")
         warehouse = connection_params.get("warehouse", "")
-        return (
-            f"snowflake://{user}:{password}@{account}/{database}"
-            f"?warehouse={warehouse}"
-        )
+        return f"snowflake://{user}:{password}@{account}/{database}?warehouse={warehouse}"
     raise ProfilerError(f"Unsupported adapter: {adapter}")
 
 
@@ -85,8 +82,7 @@ def profile_models(
         from sqlalchemy import create_engine, text
     except ImportError as e:
         raise ProfilerError(
-            "SQLAlchemy is required for profiling. "
-            "Install with: pip install docglow[profiling]"
+            "SQLAlchemy is required for profiling. Install with: pip install docglow[profiling]"
         ) from e
 
     cache: dict[str, Any] = {}
@@ -132,12 +128,20 @@ def profile_models(
 
                 # Build and execute stats query
                 stats_sql = build_stats_query(
-                    schema, table_name, column_specs,
-                    adapter=adapter, sample_size=sample_size,
+                    schema,
+                    table_name,
+                    column_specs,
+                    adapter=adapter,
+                    sample_size=sample_size,
                 )
 
                 try:
-                    logger.debug("Profiling %s.%s (%d columns)", schema, table_name, len(column_specs))
+                    logger.debug(
+                        "Profiling %s.%s (%d columns)",
+                        schema,
+                        table_name,
+                        len(column_specs),
+                    )
                     result = conn.execute(text(stats_sql))
                     row = result.mappings().fetchone()
                     if row is None:
@@ -150,9 +154,15 @@ def profile_models(
                     for col_spec in column_specs:
                         col_profile = profiles.get(col_spec.name, {})
                         distinct = col_profile.get("distinct_count", 0)
-                        if 0 < distinct <= top_values_threshold and col_spec.category in ("string", "numeric", "boolean"):
+                        has_low_cardinality = (
+                            0 < distinct <= top_values_threshold
+                            and col_spec.category in ("string", "numeric", "boolean")
+                        )
+                        if has_low_cardinality:
                             tv_sql = build_top_values_query(
-                                schema, table_name, col_spec.name,
+                                schema,
+                                table_name,
+                                col_spec.name,
                                 adapter=adapter,
                             )
                             try:
@@ -160,7 +170,12 @@ def profile_models(
                                 tv_rows = [dict(r) for r in tv_result.mappings()]
                                 col_profile["top_values"] = parse_top_values_rows(tv_rows)
                             except Exception as e:
-                                logger.debug("Top values query failed for %s.%s: %s", table_name, col_spec.name, e)
+                                logger.debug(
+                                    "Top values query failed for %s.%s: %s",
+                                    table_name,
+                                    col_spec.name,
+                                    e,
+                                )
 
                         # Fetch histogram for numeric columns
                         if col_spec.category == "numeric":
@@ -168,17 +183,26 @@ def profile_models(
                             col_max = col_profile.get("max")
                             if col_min is not None and col_max is not None and col_max > col_min:
                                 hist_sql = build_histogram_query(
-                                    schema, table_name, col_spec.name,
+                                    schema,
+                                    table_name,
+                                    col_spec.name,
                                     adapter=adapter,
                                 )
                                 try:
                                     hist_result = conn.execute(text(hist_sql))
                                     hist_rows = [dict(r) for r in hist_result.mappings()]
                                     col_profile["histogram"] = parse_histogram_rows(
-                                        hist_rows, float(col_min), float(col_max),
+                                        hist_rows,
+                                        float(col_min),
+                                        float(col_max),
                                     )
                                 except Exception as e:
-                                    logger.debug("Histogram query failed for %s.%s: %s", table_name, col_spec.name, e)
+                                    logger.debug(
+                                        "Histogram query failed for %s.%s: %s",
+                                        table_name,
+                                        col_spec.name,
+                                        e,
+                                    )
 
                     all_profiles[model_id] = profiles
                     profiled_count += 1
@@ -200,7 +224,9 @@ def profile_models(
 
     logger.info(
         "Profiling complete: %d profiled, %d cached, %d total",
-        profiled_count, cached_count, profiled_count + cached_count,
+        profiled_count,
+        cached_count,
+        profiled_count + cached_count,
     )
     return all_profiles
 
@@ -221,8 +247,7 @@ def apply_profiles(
             continue
 
         new_columns = [
-            {**col, "profile": model_profiles.get(col["name"])}
-            for col in model.get("columns", [])
+            {**col, "profile": model_profiles.get(col["name"])} for col in model.get("columns", [])
         ]
         result[model_id] = {**model, "columns": new_columns}
 

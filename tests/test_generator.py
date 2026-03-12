@@ -3,13 +3,10 @@
 import json
 from pathlib import Path
 
-import pytest
-
 from docglow.artifacts.loader import load_artifacts
 from docglow.generator.bundle import bundle_site
 from docglow.generator.data import build_docglow_data
 from docglow.generator.site import generate_site
-
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 

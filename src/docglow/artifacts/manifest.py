@@ -66,7 +66,7 @@ class ManifestNode(BaseModel):
     columns: dict[str, ManifestColumnInfo] = Field(default_factory=dict)
     meta: dict[str, object] = Field(default_factory=dict)
     tags: list[str] = Field(default_factory=list)
-    config: NodeConfig = Field(default_factory=NodeConfig)
+    config: NodeConfig = Field(default_factory=NodeConfig)  # type: ignore[arg-type]
     depends_on: DependsOn = Field(default_factory=DependsOn)
     raw_code: str = Field("", alias="raw_code")
     compiled_code: str | None = Field(None, alias="compiled_code")

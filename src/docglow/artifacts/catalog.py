@@ -43,7 +43,7 @@ class CatalogNode(BaseModel):
     """A node (table/view) in the dbt catalog."""
 
     unique_id: str
-    metadata: CatalogNodeMetadata = Field(default_factory=CatalogNodeMetadata)
+    metadata: CatalogNodeMetadata = Field(default_factory=CatalogNodeMetadata)  # type: ignore[arg-type]
     columns: dict[str, CatalogColumnInfo] = Field(default_factory=dict)
     stats: dict[str, CatalogStat] = Field(default_factory=dict)
 
