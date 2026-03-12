@@ -349,16 +349,21 @@ function LineageFlowInner({
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isDraggingRef = useRef(false)
   const [dragOverrides, setDragOverrides] = useState<Record<string, { x: number; y: number }>>({})
 
   // Debounced hover setter — avoids BFS recomputation on fast mouse movement
+  // Suppressed entirely during drag to prevent highlight flicker
   const setHoveredIdDebounced = useCallback((id: string | null) => {
     if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current)
+    if (isDraggingRef.current) return
     if (id === null) {
       setHoveredId(null)
       return
     }
-    hoverTimerRef.current = setTimeout(() => setHoveredId(id), 60)
+    hoverTimerRef.current = setTimeout(() => {
+      if (!isDraggingRef.current) setHoveredId(id)
+    }, 60)
   }, [])
 
   const centerOnHighlight = useCallback(() => {
@@ -594,6 +599,14 @@ function LineageFlowInner({
     }
   }, [layout.nodes.length, layout.edges.length, fitView])
 
+  const handleNodeDragStart = useCallback(() => {
+    isDraggingRef.current = true
+  }, [])
+
+  const handleNodeDragStop = useCallback(() => {
+    isDraggingRef.current = false
+  }, [])
+
   const handleNodeMouseEnter: NodeMouseHandler = useCallback((_, node) => {
     setHoveredIdDebounced(node.id)
   }, [setHoveredIdDebounced])
@@ -652,6 +665,8 @@ function LineageFlowInner({
       edges={rfEdges}
       nodeTypes={nodeTypes}
       onNodesChange={handleNodesChange}
+      onNodeDragStart={handleNodeDragStart}
+      onNodeDragStop={handleNodeDragStop}
       onNodeMouseEnter={handleNodeMouseEnter}
       onNodeMouseLeave={handleNodeMouseLeave}
       onNodeClick={handleNodeClick}
