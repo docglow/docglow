@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-03-12
+
 ### Changed
 - Version is now dynamically sourced from `src/docglow/__init__.py` (single source of truth)
 
@@ -35,5 +37,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Suppressed hover highlights during node drag to prevent flicker
 - Shared SVG markers to reduce DOM overhead
 
-[Unreleased]: https://github.com/docglow/docglow/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/docglow/docglow/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/docglow/docglow/compare/v0.1.0...v0.2.0 
 [0.1.0]: https://github.com/docglow/docglow/releases/tag/v0.1.0
