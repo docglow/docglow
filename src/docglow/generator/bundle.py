@@ -86,7 +86,6 @@ def _bundle_static(
     frontend_dist: Path,
 ) -> None:
     """Bundle everything into a single index.html."""
-    import re
     import shutil
 
     index_path = frontend_dist / "index.html"
@@ -96,7 +95,11 @@ def _bundle_static(
     data_script = f"<script>window.__DOCGLOW_DATA__={data_json};</script>"
 
     # Inject data script BEFORE the first <script> tag so the app JS can read it
-    html = re.sub(r"(<script)", f"{data_script}\n\\1", html, count=1)
+    script_pos = html.find("<script")
+    if script_pos != -1:
+        html = html[:script_pos] + data_script + "\n" + html[script_pos:]
+    else:
+        html = html.replace("</head>", f"{data_script}\n</head>")
 
     # Inline CSS and JS assets
     html = _inline_assets(html, frontend_dist)
