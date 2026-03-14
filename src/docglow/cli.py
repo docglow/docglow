@@ -98,8 +98,7 @@ def generate(
 
     # Security warning for AI mode
     if ai:
-        err_console = Console(stderr=True)
-        err_console.print(
+        console.print(
             "\n[bold yellow]Warning:[/bold yellow] AI mode embeds your API key "
             "in the generated site.\n"
             "  This is safe for local use but do [bold]NOT[/bold] deploy this "
