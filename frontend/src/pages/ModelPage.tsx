@@ -108,7 +108,7 @@ type Tab = 'columns' | 'sql' | 'lineage' | 'tests'
 export function ModelPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { data, getModel } = useProjectStore()
+  const { data, getModel, getColumnLineage } = useProjectStore()
   const [activeTab, setActiveTab] = useState<Tab>('columns')
   const [sqlMode, setSqlMode] = useState<'compiled' | 'raw'>('compiled')
 
@@ -232,7 +232,12 @@ export function ModelPage() {
       </div>
 
       {/* Tab Content */}
-      {activeTab === 'columns' && <ColumnTable columns={model.columns} />}
+      {activeTab === 'columns' && (
+        <ColumnTable
+          columns={model.columns}
+          columnLineage={getColumnLineage(decodedId)}
+        />
+      )}
 
       {activeTab === 'sql' && (
         <div>

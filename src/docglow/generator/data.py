@@ -172,6 +172,7 @@ def build_docglow_data(
     select: str | None = None,
     exclude: str | None = None,
     layer_config: LineageLayerConfig | None = None,
+    column_lineage_enabled: bool = False,
 ) -> dict[str, Any]:
     """Transform loaded artifacts into the unified DocglowData payload.
 
@@ -263,6 +264,23 @@ def build_docglow_data(
     health_report = compute_health(models, sources, seeds, snapshots)
     health = health_to_dict(health_report)
 
+    # Column-level lineage
+    column_lineage: dict[str, Any] | None = None
+    if column_lineage_enabled:
+        from docglow.lineage.analyzer import analyze_column_lineage
+        from docglow.lineage.column_parser import detect_dialect
+
+        dialect = detect_dialect(manifest.metadata.adapter_type)
+        column_lineage = analyze_column_lineage(
+            models=models,
+            sources=sources,
+            seeds=seeds,
+            snapshots=snapshots,
+            dialect=dialect,
+            manifest_nodes=dict(manifest.nodes),
+            manifest_sources=dict(manifest.sources),
+        )
+
     # AI context (compact project summary for chat)
     ai_context: dict[str, Any] | None = None
     if ai_enabled:
@@ -320,6 +338,7 @@ def build_docglow_data(
         "search_index": search_index,
         "ai_context": ai_context,
         "ai_key": resolved_ai_key,
+        "column_lineage": column_lineage,
     }
 
 

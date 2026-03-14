@@ -52,6 +52,11 @@ def cli() -> None:
 )
 @click.option("--title", type=str, default=None, help="Custom site title")
 @click.option("--theme", type=click.Choice(["light", "dark", "auto"]), default="auto")
+@click.option(
+    "--column-lineage/--no-column-lineage",
+    default=False,
+    help="Enable column-level lineage analysis (requires sqlglot)",
+)
 @click.option("--verbose", is_flag=True)
 def generate(
     project_dir: Path,
@@ -69,6 +74,7 @@ def generate(
     ai_key: str | None,
     title: str | None,
     theme: str,
+    column_lineage: bool,
     verbose: bool,
 ) -> None:
     """Generate the documentation site."""
@@ -88,6 +94,17 @@ def generate(
         ai = True  # --ai-key implies --ai
     if not title and config.title != "docglow":
         title = config.title
+
+    # Validate column-lineage dependency
+    if column_lineage:
+        try:
+            import sqlglot  # noqa: F401
+        except ImportError:
+            console.print(
+                "[bold red]Error:[/bold red] Column lineage requires sqlglot. "
+                "Install with: [bold]pip install docglow\\[column-lineage][/bold]"
+            )
+            raise SystemExit(1)
 
     # Parse profiling connection params
     profiling_connection = None
@@ -110,6 +127,7 @@ def generate(
             title=title,
             select=select,
             exclude=exclude,
+            column_lineage_enabled=column_lineage,
         )
         console.print(f"\n[bold green]Site generated at {output_path}[/bold green]")
         if static:

@@ -1,10 +1,18 @@
 import { useState, useMemo } from 'react'
-import type { DocglowColumn, ColumnProfile, TopValue, HistogramBin } from '../../types'
+import { useNavigate } from 'react-router-dom'
+import type { DocglowColumn, ColumnProfile, TopValue, HistogramBin, ColumnLineageDependency } from '../../types'
 import { TestBadge } from '../tests/TestBadge'
 import { formatNumber, formatPercent } from '../../utils/formatting'
 
 interface ColumnTableProps {
   columns: DocglowColumn[]
+  columnLineage?: Record<string, ColumnLineageDependency[]>
+}
+
+const TRANSFORMATION_STYLES: Record<string, { label: string; color: string; bg: string }> = {
+  direct:     { label: 'direct',     color: '#16a34a', bg: '#16a34a14' },
+  derived:    { label: 'derived',    color: '#d97706', bg: '#d9770614' },
+  aggregated: { label: 'aggregated', color: '#7c3aed', bg: '#7c3aed14' },
 }
 
 function NullBar({ rate }: { rate: number }) {
@@ -60,6 +68,56 @@ function Histogram({ bins }: { bins: HistogramBin[] }) {
             style={{ height: `${h}px`, minWidth: 4 }}
             title={`${bin.low.toFixed(1)} – ${bin.high.toFixed(1)}: ${bin.count}`}
           />
+        )
+      })}
+    </div>
+  )
+}
+
+function LineageDeps({ deps }: { deps: ColumnLineageDependency[] }) {
+  const navigate = useNavigate()
+
+  // Group by source_model for a cleaner display
+  const grouped = useMemo(() => {
+    const map = new Map<string, ColumnLineageDependency[]>()
+    for (const dep of deps) {
+      const existing = map.get(dep.source_model) ?? []
+      map.set(dep.source_model, [...existing, dep])
+    }
+    return map
+  }, [deps])
+
+  return (
+    <div className="flex flex-wrap gap-1">
+      {Array.from(grouped.entries()).map(([modelId, modelDeps]) => {
+        const modelName = modelId.split('.').pop() ?? modelId
+        const resourceType = modelId.split('.')[0] ?? 'model'
+        const navType = resourceType === 'source' ? 'source' : 'model'
+        const columns = modelDeps.map(d => d.source_column)
+        const transformation = modelDeps[0].transformation
+        const style = TRANSFORMATION_STYLES[transformation] ?? TRANSFORMATION_STYLES.direct
+
+        return (
+          <button
+            key={`${modelId}-${columns.join(',')}`}
+            onClick={(e) => {
+              e.stopPropagation()
+              navigate(`/${navType}/${encodeURIComponent(modelId)}`)
+            }}
+            title={`${modelId}\nColumns: ${columns.join(', ')}\nType: ${transformation}`}
+            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px]
+                       hover:brightness-90 transition-all cursor-pointer border"
+            style={{
+              background: style.bg,
+              color: style.color,
+              borderColor: `${style.color}30`,
+            }}
+          >
+            <span className="font-medium">{modelName}</span>
+            <span style={{ opacity: 0.7 }}>
+              .{columns.length === 1 ? columns[0] : `{${columns.join(', ')}}`}
+            </span>
+          </button>
         )
       })}
     </div>
@@ -184,9 +242,10 @@ const MAX_NAME_CH = 30
 const MIN_NAME_CH = 12
 const CH_PX = 7.2 // approximate px per monospace character at text-xs
 
-export function ColumnTable({ columns }: ColumnTableProps) {
+export function ColumnTable({ columns, columnLineage }: ColumnTableProps) {
   const [expandedCol, setExpandedCol] = useState<string | null>(null)
   const hasAnyProfile = columns.some(c => c.profile != null)
+  const hasAnyLineage = columnLineage != null && Object.keys(columnLineage).length > 0
 
   // Compute a consistent name column width based on the longest name (capped)
   const nameColWidth = useMemo(() => {
@@ -196,6 +255,10 @@ export function ColumnTable({ columns }: ColumnTableProps) {
     // +4 for the expand chevron space, +32 for padding
     return chars * CH_PX + 4 + 32
   }, [columns])
+
+  const totalCols = 4
+    + (hasAnyProfile ? 2 : 0)
+    + (hasAnyLineage ? 1 : 0)
 
   if (columns.length === 0) {
     return <div className="text-sm text-[var(--text-muted)]">No columns found.</div>
@@ -208,6 +271,7 @@ export function ColumnTable({ columns }: ColumnTableProps) {
           <col style={{ width: nameColWidth }} />
           <col style={{ width: 160 }} />
           <col />
+          {hasAnyLineage && <col style={{ width: 260 }} />}
           {hasAnyProfile && (
             <>
               <col style={{ width: 120 }} />
@@ -221,6 +285,9 @@ export function ColumnTable({ columns }: ColumnTableProps) {
             <th className="text-left px-4 py-2 font-medium">Column</th>
             <th className="text-left px-4 py-2 font-medium">Type</th>
             <th className="text-left px-4 py-2 font-medium">Description</th>
+            {hasAnyLineage && (
+              <th className="text-left px-4 py-2 font-medium">Upstream</th>
+            )}
             {hasAnyProfile && (
               <>
                 <th className="text-left px-4 py-2 font-medium">Nulls</th>
@@ -234,9 +301,10 @@ export function ColumnTable({ columns }: ColumnTableProps) {
           {columns.map((col) => {
             const isExpanded = expandedCol === col.name
             const canExpand = col.profile != null
+            const deps = columnLineage?.[col.name]
             return (
               <tr key={col.name} className="group">
-                <td colSpan={hasAnyProfile ? 6 : 4} className="p-0">
+                <td colSpan={totalCols} className="p-0">
                   <div
                     className={`flex items-center border-t border-[var(--border)]
                       ${canExpand ? 'cursor-pointer hover:bg-[var(--bg-surface)]' : ''}
@@ -279,6 +347,17 @@ export function ColumnTable({ columns }: ColumnTableProps) {
                         <span className="text-sm text-[var(--text-muted)] italic">No description</span>
                       )}
                     </div>
+
+                    {/* Column lineage — upstream dependencies */}
+                    {hasAnyLineage && (
+                      <div className="px-4 py-2 shrink-0" style={{ width: 260 }}>
+                        {deps && deps.length > 0 ? (
+                          <LineageDeps deps={deps} />
+                        ) : (
+                          <span className="text-[var(--text-muted)]">—</span>
+                        )}
+                      </div>
+                    )}
 
                     {hasAnyProfile && (
                       <>

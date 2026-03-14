@@ -1,3 +1,11 @@
+export interface ColumnLineageDependency {
+  source_model: string
+  source_column: string
+  transformation: 'direct' | 'derived' | 'aggregated'
+}
+
+export type ColumnLineageData = Record<string, Record<string, ColumnLineageDependency[]>>
+
 export interface DocglowData {
   metadata: DocglowMetadata
   models: Record<string, DocglowModel>
@@ -7,6 +15,7 @@ export interface DocglowData {
   exposures: Record<string, DocglowExposure>
   metrics: Record<string, DocglowMetric>
   lineage: LineageData
+  column_lineage?: ColumnLineageData
   health: HealthData
   search_index: SearchEntry[]
   ai_context: AiContext | null
