@@ -2,7 +2,20 @@
 
 Next-generation documentation site generator for [dbt Core](https://github.com/dbt-labs/dbt-core) projects.
 
-Docglow replaces the default `dbt docs serve` workflow with a modern, interactive single-page application featuring lineage exploration, documentation serving, and project health scoring.
+## Why Docglow?
+
+Over **60,000 teams** use dbt Core without access to dbt Cloud's documentation features. The built-in `dbt docs serve` generates a dated, hard-to-navigate static site that doesn't scale.
+
+Docglow replaces it with a **modern, interactive single-page application** — and it works with any dbt Core project out of the box.
+
+- **No dbt Cloud required** — generate and serve docs locally or deploy anywhere
+- **Unlimited models, unlimited viewers** — no seat caps, no model limits (unlike hosted alternatives like Tributary Docs)
+- **Zero configuration** — just point it at a dbt project with compiled artifacts and go
+- **Interactive lineage explorer** — drag, filter, and trace upstream/downstream dependencies visually
+- **Project health scoring** — get a coverage report for descriptions, tests, and documentation completeness
+
+<!-- TODO: Add screenshot or GIF of lineage explorer here -->
+<!-- Place image assets in docs/images/ -->
 
 ## Install
 
