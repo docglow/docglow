@@ -153,7 +153,7 @@ def _inline_assets(html: str, frontend_dist: Path) -> str:
         js_path = frontend_dist / src.lstrip("./")
         if js_path.exists():
             js_content = js_path.read_text(encoding="utf-8")
-            return f"<script>{js_content}</script>"
+            return f'<script type="module">{js_content}</script>'
         return match.group(0)
 
     html = re.sub(
