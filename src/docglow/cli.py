@@ -89,6 +89,18 @@ def generate(
     if not title and config.title != "docglow":
         title = config.title
 
+    # Security warning for AI mode
+    if ai:
+        err_console = Console(stderr=True)
+        err_console.print(
+            "\n[bold yellow]Warning:[/bold yellow] AI mode embeds your API key "
+            "in the generated site.\n"
+            "  This is safe for local use but do [bold]NOT[/bold] deploy this "
+            "site publicly.\n"
+            "  Use [bold]docglow publish[/bold] for hosted AI features with "
+            "secure key management.\n",
+        )
+
     # Parse profiling connection params
     profiling_connection = None
     if profile and profile_adapter and profile_connection:
