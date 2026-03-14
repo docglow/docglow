@@ -1,0 +1,51 @@
+name: Deploy Demo Site
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'examples/jaffle-shop/**'
+      - 'src/docglow/**'
+      - 'frontend/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install docglow
+        run: pip install .
+
+      - name: Generate demo site
+        run: docglow generate --project-dir examples/jaffle-shop --output-dir site --static
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
