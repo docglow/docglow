@@ -23,6 +23,7 @@ Thumbs.db
 # Project
 dev/
 target/
+!examples/**/target/
 *.duckdb
 *.duckdb.wal
 
