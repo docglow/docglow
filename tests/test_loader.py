@@ -229,7 +229,9 @@ class TestLoadArtifacts:
         assert len(result.catalog.nodes) == 0
         assert len(result.catalog.sources) == 0
 
-    def test_missing_catalog_logs_warning(self, tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    def test_missing_catalog_logs_warning(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
         """Missing catalog.json logs a specific warning."""
         target = tmp_path / "target"
         target.mkdir()
