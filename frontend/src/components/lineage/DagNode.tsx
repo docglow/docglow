@@ -36,6 +36,8 @@ export interface DagNodeData {
   highlightedColumns?: Set<string>
   /** Whether this node participates in a column trace (for amber border on collapsed nodes) */
   inColumnTrace?: boolean
+  /** Node is in the lineage chain but has no column lineage data */
+  noColumnData?: boolean
   [key: string]: unknown
 }
 
@@ -52,17 +54,21 @@ function DagNodeComponent({ data, id }: NodeProps) {
     hasColumnLineage,
     highlightedColumns,
     inColumnTrace,
+    noColumnData,
   } = data as DagNodeData
 
   const [showTooltip, setShowTooltip] = useState(false)
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const expandedNodeIds = useColumnHighlightStore(s => s.expandedNodeIds)
-  const selectedColumn = useColumnHighlightStore(s => s.selectedColumn)
+  const isExpanded = useColumnHighlightStore(s => s.expandedNodeIds.has(id))
+  const isThisSelected = useColumnHighlightStore(
+    s => s.selectedColumn?.modelId === id
+  )
+  const selectedColumnName = useColumnHighlightStore(
+    s => s.selectedColumn?.modelId === id ? s.selectedColumn.columnName : null
+  )
   const toggleNodeExpanded = useColumnHighlightStore(s => s.toggleNodeExpanded)
   const selectColumn = useColumnHighlightStore(s => s.selectColumn)
-
-  const isExpanded = expandedNodeIds.has(id)
 
   const handleMouseEnter = useCallback(() => {
     hoverTimer.current = setTimeout(() => setShowTooltip(true), 500)
@@ -92,13 +98,17 @@ function DagNodeComponent({ data, id }: NodeProps) {
   const showAmberBorder = isActive || inColumnTrace
   const border = showAmberBorder
     ? `2.5px solid ${AMBER}`
-    : borderColor !== 'transparent'
-      ? `2px solid ${borderColor}`
-      : '1px solid var(--border, #e2e8f0)'
+    : noColumnData
+      ? `2px dashed ${AMBER}88`
+      : borderColor !== 'transparent'
+        ? `2px solid ${borderColor}`
+        : '1px solid var(--border, #e2e8f0)'
 
   const boxShadow = showAmberBorder
     ? `0 0 0 3px ${AMBER}33, 0 0 12px ${AMBER}44`
-    : undefined
+    : noColumnData
+      ? `0 0 0 2px ${AMBER}22`
+      : undefined
 
   const hasTooltipContent = folder || schema
   const canExpand = hasColumnLineage && columns && columns.length > 0
@@ -119,8 +129,8 @@ function DagNodeComponent({ data, id }: NodeProps) {
           borderRadius: 6,
           border,
           boxShadow,
-          background: showAmberBorder ? '#fef3c710' : 'var(--bg, #fff)',
-          overflow: 'hidden',
+          background: showAmberBorder ? 'var(--bg, #fff)' : 'var(--bg, #fff)',
+          overflow: 'visible',
           cursor: 'pointer',
           position: 'relative',
         }}
@@ -190,13 +200,19 @@ function DagNodeComponent({ data, id }: NodeProps) {
           <div
             style={{
               borderTop: '1px solid var(--border, #e2e8f0)',
+              border: '1px solid var(--border, #e2e8f0)',
+              borderRadius: '0 0 6px 6px',
               maxHeight: MAX_VISIBLE_COLUMNS * COLUMN_ROW_HEIGHT + 4,
               overflowY: 'auto',
               overflowX: 'hidden',
+              background: 'var(--bg, #fff)',
+              position: 'relative',
+              zIndex: 20,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
             }}
           >
             {visibleColumns.map((col) => {
-              const isSelected = selectedColumn?.modelId === id && selectedColumn?.columnName === col
+              const isSelected = isThisSelected && selectedColumnName === col
               const isHighlighted = highlightedColumns?.has(col)
               const colBg = isSelected
                 ? `${AMBER}30`
