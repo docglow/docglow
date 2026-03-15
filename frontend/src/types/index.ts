@@ -6,6 +6,14 @@ export interface ColumnLineageDependency {
 
 export type ColumnLineageData = Record<string, Record<string, ColumnLineageDependency[]>>
 
+export interface ColumnEdge {
+  sourceModel: string
+  sourceColumn: string
+  targetModel: string
+  targetColumn: string
+  transformation: 'direct' | 'derived' | 'aggregated'
+}
+
 export interface DocglowData {
   metadata: DocglowMetadata
   models: Record<string, DocglowModel>
