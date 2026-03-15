@@ -10,6 +10,7 @@ import { Markdown } from '../components/Markdown'
 import { materializationLabel } from '../utils/colors'
 import { getSubgraph, type LineageDirection } from '../utils/graph'
 import { applyFilters, useFilterState, computeSubgraphOptions } from '../utils/lineageFilters'
+import { buildModelColumnsMap } from '../utils/modelColumns'
 
 const RESOURCE_TYPE_META: Record<string, { label: string; color: string; bg: string }> = {
   model:    { label: 'M', color: '#2563eb', bg: '#2563eb18' },
@@ -108,7 +109,7 @@ type Tab = 'columns' | 'sql' | 'lineage' | 'tests'
 export function ModelPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { data, getModel } = useProjectStore()
+  const { data, getModel, getColumnLineage } = useProjectStore()
   const [activeTab, setActiveTab] = useState<Tab>('columns')
   const [sqlMode, setSqlMode] = useState<'compiled' | 'raw'>('compiled')
 
@@ -143,6 +144,11 @@ export function ModelPage() {
     clearTags()
     clearFolders()
   }, [clearTypes, clearTags, clearFolders])
+
+  const modelColumnsMap = useMemo(() => {
+    if (!data) return {}
+    return buildModelColumnsMap(data)
+  }, [data])
 
   if (!model) {
     return (
@@ -232,7 +238,12 @@ export function ModelPage() {
       </div>
 
       {/* Tab Content */}
-      {activeTab === 'columns' && <ColumnTable columns={model.columns} />}
+      {activeTab === 'columns' && (
+        <ColumnTable
+          columns={model.columns}
+          columnLineage={getColumnLineage(decodedId)}
+        />
+      )}
 
       {activeTab === 'sql' && (
         <div>
@@ -388,6 +399,8 @@ export function ModelPage() {
               highlightId={decodedId}
               layerConfig={data?.lineage.layer_config}
               onNavigateAway={() => setLineageFullscreen(false)}
+              columnLineageData={data?.column_lineage}
+              modelColumns={modelColumnsMap}
             />
           </div>
         </div>

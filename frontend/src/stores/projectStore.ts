@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { DocglowData, DocglowModel, DocglowSource } from '../types'
+import type { DocglowData, DocglowModel, DocglowSource, ColumnLineageDependency } from '../types'
 import { useChatStore } from './chatStore'
 
 interface ProjectState {
@@ -16,6 +16,7 @@ interface ProjectState {
   getModel: (uniqueId: string) => DocglowModel | undefined
   getSource: (uniqueId: string) => DocglowSource | undefined
   getResource: (uniqueId: string) => DocglowModel | DocglowSource | undefined
+  getColumnLineage: (modelId: string) => Record<string, ColumnLineageDependency[]> | undefined
 }
 
 function getInitialTheme(): 'light' | 'dark' {
@@ -100,6 +101,12 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         data.seeds[uniqueId] ??
         data.snapshots[uniqueId]
       )
+    },
+
+    getColumnLineage: (modelId) => {
+      const { data } = get()
+      if (!data?.column_lineage) return undefined
+      return data.column_lineage[modelId]
     },
   }
 })

@@ -41,6 +41,7 @@ class TestBuildDocglowData:
             "search_index",
             "ai_context",
             "ai_key",
+            "column_lineage",
         }
         assert set(data.keys()) == expected_keys
 

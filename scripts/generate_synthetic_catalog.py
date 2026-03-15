@@ -83,7 +83,8 @@ def infer_type(col_name: str, data_type: str | None) -> str:
         return "TIMESTAMP_NTZ"
     if lower.endswith("_count") or lower.endswith("_number") or lower.endswith("_num"):
         return "NUMBER"
-    if lower.endswith("_amount") or lower.endswith("_total") or lower.endswith("_price") or lower.endswith("_cost"):
+    money_suffixes = ("_amount", "_total", "_price", "_cost")
+    if any(lower.endswith(s) for s in money_suffixes):
         return "NUMBER(38,2)"
     if lower.endswith("_rate") or lower.endswith("_ratio") or lower.endswith("_percent"):
         return "FLOAT"
@@ -201,7 +202,7 @@ def generate_catalog(manifest_path: Path) -> dict:
     nodes_with_cols = sum(1 for n in catalog_nodes.values() if n["columns"])
     sources_with_cols = sum(1 for s in catalog_sources.values() if s["columns"])
 
-    print(f"Generated catalog:")
+    print("Generated catalog:")
     print(f"  Nodes: {len(catalog_nodes)} ({nodes_with_cols} with columns)")
     print(f"  Sources: {len(catalog_sources)} ({sources_with_cols} with columns)")
 

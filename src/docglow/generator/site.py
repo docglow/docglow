@@ -30,6 +30,7 @@ def generate_site(
     title: str | None = None,
     select: str | None = None,
     exclude: str | None = None,
+    column_lineage_enabled: bool = False,
 ) -> Path:
     """Generate the docglow static site.
 
@@ -69,6 +70,7 @@ def generate_site(
         select=select,
         exclude=exclude,
         layer_config=config.lineage_layers,
+        column_lineage_enabled=column_lineage_enabled,
     )
 
     # Run profiling if enabled
