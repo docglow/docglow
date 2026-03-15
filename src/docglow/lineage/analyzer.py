@@ -71,8 +71,13 @@ def analyze_column_lineage(
         sql = data.get("compiled_sql", "")
         if not sql:
             raw = data.get("raw_sql", "")
-            if raw:
+            if not raw:
+                continue
+            # Only fall back to raw SQL if it contains no Jinja templates
+            if "{{" in raw or "{%" in raw:
                 sql = strip_jinja(raw)
+            else:
+                sql = raw
 
         if not sql or not sql.strip():
             continue
@@ -80,9 +85,7 @@ def analyze_column_lineage(
         total_models += 1
 
         # Get known column names from catalog for SELECT * fallback
-        known_columns = [
-            col["name"] for col in data.get("columns", []) if col.get("name")
-        ]
+        known_columns = [col["name"] for col in data.get("columns", []) if col.get("name")]
 
         try:
             raw_lineage = parse_column_lineage(
