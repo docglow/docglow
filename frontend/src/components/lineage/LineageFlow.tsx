@@ -16,8 +16,10 @@ import {
 import '@xyflow/react/dist/style.css'
 import dagre from 'dagre'
 import { useNavigate } from 'react-router-dom'
-import type { LineageNode, LineageEdge, LayerDefinition } from '../../types'
+import type { LineageNode, LineageEdge, LayerDefinition, ColumnLineageData } from '../../types'
 import { getFullChain } from '../../utils/graphTraversal'
+import { useColumnHighlightStore } from '../../stores/columnHighlightStore'
+import { buildReverseIndex, getColumnTraceResult } from '../../utils/columnLineageGraph'
 import { DagNode } from './DagNode'
 import { FolderNode } from './FolderNode'
 
@@ -330,6 +332,10 @@ export interface LineageFlowProps {
   layerConfig?: LayerDefinition[]
   /** Called when user double-clicks to navigate away (e.g. to exit fullscreen) */
   onNavigateAway?: () => void
+  /** Column-level lineage data for column highlighting */
+  columnLineageData?: ColumnLineageData
+  /** Map of model ID → list of column names (for DagNode expansion) */
+  modelColumns?: Record<string, string[]>
 }
 
 function LineageFlowInner({
@@ -342,21 +348,47 @@ function LineageFlowInner({
   onFolderClick,
   layerConfig,
   onNavigateAway,
+  columnLineageData,
+  modelColumns,
 }: LineageFlowProps) {
   const navigate = useNavigate()
   const { fitView, getNodes } = useReactFlow()
   const [hoveredId, setHoveredId] = useState<string | null>(null)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
+
+  // Column highlight state
+  const selectedColumn = useColumnHighlightStore(s => s.selectedColumn)
+  const expandedNodeIds = useColumnHighlightStore(s => s.expandedNodeIds)
+  const clearColumnSelection = useColumnHighlightStore(s => s.clearSelection)
+
+  // Memoize reverse index for downstream column tracing
+  const reverseIndex = useMemo(
+    () => columnLineageData ? buildReverseIndex(columnLineageData) : new Map(),
+    [columnLineageData],
+  )
+
+  // Compute column trace when a column is selected
+  const columnTrace = useMemo(() => {
+    if (!selectedColumn || !columnLineageData) return null
+    return getColumnTraceResult(
+      selectedColumn.modelId,
+      selectedColumn.columnName,
+      columnLineageData,
+      reverseIndex,
+    )
+  }, [selectedColumn, columnLineageData, reverseIndex])
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isDraggingRef = useRef(false)
   const [dragOverrides, setDragOverrides] = useState<Record<string, { x: number; y: number }>>({})
 
   // Debounced hover setter — avoids BFS recomputation on fast mouse movement
-  // Suppressed entirely during drag to prevent highlight flicker
+  // Suppressed entirely during drag or when column trace is active
   const setHoveredIdDebounced = useCallback((id: string | null) => {
     if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current)
     if (isDraggingRef.current) return
+    // Suppress hover highlighting when a column is selected to prevent flicker
+    if (selectedColumn) return
     if (id === null) {
       setHoveredId(null)
       return
@@ -364,7 +396,7 @@ function LineageFlowInner({
     hoverTimerRef.current = setTimeout(() => {
       if (!isDraggingRef.current) setHoveredId(id)
     }, 60)
-  }, [])
+  }, [selectedColumn])
 
   const centerOnHighlight = useCallback(() => {
     if (!highlightId) return
@@ -493,6 +525,15 @@ function LineageFlowInner({
         }
       }
 
+      const nodeColumns = modelColumns?.[ln.id]
+      const hasColumnLineage = columnLineageData != null && columnLineageData[ln.id] != null
+      const nodeHighlightedCols = columnTrace?.highlightedColumns.get(ln.id)
+      const inColumnTrace = nodeHighlightedCols != null && nodeHighlightedCols.size > 0
+
+      // When column trace is active, dim nodes not involved
+      const dimmedByColumnTrace = columnTrace != null && !inColumnTrace
+      const baseOpacity = !highlightedSet || highlightedSet.has(ln.id) ? 1 : 0.4
+
       return {
         id: ln.id,
         type: 'dag',
@@ -507,16 +548,21 @@ function LineageFlowInner({
           isActive: ln.id === activeId,
           folder: ln.data.folder,
           schema: ln.data.schema,
+          columns: nodeColumns,
+          hasColumnLineage,
+          highlightedColumns: nodeHighlightedCols,
+          inColumnTrace: inColumnTrace && !expandedNodeIds.has(ln.id),
+          noColumnData: columnTrace != null && !hasColumnLineage && highlightedSet?.has(ln.id),
         },
         style: {
-          opacity: !highlightedSet || highlightedSet.has(ln.id) ? 1 : 0.4,
+          opacity: dimmedByColumnTrace ? 0.3 : baseOpacity,
           transition: 'opacity 0.15s ease',
         },
       }
     })
 
     return [...bandNodes, ...dataNodes]
-  }, [layout.nodes, highlightedSet, activeId, folderData, expandedFolders, layerBands])
+  }, [layout.nodes, highlightedSet, activeId, folderData, expandedFolders, layerBands, modelColumns, columnLineageData, columnTrace, expandedNodeIds])
 
   // Reset drag overrides when the layout recomputes (depth/filter changes)
   const layoutRef = useRef(layout)
@@ -569,9 +615,18 @@ function LineageFlowInner({
     height: 12,
   }), [])
 
-  // Build React Flow edges
+  const MARKER_COLUMN = useMemo(() => ({
+    type: MarkerType.ArrowClosed as const,
+    color: '#f59e0b',
+    width: 14,
+    height: 10,
+  }), [])
+
+  // Build React Flow edges (model-level + column-level)
   const rfEdges = useMemo((): Edge[] => {
-    return layout.edges.map((e) => {
+    const isColumnTraceActive = columnTrace != null
+
+    const modelEdges: Edge[] = layout.edges.map((e) => {
       const isHighlighted = highlightedSet
         ? highlightedSet.has(e.source) && highlightedSet.has(e.target)
         : false
@@ -584,13 +639,41 @@ function LineageFlowInner({
         style: {
           stroke: isHighlighted ? '#2563eb' : 'var(--text-muted, #94a3b8)',
           strokeWidth: isHighlighted ? 2 : 1.5,
-          opacity: !highlightedSet ? 0.5 : isHighlighted ? 0.8 : 0.15,
+          opacity: isColumnTraceActive ? 0.08 : !highlightedSet ? 0.5 : isHighlighted ? 0.8 : 0.15,
           transition: 'opacity 0.15s ease, stroke 0.15s ease',
         },
         markerEnd: isHighlighted ? MARKER_HIGHLIGHTED : MARKER_DEFAULT,
       }
     })
-  }, [layout.edges, highlightedSet, MARKER_HIGHLIGHTED, MARKER_DEFAULT])
+
+    // Column-level edges
+    if (!columnTrace) return modelEdges
+
+    const columnEdges: Edge[] = columnTrace.edges.map((ce) => {
+      const sourceExpanded = expandedNodeIds.has(ce.sourceModel)
+      const targetExpanded = expandedNodeIds.has(ce.targetModel)
+
+      return {
+        id: `col__${ce.sourceModel}__${ce.sourceColumn}__${ce.targetModel}__${ce.targetColumn}`,
+        source: ce.sourceModel,
+        target: ce.targetModel,
+        sourceHandle: sourceExpanded ? `col-${ce.sourceColumn}-source` : undefined,
+        targetHandle: targetExpanded ? `col-${ce.targetColumn}-target` : undefined,
+        type: 'smoothstep',
+        animated: false,
+        style: {
+          stroke: '#f59e0b',
+          strokeWidth: 2,
+          strokeDasharray: '6 3',
+          opacity: 0.9,
+        },
+        markerEnd: MARKER_COLUMN,
+        zIndex: 10,
+      }
+    })
+
+    return [...modelEdges, ...columnEdges]
+  }, [layout.edges, highlightedSet, MARKER_HIGHLIGHTED, MARKER_DEFAULT, MARKER_COLUMN, columnTrace, expandedNodeIds])
 
   // Fit view when data changes
   useEffect(() => {
@@ -647,7 +730,8 @@ function LineageFlowInner({
   // Close panel when clicking canvas background
   const handlePaneClick = useCallback(() => {
     setSelectedNodeId(null)
-  }, [])
+    clearColumnSelection()
+  }, [clearColumnSelection])
 
   // Lookup for selected node detail panel
   const selectedNodeData = useMemo(() => {

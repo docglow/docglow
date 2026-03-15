@@ -6,6 +6,7 @@ import { getSubgraph } from '../utils/graph'
 import { applyFilters, useFilterState, computeSubgraphOptions, RESOURCE_TYPES } from '../utils/lineageFilters'
 import type { LineageDirection } from '../utils/graph'
 import type { LineageNode, LineageEdge } from '../types'
+import { buildModelColumnsMap } from '../utils/modelColumns'
 
 interface ModelSuggestion {
   node: LineageNode
@@ -81,6 +82,11 @@ export function LineagePage() {
     if (!data || !selectedNodeId) return null
     return data.lineage.nodes.find(n => n.id === selectedNodeId) ?? null
   }, [data, selectedNodeId])
+
+  const modelColumnsMap = useMemo(() => {
+    if (!data) return {}
+    return buildModelColumnsMap(data)
+  }, [data])
 
   const handleSelectModel = useCallback((id: string) => {
     setSelectedNodeId(id)
@@ -224,6 +230,8 @@ export function LineagePage() {
             edges={subgraph.edges}
             highlightId={selectedNodeId}
             layerConfig={data.lineage.layer_config}
+            columnLineageData={data.column_lineage}
+            modelColumns={modelColumnsMap}
           />
         </div>
       </div>
