@@ -213,7 +213,8 @@ def _rewrite_star_to_columns(
     new_exprs = [exp.Column(this=exp.to_identifier(c)) for c in columns]
     outermost.set("expressions", new_exprs)
 
-    return tree.sql(dialect=dialect)
+    result: str = tree.sql(dialect=dialect)
+    return result
 
 
 def _extract_output_columns(select: Any) -> list[str]:
@@ -227,10 +228,6 @@ def _extract_output_columns(select: Any) -> list[str]:
         elif isinstance(expression, exp.Column):
             columns.append(expression.name)
         elif isinstance(expression, exp.Star):
-            continue
-        elif isinstance(expression, exp.Exclude):
-            # SELECT * EXCLUDE(...) — we'll handle this in the caller
-            # with known_columns by removing excluded columns
             continue
         else:
             alias = expression.alias_or_name
