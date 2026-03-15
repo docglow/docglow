@@ -1,5 +1,6 @@
 """Tests for artifact loading and parsing."""
 
+import logging
 from pathlib import Path
 
 import pytest
@@ -167,9 +168,8 @@ class TestLoadArtifacts:
         """Missing manifest.json raises ArtifactLoadError."""
         target = tmp_path / "target"
         target.mkdir()
-        (target / "catalog.json").write_text("{}")
 
-        with pytest.raises(ArtifactLoadError, match="File not found"):
+        with pytest.raises(ArtifactLoadError, match="manifest.json"):
             load_artifacts(tmp_path)
 
     def test_invalid_json_raises(self, tmp_path: Path) -> None:
@@ -214,3 +214,45 @@ class TestLoadArtifacts:
         result = load_artifacts(tmp_path, target_dir=custom)
 
         assert result.manifest is not None
+
+    def test_missing_catalog_degrades_gracefully(self, tmp_path: Path) -> None:
+        """Missing catalog.json should not raise — creates empty catalog."""
+        target = tmp_path / "target"
+        target.mkdir()
+        # Only copy manifest, NOT catalog
+        (target / "manifest.json").write_text((FIXTURES_DIR / "manifest.json").read_text())
+
+        result = load_artifacts(tmp_path)
+
+        assert result.manifest is not None
+        assert result.catalog is not None
+        assert len(result.catalog.nodes) == 0
+        assert len(result.catalog.sources) == 0
+
+    def test_missing_catalog_logs_warning(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Missing catalog.json logs a specific warning."""
+        target = tmp_path / "target"
+        target.mkdir()
+        (target / "manifest.json").write_text((FIXTURES_DIR / "manifest.json").read_text())
+
+        with caplog.at_level(logging.WARNING):
+            load_artifacts(tmp_path)
+
+        assert "catalog.json not found" in caplog.text
+        assert "column types will be unavailable" in caplog.text
+
+    def test_missing_manifest_actionable_error(self, tmp_path: Path) -> None:
+        """Missing manifest.json gives actionable error message."""
+        target = tmp_path / "target"
+        target.mkdir()
+
+        with pytest.raises(ArtifactLoadError, match="dbt compile") as exc_info:
+            load_artifacts(tmp_path)
+
+        error_msg = str(exc_info.value)
+        assert "manifest.json" in error_msg
+        assert "dbt compile" in error_msg
+        assert "dbt run" in error_msg
+        assert "--target-dir" in error_msg
