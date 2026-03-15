@@ -11,7 +11,6 @@ interface ColumnHighlightState {
   selectColumn: (modelId: string, columnName: string) => void
   clearSelection: () => void
   toggleNodeExpanded: (nodeId: string) => void
-  collapseNode: (nodeId: string) => void
 }
 
 export const useColumnHighlightStore = create<ColumnHighlightState>((set, get) => ({
@@ -47,15 +46,4 @@ export const useColumnHighlightStore = create<ColumnHighlightState>((set, get) =
     set({ expandedNodeIds: next })
   },
 
-  collapseNode: (nodeId) => {
-    const { expandedNodeIds, selectedColumn } = get()
-    if (!expandedNodeIds.has(nodeId)) return
-    const next = new Set(expandedNodeIds)
-    next.delete(nodeId)
-    if (selectedColumn?.modelId === nodeId) {
-      set({ expandedNodeIds: next, selectedColumn: null })
-    } else {
-      set({ expandedNodeIds: next })
-    }
-  },
 }))
