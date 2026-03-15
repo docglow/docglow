@@ -159,14 +159,11 @@ class TestParseColumnLineage:
         )
         SELECT * FROM renamed
         """
-        result = parse_column_lineage(
-            sql, known_columns=["user_id", "name"]
-        )
+        result = parse_column_lineage(sql, known_columns=["user_id", "name"])
         assert "user_id" in result
         assert "name" in result
         assert any(
-            d.source_table == "raw_users" and d.source_column == "id"
-            for d in result["user_id"]
+            d.source_table == "raw_users" and d.source_column == "id" for d in result["user_id"]
         )
 
     def test_select_star_with_schema_resolves_inner_ctes(self) -> None:
@@ -185,10 +182,7 @@ class TestParseColumnLineage:
         """
         result = parse_column_lineage(sql, schema=schema)
         assert "id" in result
-        assert any(
-            d.source_table == "base_table"
-            for d in result["id"]
-        )
+        assert any(d.source_table == "base_table" for d in result["id"])
 
     def test_dependency_is_frozen_dataclass(self) -> None:
         sql = "SELECT id FROM users"

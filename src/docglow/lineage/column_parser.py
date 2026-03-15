@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import signal
 from dataclasses import dataclass
 from typing import Any
 
@@ -101,8 +100,22 @@ def parse_column_lineage(
     # Extract output column names from the SELECT clause
     output_columns = _extract_output_columns(select_stmt)
 
-    # If SELECT * and we have known columns from catalog, use those
-    if not output_columns and known_columns:
+    # Check for SELECT * EXCLUDE(...) pattern
+    excluded_cols = _get_excluded_columns(select_stmt)
+
+    # Detect if outermost SELECT uses * or * EXCLUDE
+    has_star = any(isinstance(expr, exp.Star) for expr in select_stmt.expressions)
+
+    # If SELECT * (with or without EXCLUDE) and we have known columns, use those
+    if has_star and known_columns:
+        # Start with known columns, remove excluded ones
+        star_columns = [c for c in known_columns if c.lower() not in excluded_cols]
+        # Remove columns that are already explicitly listed (e.g. aliased CASE exprs)
+        explicit_names = {c.lower() for c in output_columns}
+        star_columns = [c for c in star_columns if c.lower() not in explicit_names]
+        # Prepend star columns before explicit columns
+        output_columns = star_columns + output_columns
+    elif not output_columns and known_columns:
         output_columns = list(known_columns)
 
     if not output_columns:
@@ -110,28 +123,19 @@ def parse_column_lineage(
 
     # If the outermost SELECT uses *, rewrite it to explicit columns
     # so SQLGlot's lineage() can trace through
-    has_star = any(
-        isinstance(expr, exp.Star) for expr in select_stmt.expressions
-    )
     trace_sql = compiled_sql
     if has_star and output_columns:
-        trace_sql = _rewrite_star_to_columns(
-            compiled_sql, output_columns, dialect
-        )
+        trace_sql = _rewrite_star_to_columns(compiled_sql, output_columns, dialect)
 
     # Trace lineage for each output column with a per-column timeout
     result: dict[str, list[ColumnDependency]] = {}
     for col_name in output_columns:
         try:
-            deps = _trace_column_with_timeout(
-                col_name, trace_sql, schema or {}, dialect
-            )
+            deps = _trace_column_with_timeout(col_name, trace_sql, schema or {}, dialect)
             if deps:
                 result[col_name] = deps
         except Exception:  # noqa: BLE001
-            logger.debug(
-                "Failed to trace lineage for column '%s'", col_name
-            )
+            logger.debug("Failed to trace lineage for column '%s'", col_name, exc_info=True)
             continue
 
     return result
@@ -142,39 +146,35 @@ def _trace_column_with_timeout(
     sql: str,
     schema: dict[str, dict[str, str]],
     dialect: str | None,
-    timeout_seconds: int = 5,
+    timeout_seconds: int = 2,
 ) -> list[ColumnDependency]:
-    """Trace lineage for a single column with a timeout.
+    """Trace lineage for a single column with a thread-safe timeout."""
+    from concurrent.futures import ThreadPoolExecutor
+    from concurrent.futures import TimeoutError as FuturesTimeout
 
-    Uses SIGALRM on Unix systems. Falls back to no timeout on platforms
-    that don't support it (Windows).
-    """
     from sqlglot.lineage import lineage
 
-    def _timeout_handler(signum: int, frame: Any) -> None:
-        raise TimeoutError
-
-    use_alarm = hasattr(signal, "SIGALRM")
-
-    if use_alarm:
-        old_handler = signal.signal(signal.SIGALRM, _timeout_handler)
-        signal.alarm(timeout_seconds)
-
-    try:
-        node = lineage(
+    def _trace() -> Any:
+        # Pass empty schema to lineage() — we handle SELECT * via
+        # _rewrite_star_to_columns with known_columns instead.
+        # Passing the full schema often breaks lineage() when table
+        # names in SQL don't match schema keys (3-part vs 2-part names).
+        return lineage(
             column=col_name,
             sql=sql,
-            schema=schema,
+            schema={},
             dialect=dialect,
         )
-        return _collect_dependencies(node)
-    except TimeoutError:
-        logger.debug("Timeout tracing lineage for column '%s'", col_name)
-        return []
-    finally:
-        if use_alarm:
-            signal.alarm(0)
-            signal.signal(signal.SIGALRM, old_handler)
+
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(_trace)
+        try:
+            node = future.result(timeout=timeout_seconds)
+            return _collect_dependencies(node)
+        except FuturesTimeout:
+            logger.debug("Timeout tracing lineage for column '%s'", col_name)
+            future.cancel()
+            return []
 
 
 def _rewrite_star_to_columns(
@@ -205,9 +205,7 @@ def _rewrite_star_to_columns(
         return sql
 
     # Only rewrite if the outermost SELECT contains a Star
-    has_star = any(
-        isinstance(expr, exp.Star) for expr in outermost.expressions
-    )
+    has_star = any(isinstance(expr, exp.Star) for expr in outermost.expressions)
     if not has_star:
         return sql
 
@@ -230,11 +228,29 @@ def _extract_output_columns(select: Any) -> list[str]:
             columns.append(expression.name)
         elif isinstance(expression, exp.Star):
             continue
+        elif isinstance(expression, exp.Exclude):
+            # SELECT * EXCLUDE(...) — we'll handle this in the caller
+            # with known_columns by removing excluded columns
+            continue
         else:
             alias = expression.alias_or_name
             if alias:
                 columns.append(alias)
     return columns
+
+
+def _get_excluded_columns(select: Any) -> set[str]:
+    """Extract column names from EXCLUDE/EXCEPT clause in SELECT * EXCLUDE(...)."""
+    from sqlglot import exp
+
+    excluded: set[str] = set()
+    for expression in select.expressions:
+        if isinstance(expression, exp.Star):
+            # Star may contain EXCLUDE/EXCEPT columns as children
+            for child in expression.walk():
+                if isinstance(child, exp.Column) and child is not expression:
+                    excluded.add(child.name.lower())
+    return excluded
 
 
 def _collect_dependencies(root_node: Any) -> list[ColumnDependency]:
@@ -295,9 +311,7 @@ def _collect_dependencies(root_node: Any) -> list[ColumnDependency]:
     return deps
 
 
-def _walk_with_parent(
-    node: Any, parent: Any | None, result: list[tuple[Any, Any | None]]
-) -> None:
+def _walk_with_parent(node: Any, parent: Any | None, result: list[tuple[Any, Any | None]]) -> None:
     """Walk the lineage tree collecting (node, parent) pairs."""
     result.append((node, parent))
     for child in node.downstream:
@@ -401,8 +415,6 @@ def build_schema_mapping(
             # Also index by source_name.table_name
             source_name = data.get("source_name", "")
             if source_name:
-                schema.setdefault(
-                    f"{source_name}.{name}", col_map
-                )
+                schema.setdefault(f"{source_name}.{name}", col_map)
 
     return schema

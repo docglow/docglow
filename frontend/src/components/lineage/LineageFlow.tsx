@@ -383,10 +383,12 @@ function LineageFlowInner({
   const [dragOverrides, setDragOverrides] = useState<Record<string, { x: number; y: number }>>({})
 
   // Debounced hover setter — avoids BFS recomputation on fast mouse movement
-  // Suppressed entirely during drag to prevent highlight flicker
+  // Suppressed entirely during drag or when column trace is active
   const setHoveredIdDebounced = useCallback((id: string | null) => {
     if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current)
     if (isDraggingRef.current) return
+    // Suppress hover highlighting when a column is selected to prevent flicker
+    if (selectedColumn) return
     if (id === null) {
       setHoveredId(null)
       return
@@ -394,7 +396,7 @@ function LineageFlowInner({
     hoverTimerRef.current = setTimeout(() => {
       if (!isDraggingRef.current) setHoveredId(id)
     }, 60)
-  }, [])
+  }, [selectedColumn])
 
   const centerOnHighlight = useCallback(() => {
     if (!highlightId) return
@@ -550,6 +552,7 @@ function LineageFlowInner({
           hasColumnLineage,
           highlightedColumns: nodeHighlightedCols,
           inColumnTrace: inColumnTrace && !expandedNodeIds.has(ln.id),
+          noColumnData: columnTrace != null && !hasColumnLineage && highlightedSet?.has(ln.id),
         },
         style: {
           opacity: dimmedByColumnTrace ? 0.3 : baseOpacity,

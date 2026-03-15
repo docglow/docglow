@@ -10,6 +10,7 @@ import { Markdown } from '../components/Markdown'
 import { materializationLabel } from '../utils/colors'
 import { getSubgraph, type LineageDirection } from '../utils/graph'
 import { applyFilters, useFilterState, computeSubgraphOptions } from '../utils/lineageFilters'
+import { buildModelColumnsMap } from '../utils/modelColumns'
 
 const RESOURCE_TYPE_META: Record<string, { label: string; color: string; bg: string }> = {
   model:    { label: 'M', color: '#2563eb', bg: '#2563eb18' },
@@ -144,17 +145,9 @@ export function ModelPage() {
     clearFolders()
   }, [clearTypes, clearTags, clearFolders])
 
-  // Build model ID -> column names map for DagNode expansion
   const modelColumnsMap = useMemo(() => {
     if (!data) return {}
-    const map: Record<string, string[]> = {}
-    for (const [id, m] of Object.entries(data.models)) {
-      map[id] = m.columns.map(c => c.name)
-    }
-    for (const [id, s] of Object.entries(data.sources)) {
-      map[id] = s.columns.map(c => c.name)
-    }
-    return map
+    return buildModelColumnsMap(data)
   }, [data])
 
   if (!model) {
