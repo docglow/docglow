@@ -25,7 +25,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install -e ".[dev]"
+      - run: pip install -e ".[dev,column-lineage]"
       - run: mypy src/docglow
 
   test:
@@ -38,5 +38,5 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - run: pip install -e ".[dev,profiling,ai,cloud]"
+      - run: pip install -e ".[dev,profiling,ai,cloud,column-lineage]"
       - run: pytest --cov=docglow --cov-report=term-missing
