@@ -1,5 +1,6 @@
 import { memo, useState, useRef, useCallback } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
+import { useColumnHighlightStore } from '../../stores/columnHighlightStore'
 
 const RESOURCE_COLORS: Record<string, string> = {
   model: '#2563eb',
@@ -17,6 +18,10 @@ const TEST_STATUS_BORDER: Record<string, string> = {
   none: 'transparent',
 }
 
+const COLUMN_ROW_HEIGHT = 22
+const MAX_VISIBLE_COLUMNS = 30
+const AMBER = '#f59e0b'
+
 export interface DagNodeData {
   name: string
   resource_type: string
@@ -25,10 +30,18 @@ export interface DagNodeData {
   isActive: boolean
   folder?: string
   schema?: string
+  columns?: string[]
+  hasColumnLineage?: boolean
+  /** Map of column names that should be highlighted in the column trace */
+  highlightedColumns?: Set<string>
+  /** Whether this node participates in a column trace (for amber border on collapsed nodes) */
+  inColumnTrace?: boolean
+  /** Node is in the lineage chain but has no column lineage data */
+  noColumnData?: boolean
   [key: string]: unknown
 }
 
-function DagNodeComponent({ data }: NodeProps) {
+function DagNodeComponent({ data, id }: NodeProps) {
   const {
     name,
     resource_type,
@@ -37,10 +50,25 @@ function DagNodeComponent({ data }: NodeProps) {
     isActive,
     folder,
     schema,
+    columns,
+    hasColumnLineage,
+    highlightedColumns,
+    inColumnTrace,
+    noColumnData,
   } = data as DagNodeData
 
   const [showTooltip, setShowTooltip] = useState(false)
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const isExpanded = useColumnHighlightStore(s => s.expandedNodeIds.has(id))
+  const isThisSelected = useColumnHighlightStore(
+    s => s.selectedColumn?.modelId === id
+  )
+  const selectedColumnName = useColumnHighlightStore(
+    s => s.selectedColumn?.modelId === id ? s.selectedColumn.columnName : null
+  )
+  const toggleNodeExpanded = useColumnHighlightStore(s => s.toggleNodeExpanded)
+  const selectColumn = useColumnHighlightStore(s => s.selectColumn)
 
   const handleMouseEnter = useCallback(() => {
     hoverTimer.current = setTimeout(() => setShowTooltip(true), 500)
@@ -54,22 +82,41 @@ function DagNodeComponent({ data }: NodeProps) {
     setShowTooltip(false)
   }, [])
 
+  const handleExpandClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    toggleNodeExpanded(id)
+  }, [id, toggleNodeExpanded])
+
+  const handleColumnClick = useCallback((e: React.MouseEvent, colName: string) => {
+    e.stopPropagation()
+    selectColumn(id, colName)
+  }, [id, selectColumn])
+
   const fill = RESOURCE_COLORS[resource_type] ?? '#6b7280'
   const borderColor = TEST_STATUS_BORDER[test_status] ?? 'transparent'
 
-  const ACTIVE_COLOR = '#f59e0b' // amber-500
+  const showAmberBorder = isActive || inColumnTrace
+  const border = showAmberBorder
+    ? `2.5px solid ${AMBER}`
+    : noColumnData
+      ? `2px dashed ${AMBER}88`
+      : borderColor !== 'transparent'
+        ? `2px solid ${borderColor}`
+        : '1px solid var(--border, #e2e8f0)'
 
-  const border = isActive
-    ? `2.5px solid ${ACTIVE_COLOR}`
-    : borderColor !== 'transparent'
-      ? `2px solid ${borderColor}`
-      : '1px solid var(--border, #e2e8f0)'
-
-  const boxShadow = isActive
-    ? `0 0 0 3px ${ACTIVE_COLOR}33, 0 0 12px ${ACTIVE_COLOR}44`
-    : undefined
+  const boxShadow = showAmberBorder
+    ? `0 0 0 3px ${AMBER}33, 0 0 12px ${AMBER}44`
+    : noColumnData
+      ? `0 0 0 2px ${AMBER}22`
+      : undefined
 
   const hasTooltipContent = folder || schema
+  const canExpand = hasColumnLineage && columns && columns.length > 0
+
+  const visibleColumns = columns
+    ? columns.slice(0, MAX_VISIBLE_COLUMNS)
+    : []
+  const hasMore = columns ? columns.length > MAX_VISIBLE_COLUMNS : false
 
   return (
     <>
@@ -79,44 +126,161 @@ function DagNodeComponent({ data }: NodeProps) {
         onMouseLeave={handleMouseLeave}
         style={{
           width: 180,
-          height: 44,
           borderRadius: 6,
           border,
           boxShadow,
-          background: isActive ? '#fef3c710' : 'var(--bg, #fff)',
-          display: 'flex',
-          alignItems: 'stretch',
-          overflow: 'hidden',
+          background: showAmberBorder ? 'var(--bg, #fff)' : 'var(--bg, #fff)',
+          overflow: 'visible',
           cursor: 'pointer',
           position: 'relative',
         }}
       >
-        <div style={{ width: 4, background: fill, flexShrink: 0 }} />
-        <div style={{ padding: '4px 8px', overflow: 'hidden', minWidth: 0 }}>
-          <div
-            style={{
-              fontSize: 12,
-              fontWeight: 600,
-              color: 'var(--text, #0f172a)',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}
-          >
-            {name}
+        {/* Header row */}
+        <div style={{ display: 'flex', alignItems: 'stretch', height: 44 }}>
+          <div style={{ width: 4, background: fill, flexShrink: 0 }} />
+          <div style={{ padding: '4px 8px', overflow: 'hidden', minWidth: 0, flex: 1 }}>
+            <div
+              style={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: 'var(--text, #0f172a)',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {name}
+            </div>
+            <div
+              style={{
+                fontSize: 10,
+                color: 'var(--text-muted, #64748b)',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {resource_type}{materialization ? ` · ${materialization}` : ''}
+            </div>
           </div>
-          <div
-            style={{
-              fontSize: 10,
-              color: 'var(--text-muted, #64748b)',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {resource_type}{materialization ? ` · ${materialization}` : ''}
-          </div>
+          {/* Expand chevron */}
+          {canExpand && (
+            <button
+              onClick={handleExpandClick}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '0 6px',
+                color: 'var(--text-muted, #64748b)',
+                display: 'flex',
+                alignItems: 'center',
+                flexShrink: 0,
+              }}
+              title={isExpanded ? 'Hide columns' : 'Show columns'}
+            >
+              <svg
+                width={10}
+                height={10}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.5}
+                style={{
+                  transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                  transition: 'transform 0.15s ease',
+                }}
+              >
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
+          )}
         </div>
+
+        {/* Expanded column list */}
+        {isExpanded && columns && (
+          <div
+            style={{
+              borderTop: '1px solid var(--border, #e2e8f0)',
+              border: '1px solid var(--border, #e2e8f0)',
+              borderRadius: '0 0 6px 6px',
+              maxHeight: MAX_VISIBLE_COLUMNS * COLUMN_ROW_HEIGHT + 4,
+              overflowY: 'auto',
+              overflowX: 'hidden',
+              background: 'var(--bg, #fff)',
+              position: 'relative',
+              zIndex: 20,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
+            }}
+          >
+            {visibleColumns.map((col) => {
+              const isSelected = isThisSelected && selectedColumnName === col
+              const isHighlighted = highlightedColumns?.has(col)
+              const colBg = isSelected
+                ? `${AMBER}30`
+                : isHighlighted
+                  ? `${AMBER}15`
+                  : 'transparent'
+
+              return (
+                <div
+                  key={col}
+                  onClick={(e) => handleColumnClick(e, col)}
+                  style={{
+                    height: COLUMN_ROW_HEIGHT,
+                    padding: '0 8px 0 12px',
+                    fontSize: 10,
+                    color: isSelected || isHighlighted ? AMBER : 'var(--text, #0f172a)',
+                    fontWeight: isSelected ? 600 : 400,
+                    background: colBg,
+                    display: 'flex',
+                    alignItems: 'center',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    position: 'relative',
+                    transition: 'background 0.1s ease',
+                  }}
+                  title={col}
+                >
+                  {col}
+                  {/* Per-column handles for edge connections */}
+                  <Handle
+                    type="target"
+                    position={Position.Left}
+                    id={`col-${col}-target`}
+                    className="!opacity-0 !w-0 !h-0"
+                    style={{ top: '50%' }}
+                  />
+                  <Handle
+                    type="source"
+                    position={Position.Right}
+                    id={`col-${col}-source`}
+                    className="!opacity-0 !w-0 !h-0"
+                    style={{ top: '50%' }}
+                  />
+                </div>
+              )
+            })}
+            {hasMore && (
+              <div
+                style={{
+                  height: COLUMN_ROW_HEIGHT,
+                  padding: '0 8px 0 12px',
+                  fontSize: 10,
+                  color: 'var(--text-muted, #64748b)',
+                  fontStyle: 'italic',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                +{columns.length - MAX_VISIBLE_COLUMNS} more columns
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Hover tooltip */}
-        {showTooltip && hasTooltipContent && (
+        {showTooltip && hasTooltipContent && !isExpanded && (
           <div
             style={{
               position: 'absolute',
