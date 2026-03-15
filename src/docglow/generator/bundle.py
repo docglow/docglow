@@ -86,17 +86,28 @@ def _bundle_static(
     frontend_dist: Path,
 ) -> None:
     """Bundle everything into a single index.html."""
+    import shutil
+
     index_path = frontend_dist / "index.html"
     html = index_path.read_text(encoding="utf-8")
 
     data_json = json.dumps(docglow_data, separators=(",", ":"))
     data_script = f"<script>window.__DOCGLOW_DATA__={data_json};</script>"
 
-    # Inject data script before closing </head> tag
-    html = html.replace("</head>", f"{data_script}\n</head>")
+    # Inject data script BEFORE the first <script> tag so the app JS can read it
+    script_pos = html.find("<script")
+    if script_pos != -1:
+        html = html[:script_pos] + data_script + "\n" + html[script_pos:]
+    else:
+        html = html.replace("</head>", f"{data_script}\n</head>")
 
     # Inline CSS and JS assets
     html = _inline_assets(html, frontend_dist)
+
+    # Copy favicon if present
+    favicon_path = frontend_dist / "favicon.svg"
+    if favicon_path.exists():
+        shutil.copy2(favicon_path, output_dir / "favicon.svg")
 
     output_path = output_dir / "index.html"
     output_path.write_text(html, encoding="utf-8")
@@ -142,7 +153,7 @@ def _inline_assets(html: str, frontend_dist: Path) -> str:
         js_path = frontend_dist / src.lstrip("./")
         if js_path.exists():
             js_content = js_path.read_text(encoding="utf-8")
-            return f"<script>{js_content}</script>"
+            return f'<script type="module">{js_content}</script>'
         return match.group(0)
 
     html = re.sub(
