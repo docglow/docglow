@@ -58,6 +58,12 @@ def cli() -> None:
     help="Enable column-level lineage analysis (requires sqlglot)",
 )
 @click.option("--verbose", is_flag=True)
+@click.option(
+    "--fail-under",
+    type=float,
+    default=None,
+    help="Exit with code 1 if health score is below this threshold (0-100)",
+)
 def generate(
     project_dir: Path,
     target_dir: Path | None,
@@ -76,6 +82,7 @@ def generate(
     theme: str,
     column_lineage: bool,
     verbose: bool,
+    fail_under: float | None,
 ) -> None:
     """Generate the documentation site."""
     _setup_logging(verbose)
@@ -106,6 +113,17 @@ def generate(
             )
             raise SystemExit(1)
 
+    # Security warning for AI mode
+    if ai:
+        console.print(
+            "\n[bold yellow]Warning:[/bold yellow] AI mode embeds your API key "
+            "in the generated site.\n"
+            "  This is safe for local use but do [bold]NOT[/bold] deploy this "
+            "site publicly.\n"
+            "  Use [bold]docglow publish[/bold] for hosted AI features with "
+            "secure key management.\n",
+        )
+
     # Parse profiling connection params
     profiling_connection = None
     if profile and profile_adapter and profile_connection:
@@ -134,6 +152,26 @@ def generate(
             console.print("  Single-file mode: open index.html directly in a browser")
         else:
             console.print("  Run [bold]docglow serve[/bold] to view locally")
+
+        if fail_under is not None:
+            from docglow.artifacts.loader import load_artifacts as _load_artifacts
+            from docglow.generator.data import build_docglow_data as _build_data
+
+            _artifacts = _load_artifacts(project_dir, target_dir)
+            _data = _build_data(_artifacts)
+            _score = _data["health"]["score"]["overall"]
+
+            if _score < fail_under:
+                console.print(
+                    f"\n[bold red]Health score {_score:.0f} is below "
+                    f"threshold {fail_under:.0f}[/bold red]"
+                )
+                raise SystemExit(1)
+            else:
+                console.print(
+                    f"\n[bold green]Health score: {_score:.0f} "
+                    f"(threshold: {fail_under:.0f})[/bold green]"
+                )
     except ArtifactLoadError as e:
         console.print(f"[bold red]Error:[/bold red] {e}")
         raise SystemExit(1) from e
@@ -186,11 +224,18 @@ def serve(
     default="table",
 )
 @click.option("--select", type=str, default=None)
+@click.option(
+    "--fail-under",
+    type=float,
+    default=None,
+    help="Exit with code 1 if health score is below this threshold (0-100)",
+)
 def health(
     project_dir: Path,
     target_dir: Path | None,
     output_format: str,
     select: str | None,
+    fail_under: float | None,
 ) -> None:
     """Show project health score."""
     import json
@@ -213,6 +258,12 @@ def health(
 
     if output_format == "json":
         console.print(json.dumps(health_data, indent=2))
+        if fail_under is not None and score["overall"] < fail_under:
+            console.print(
+                f"\n[bold red]Health score {score['overall']:.0f} is below "
+                f"threshold {fail_under:.0f}[/bold red]"
+            )
+            raise SystemExit(1)
         return
 
     # Table or markdown output
@@ -272,6 +323,13 @@ def health(
 
     console.print(table)
     console.print()
+
+    if fail_under is not None and score["overall"] < fail_under:
+        console.print(
+            f"\n[bold red]Health score {score['overall']:.0f} is below "
+            f"threshold {fail_under:.0f}[/bold red]"
+        )
+        raise SystemExit(1)
 
 
 @cli.command()
@@ -515,6 +573,83 @@ def setup() -> None:
     save_cloud_config(workspace_slug=workspace, project_slug=project)
     console.print("\n[bold green]Setup complete![/bold green]")
     console.print("  Config saved to ~/.docglow/config.json")
+
+
+INIT_TEMPLATE = """\
+# docglow.yml — Configuration for docglow documentation generator
+# All settings are optional. Docglow works out of the box without this file.
+# Uncomment and modify any settings you want to customize.
+
+# version: 1
+# title: "My dbt Project"
+# theme: auto  # auto | light | dark
+
+# health:
+#   weights:
+#     documentation: 0.25
+#     testing: 0.25
+#     freshness: 0.15
+#     complexity: 0.15
+#     naming: 0.10
+#     orphans: 0.10
+#   naming_rules:
+#     staging: "^stg_"
+#     intermediate: "^int_"
+#     marts_fact: "^fct_"
+#     marts_dimension: "^dim_"
+#   complexity:
+#     high_sql_lines: 200
+#     high_join_count: 8
+#     high_cte_count: 10
+
+# profiling:
+#   enabled: false
+#   sample_size: 10000
+#   cache: true
+
+# ai:
+#   enabled: false
+#   model: claude-sonnet-4-20250514
+
+# lineage_layers:
+#   layers:
+#     - name: source
+#       rank: 0
+#       color: "#dcfce7"
+#     - name: staging
+#       rank: 1
+#       color: "#dbeafe"
+#     - name: intermediate
+#       rank: 2
+#       color: "#fef3c7"
+#     - name: mart
+#       rank: 3
+#       color: "#fce7f3"
+#     - name: exposure
+#       rank: 4
+#       color: "#f3e8ff"
+"""
+
+
+@cli.command()
+@click.option("--project-dir", type=click.Path(path_type=Path), default=".")
+@click.option("--force", is_flag=True, help="Overwrite existing docglow.yml")
+def init(project_dir: Path, force: bool) -> None:
+    """Generate a docglow.yml configuration file."""
+    for name in ("docglow.yml", "docglow.yaml"):
+        if (project_dir / name).exists() and not force:
+            console.print(
+                f"[bold yellow]{name}[/bold yellow] already exists in {project_dir}. "
+                "Use [bold]--force[/bold] to overwrite."
+            )
+            return
+
+    config_path = project_dir / "docglow.yml"
+    config_path.write_text(INIT_TEMPLATE, encoding="utf-8")
+    console.print(
+        f"[bold green]Created {config_path}[/bold green] — "
+        "all settings are optional, edit as needed."
+    )
 
 
 def _parse_connection(adapter: str, connection: str) -> dict[str, str]:
