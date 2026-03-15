@@ -144,6 +144,19 @@ export function ModelPage() {
     clearFolders()
   }, [clearTypes, clearTags, clearFolders])
 
+  // Build model ID -> column names map for DagNode expansion
+  const modelColumnsMap = useMemo(() => {
+    if (!data) return {}
+    const map: Record<string, string[]> = {}
+    for (const [id, m] of Object.entries(data.models)) {
+      map[id] = m.columns.map(c => c.name)
+    }
+    for (const [id, s] of Object.entries(data.sources)) {
+      map[id] = s.columns.map(c => c.name)
+    }
+    return map
+  }, [data])
+
   if (!model) {
     return (
       <div className="text-[var(--text-muted)]">
@@ -393,6 +406,8 @@ export function ModelPage() {
               highlightId={decodedId}
               layerConfig={data?.lineage.layer_config}
               onNavigateAway={() => setLineageFullscreen(false)}
+              columnLineageData={data?.column_lineage}
+              modelColumns={modelColumnsMap}
             />
           </div>
         </div>

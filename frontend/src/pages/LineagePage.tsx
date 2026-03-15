@@ -82,6 +82,19 @@ export function LineagePage() {
     return data.lineage.nodes.find(n => n.id === selectedNodeId) ?? null
   }, [data, selectedNodeId])
 
+  // Build model ID -> column names map for DagNode expansion
+  const modelColumnsMap = useMemo(() => {
+    if (!data) return {}
+    const map: Record<string, string[]> = {}
+    for (const [id, model] of Object.entries(data.models)) {
+      map[id] = model.columns.map(c => c.name)
+    }
+    for (const [id, source] of Object.entries(data.sources)) {
+      map[id] = source.columns.map(c => c.name)
+    }
+    return map
+  }, [data])
+
   const handleSelectModel = useCallback((id: string) => {
     setSelectedNodeId(id)
     setSearch('')
@@ -224,6 +237,8 @@ export function LineagePage() {
             edges={subgraph.edges}
             highlightId={selectedNodeId}
             layerConfig={data.lineage.layer_config}
+            columnLineageData={data.column_lineage}
+            modelColumns={modelColumnsMap}
           />
         </div>
       </div>
