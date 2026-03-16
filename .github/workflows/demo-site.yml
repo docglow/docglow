@@ -7,6 +7,7 @@ on:
       - 'examples/jaffle-shop/**'
       - 'src/docglow/**'
       - 'frontend/**'
+      - '.github/workflows/demo-site.yml'
   workflow_dispatch:
 
 permissions:
