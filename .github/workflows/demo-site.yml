@@ -33,10 +33,10 @@ jobs:
           python-version: '3.12'
 
       - name: Install docglow
-        run: pip install .
+        run: pip install ".[column-lineage]"
 
       - name: Generate demo site
-        run: docglow generate --project-dir examples/jaffle-shop --output-dir site --static
+        run: docglow generate --project-dir examples/jaffle-shop --output-dir site --static --column-lineage
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
