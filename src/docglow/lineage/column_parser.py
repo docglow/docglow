@@ -155,22 +155,32 @@ def _trace_column_with_timeout(
     from sqlglot.lineage import lineage
 
     def _trace() -> Any:
-        # Pass empty schema to lineage() — we handle SELECT * via
-        # _rewrite_star_to_columns with known_columns instead.
-        # Passing the full schema often breaks lineage() when table
-        # names in SQL don't match schema keys (3-part vs 2-part names).
-        return lineage(
+        # Try with schema first (enables SELECT * expansion through CTEs).
+        # If it fails, retry without schema (handles cases where schema
+        # keys don't match SQL table references).
+        node = lineage(
+            column=col_name,
+            sql=sql,
+            schema=schema or {},
+            dialect=dialect,
+        )
+        deps = _collect_dependencies(node)
+        if deps:
+            return deps
+        # Retry without schema
+        node = lineage(
             column=col_name,
             sql=sql,
             schema={},
             dialect=dialect,
         )
+        return _collect_dependencies(node)
 
     with ThreadPoolExecutor(max_workers=1) as executor:
         future = executor.submit(_trace)
         try:
-            node = future.result(timeout=timeout_seconds)
-            return _collect_dependencies(node)
+            result: list[ColumnDependency] = future.result(timeout=timeout_seconds)
+            return result
         except FuturesTimeout:
             logger.debug("Timeout tracing lineage for column '%s'", col_name)
             future.cancel()
@@ -380,38 +390,30 @@ def build_schema_mapping(
     """
     schema: dict[str, dict[str, str]] = {}
 
-    for data in models.values():
+    for data in {**models, **sources}.values():
         name = data.get("name", "")
         schema_name = data.get("schema", "")
+        database = data.get("database", "")
         if not name:
             continue
         col_map: dict[str, str] = {}
         for col in data.get("columns", []):
             col_type = col.get("data_type", "")
             col_map[col["name"]] = col_type or "VARCHAR"
-        if col_map:
-            # Index by schema.name (e.g. "public.users")
-            if schema_name:
-                schema[f"{schema_name}.{name}"] = col_map
-            # Also index by bare name (e.g. "users") for Jinja-stripped SQL
-            schema.setdefault(name, col_map)
-
-    for data in sources.values():
-        name = data.get("name", "")
-        schema_name = data.get("schema", "")
-        if not name:
+        if not col_map:
             continue
-        col_map = {}
-        for col in data.get("columns", []):
-            col_type = col.get("data_type", "")
-            col_map[col["name"]] = col_type or "VARCHAR"
-        if col_map:
-            if schema_name:
-                schema[f"{schema_name}.{name}"] = col_map
-            schema.setdefault(name, col_map)
-            # Also index by source_name.table_name
-            source_name = data.get("source_name", "")
-            if source_name:
-                schema.setdefault(f"{source_name}.{name}", col_map)
+
+        # Index by multiple key formats for flexible matching:
+        # bare name, schema.name, database.schema.name
+        schema.setdefault(name, col_map)
+        if schema_name:
+            schema[f"{schema_name}.{name}"] = col_map
+            if database:
+                schema[f"{database}.{schema_name}.{name}"] = col_map
+
+        # Also index by source_name.table_name for sources
+        source_name = data.get("source_name", "")
+        if source_name:
+            schema.setdefault(f"{source_name}.{name}", col_map)
 
     return schema
