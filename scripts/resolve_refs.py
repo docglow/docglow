@@ -239,8 +239,9 @@ def resolve_model(
     remaining_jinja = re.findall(r"\{\{.*?\}\}|\{%.*?%\}", sql, flags=re.DOTALL)
     unresolved_count = len(remaining_jinja)
 
-    # Strip unresolved Jinja expressions (replace with empty string)
-    sql = re.sub(r"\{\{.*?\}\}", "", sql, flags=re.DOTALL)
+    # Replace unresolved Jinja expressions with NULL placeholder
+    # so SQL stays syntactically valid (e.g. "{{ macro() }} as col" -> "NULL as col")
+    sql = re.sub(r"\{\{.*?\}\}", "NULL", sql, flags=re.DOTALL)
     sql = re.sub(r"\{%.*?%\}", "", sql, flags=re.DOTALL)
 
     # Clean up multiple blank lines
