@@ -1,5 +1,6 @@
 """Tests for the data transformer (artifacts -> DocglowData payload)."""
 
+import json
 from pathlib import Path
 
 from docglow import __version__
@@ -9,17 +10,82 @@ from docglow.generator.data import build_docglow_data
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
 
-def _load_fixtures(tmp_path: Path) -> dict:
+def _load_fixtures(tmp_path: Path, **kwargs: object) -> dict:
     """Helper to load fixtures and build docglow data."""
     target = tmp_path / "target"
-    target.mkdir()
+    target.mkdir(exist_ok=True)
     for name in ("manifest.json", "catalog.json", "run_results.json"):
         src = FIXTURES_DIR / name
         if src.exists():
             (target / name).write_text(src.read_text())
 
     artifacts = load_artifacts(tmp_path)
-    return build_docglow_data(artifacts)
+    return build_docglow_data(artifacts, **kwargs)  # type: ignore[arg-type]
+
+
+def _load_fixtures_with_packages(tmp_path: Path, **kwargs: object) -> dict:
+    """Load fixtures with injected package nodes for testing package filtering."""
+    target = tmp_path / "target"
+    target.mkdir(exist_ok=True)
+
+    # Copy catalog and run_results as-is
+    for name in ("catalog.json", "run_results.json"):
+        src = FIXTURES_DIR / name
+        if src.exists():
+            (target / name).write_text(src.read_text())
+
+    # Load manifest and inject package nodes
+    manifest_src = FIXTURES_DIR / "manifest.json"
+    manifest_data = json.loads(manifest_src.read_text())
+
+    # Add a fake package model (dbt_utils)
+    manifest_data["nodes"]["model.dbt_utils.surrogate_key"] = {
+        "unique_id": "model.dbt_utils.surrogate_key",
+        "name": "surrogate_key",
+        "resource_type": "model",
+        "package_name": "dbt_utils",
+        "path": "macros/surrogate_key.sql",
+        "original_file_path": "macros/surrogate_key.sql",
+        "database": "analytics",
+        "schema": "dbt_utils",
+        "description": "Package utility model",
+        "columns": {},
+        "meta": {},
+        "tags": [],
+        "config": {"materialized": "view"},
+        "depends_on": {"macros": [], "nodes": []},
+        "raw_code": "SELECT 1",
+        "compiled_code": "SELECT 1",
+        "refs": [],
+        "sources": [],
+    }
+
+    # Add a second package model (elementary)
+    manifest_data["nodes"]["model.elementary.schema_changes"] = {
+        "unique_id": "model.elementary.schema_changes",
+        "name": "schema_changes",
+        "resource_type": "model",
+        "package_name": "elementary",
+        "path": "models/schema_changes.sql",
+        "original_file_path": "models/schema_changes.sql",
+        "database": "analytics",
+        "schema": "elementary",
+        "description": "Elementary schema changes",
+        "columns": {},
+        "meta": {},
+        "tags": [],
+        "config": {"materialized": "table"},
+        "depends_on": {"macros": [], "nodes": ["model.jaffle_shop.orders"]},
+        "raw_code": "SELECT 1",
+        "compiled_code": "SELECT 1",
+        "refs": [],
+        "sources": [],
+    }
+
+    (target / "manifest.json").write_text(json.dumps(manifest_data))
+
+    artifacts = load_artifacts(tmp_path)
+    return build_docglow_data(artifacts, **kwargs)  # type: ignore[arg-type]
 
 
 class TestBuildDocglowData:
@@ -251,3 +317,84 @@ class TestBuildDocglowData:
 
         for uid in data["models"]:
             assert not uid.startswith("test."), f"Test node in models: {uid}"
+
+    def test_models_have_is_package_field(self, tmp_path: Path) -> None:
+        """All models should have is_package field."""
+        data = _load_fixtures(tmp_path)
+
+        for uid, model_data in data["models"].items():
+            assert "is_package" in model_data, f"Missing is_package on {uid}"
+            assert model_data["is_package"] is False
+
+
+class TestPackageFiltering:
+    """Test filtering of dbt package models from lineage."""
+
+    def test_package_nodes_excluded_from_lineage_by_default(self, tmp_path: Path) -> None:
+        """Package models should not appear in lineage nodes by default."""
+        data = _load_fixtures_with_packages(tmp_path)
+        lineage = data["lineage"]
+
+        node_ids = {n["id"] for n in lineage["nodes"]}
+        assert "model.dbt_utils.surrogate_key" not in node_ids
+        assert "model.elementary.schema_changes" not in node_ids
+
+    def test_package_edges_excluded_from_lineage_by_default(self, tmp_path: Path) -> None:
+        """Edges referencing package nodes should be removed from lineage."""
+        data = _load_fixtures_with_packages(tmp_path)
+        lineage = data["lineage"]
+
+        for edge in lineage["edges"]:
+            assert edge["source"] != "model.dbt_utils.surrogate_key"
+            assert edge["target"] != "model.dbt_utils.surrogate_key"
+            assert edge["source"] != "model.elementary.schema_changes"
+            assert edge["target"] != "model.elementary.schema_changes"
+
+    def test_root_project_nodes_remain_in_lineage(self, tmp_path: Path) -> None:
+        """Root project models should still appear in lineage."""
+        data = _load_fixtures_with_packages(tmp_path)
+        lineage = data["lineage"]
+
+        node_ids = {n["id"] for n in lineage["nodes"]}
+        assert "model.jaffle_shop.orders" in node_ids
+
+    def test_package_models_still_in_models_dict(self, tmp_path: Path) -> None:
+        """Package models should still appear in the models dict (for the model list)."""
+        data = _load_fixtures_with_packages(tmp_path)
+
+        assert "model.dbt_utils.surrogate_key" in data["models"]
+        assert "model.elementary.schema_changes" in data["models"]
+
+    def test_package_models_have_is_package_true(self, tmp_path: Path) -> None:
+        """Package models should have is_package=True in the models dict."""
+        data = _load_fixtures_with_packages(tmp_path)
+
+        assert data["models"]["model.dbt_utils.surrogate_key"]["is_package"] is True
+        assert data["models"]["model.elementary.schema_changes"]["is_package"] is True
+
+    def test_root_models_have_is_package_false(self, tmp_path: Path) -> None:
+        """Root project models should have is_package=False."""
+        data = _load_fixtures_with_packages(tmp_path)
+
+        assert data["models"]["model.jaffle_shop.orders"]["is_package"] is False
+
+    def test_exclude_packages_false_includes_all_in_lineage(self, tmp_path: Path) -> None:
+        """When exclude_packages=False, package models appear in lineage."""
+        data = _load_fixtures_with_packages(tmp_path, exclude_packages=False)
+        lineage = data["lineage"]
+
+        node_ids = {n["id"] for n in lineage["nodes"]}
+        assert "model.dbt_utils.surrogate_key" in node_ids
+        assert "model.elementary.schema_changes" in node_ids
+        assert "model.jaffle_shop.orders" in node_ids
+
+    def test_sources_not_filtered(self, tmp_path: Path) -> None:
+        """Sources should never be filtered out, even with exclude_packages=True."""
+        data = _load_fixtures_with_packages(tmp_path)
+        lineage = data["lineage"]
+
+        node_types = {n["resource_type"] for n in lineage["nodes"]}
+        assert "source" in node_types
+
+        source_ids = {n["id"] for n in lineage["nodes"] if n["resource_type"] == "source"}
+        assert len(source_ids) > 0
