@@ -57,6 +57,12 @@ def cli() -> None:
     default=False,
     help="Enable column-level lineage analysis (requires sqlglot)",
 )
+@click.option(
+    "--include-packages",
+    is_flag=True,
+    default=False,
+    help="Include dbt package models in lineage graph",
+)
 @click.option("--verbose", is_flag=True)
 @click.option(
     "--fail-under",
@@ -81,6 +87,7 @@ def generate(
     title: str | None,
     theme: str,
     column_lineage: bool,
+    include_packages: bool,
     verbose: bool,
     fail_under: float | None,
 ) -> None:
@@ -146,6 +153,7 @@ def generate(
             select=select,
             exclude=exclude,
             column_lineage_enabled=column_lineage,
+            exclude_packages=not include_packages,
         )
         console.print(f"\n[bold green]Site generated at {output_path}[/bold green]")
         if static:
@@ -266,7 +274,54 @@ def health(
             raise SystemExit(1)
         return
 
-    # Table or markdown output
+    if output_format == "markdown":
+        lines = [
+            "## Docglow Health Report\n",
+            "| Category | Score |",
+            "|----------|-------|",
+            f"| **Overall** | **{score['overall']:.0f}/100 ({score['grade']})** |",
+            f"| Documentation | {score['documentation']:.0f} |",
+            f"| Testing | {score['testing']:.0f} |",
+            f"| Freshness | {score['freshness']:.0f} |",
+            f"| Complexity | {score['complexity']:.0f} |",
+            f"| Naming | {score['naming']:.0f} |",
+            f"| Orphans | {score['orphans']:.0f} |",
+        ]
+
+        undoc = health_data["coverage"].get("undocumented_models", [])
+        if undoc:
+            top = sorted(
+                undoc,
+                key=lambda x: x.get("downstream_count", 0),
+                reverse=True,
+            )[0]
+            lines.append(
+                f"\n**{len(undoc)} undocumented model{'s' if len(undoc) != 1 else ''}** "
+                f"(highest impact: `{top['name']}` with "
+                f"{top.get('downstream_count', 0)} downstream dependents)"
+            )
+
+        naming_violations = health_data["naming"].get("violations", [])
+        if naming_violations:
+            count = len(naming_violations)
+            lines.append(f"**{count} naming violation{'s' if count != 1 else ''}**")
+
+        orphans = health_data["orphans"]
+        if orphans:
+            count = len(orphans)
+            lines.append(f"**{count} orphan model{'s' if count != 1 else ''}**")
+
+        click.echo("\n".join(lines))
+
+        if fail_under is not None and score["overall"] < fail_under:
+            console.print(
+                f"\n[bold red]Health score {score['overall']:.0f} is below "
+                f"threshold {fail_under:.0f}[/bold red]"
+            )
+            raise SystemExit(1)
+        return
+
+    # Table output
     grade_color = {
         "A": "green",
         "B": "blue",
