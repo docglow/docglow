@@ -255,7 +255,7 @@ def _get_excluded_columns(select: Any) -> set[str]:
         if isinstance(expression, exp.Star):
             # Star may contain EXCLUDE/EXCEPT columns as children
             for child in expression.walk():
-                if isinstance(child, exp.Column) and child is not expression:
+                if isinstance(child, exp.Column):
                     excluded.add(child.name.lower())
     return excluded
 
