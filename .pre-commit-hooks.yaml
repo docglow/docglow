@@ -1,0 +1,7 @@
+- id: docglow-health
+  name: docglow health check
+  entry: docglow health --fail-under 70
+  language: python
+  pass_filenames: false
+  additional_dependencies: ['docglow']
+  types: [yaml, sql]
