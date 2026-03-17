@@ -114,6 +114,20 @@ Use Docglow as a CI quality gate with the `--fail-under` flag:
 
 Ready-to-copy workflow files for [GitHub Pages](docs/ci-examples/github-actions-pages.yml), [S3](docs/ci-examples/github-actions-s3.yml), and [health checks](docs/ci-examples/github-actions-health-check.yml) are available in `docs/ci-examples/`.
 
+### Pre-commit
+
+Add Docglow's health check to your existing pre-commit workflow:
+
+```yaml
+# .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/docglow/docglow
+    rev: v0.3.0
+    hooks:
+      - id: docglow-health
+        args: ['--fail-under', '75']
+```
+
 ## Requirements
 
 - Python 3.10+
