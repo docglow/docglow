@@ -173,6 +173,7 @@ def build_docglow_data(
     exclude: str | None = None,
     layer_config: LineageLayerConfig | None = None,
     column_lineage_enabled: bool = False,
+    exclude_packages: bool = True,
 ) -> dict[str, Any]:
     """Transform loaded artifacts into the unified DocglowData payload.
 
@@ -181,6 +182,9 @@ def build_docglow_data(
     manifest = artifacts.manifest
     catalog = artifacts.catalog
     run_results = artifacts.run_results
+
+    # Determine root project name for package filtering
+    root_project_name = manifest.metadata.project_name or ""
 
     # Build lookup maps
     run_results_by_id = _build_run_results_map(run_results)
@@ -193,18 +197,25 @@ def build_docglow_data(
     snapshots: dict[str, Any] = {}
 
     for unique_id, node in manifest.nodes.items():
+        is_package = bool(root_project_name and node.package_name != root_project_name)
         if node.resource_type == "model":
-            models[unique_id] = _transform_model(
+            model_data = _transform_model(
                 node, catalog, run_results_by_id, test_nodes_by_model, reverse_deps
             )
+            model_data["is_package"] = is_package
+            models[unique_id] = model_data
         elif node.resource_type == "seed":
-            seeds[unique_id] = _transform_model(
+            seed_data = _transform_model(
                 node, catalog, run_results_by_id, test_nodes_by_model, reverse_deps
             )
+            seed_data["is_package"] = is_package
+            seeds[unique_id] = seed_data
         elif node.resource_type == "snapshot":
-            snapshots[unique_id] = _transform_model(
+            snap_data = _transform_model(
                 node, catalog, run_results_by_id, test_nodes_by_model, reverse_deps
             )
+            snap_data["is_package"] = is_package
+            snapshots[unique_id] = snap_data
 
     # Apply --select / --exclude filtering
     if select or exclude:
@@ -255,6 +266,7 @@ def build_docglow_data(
         seeds,
         snapshots,
         layer_config=layer_config or LineageLayerConfig(),
+        exclude_packages=exclude_packages,
     )
 
     # Build search index
@@ -541,7 +553,7 @@ def _transform_model(
     # Extract source refs
     sources_used = [
         f"source.{node.package_name}.{s[0]}.{s[1]}"
-        if isinstance(s, (list, tuple)) and len(s) >= 2
+        if isinstance(s, list | tuple) and len(s) >= 2
         else str(s)
         for s in node.sources
     ]
@@ -798,8 +810,17 @@ def _build_lineage(
     snapshots: dict[str, Any],
     *,
     layer_config: LineageLayerConfig,
+    exclude_packages: bool = True,
 ) -> dict[str, Any]:
     """Build lineage graph nodes and edges."""
+    # Determine which node IDs to exclude (package models/seeds/snapshots)
+    excluded_ids: set[str] = set()
+    if exclude_packages:
+        for collection in (models, seeds, snapshots):
+            for uid, data in collection.items():
+                if data.get("is_package", False):
+                    excluded_ids.add(uid)
+
     nodes: list[dict[str, Any]] = []
     edges: list[dict[str, Any]] = []
     seen_node_ids: set[str] = set()
@@ -854,6 +875,8 @@ def _build_lineage(
         (snapshots, "snapshot"),
     ]:
         for uid, data in collection.items():
+            if uid in excluded_ids:
+                continue
             _add_lineage_node(
                 unique_id=uid,
                 name=data["name"],
@@ -867,7 +890,8 @@ def _build_lineage(
                 meta=data.get("meta", {}),
             )
             for dep in data.get("depends_on", []):
-                edges.append({"source": dep, "target": uid})
+                if dep not in excluded_ids:
+                    edges.append({"source": dep, "target": uid})
 
     # Add source nodes
     for uid, data in sources.items():
@@ -898,7 +922,8 @@ def _build_lineage(
             tags=list(exposure.tags),
         )
         for dep in exposure.depends_on.nodes:
-            edges.append({"source": dep, "target": uid})
+            if dep not in excluded_ids:
+                edges.append({"source": dep, "target": uid})
 
     # Resolve layer ranks for all nodes
     layer_ranks, auto_assigned = resolve_all_layers(nodes, edges, layer_config)
