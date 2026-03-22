@@ -11,6 +11,7 @@ import { materializationLabel } from '../utils/colors'
 import { getSubgraph, type LineageDirection } from '../utils/graph'
 import { applyFilters, useFilterState, computeSubgraphOptions } from '../utils/lineageFilters'
 import { buildModelColumnsMap } from '../utils/modelColumns'
+import { buildDownstreamMap } from '../utils/columnLineageGraph'
 
 const RESOURCE_TYPE_META: Record<string, { label: string; color: string; bg: string }> = {
   model:    { label: 'M', color: '#2563eb', bg: '#2563eb18' },
@@ -242,6 +243,7 @@ export function ModelPage() {
         <ColumnTable
           columns={model.columns}
           columnLineage={getColumnLineage(decodedId)}
+          columnDownstream={data?.column_lineage ? buildDownstreamMap(decodedId, data.column_lineage) : undefined}
         />
       )}
 
