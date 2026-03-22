@@ -115,6 +115,17 @@ def parse_column_lineage(
         star_columns = [c for c in star_columns if c.lower() not in explicit_names]
         # Prepend star columns before explicit columns
         output_columns = star_columns + output_columns
+    elif has_star and not known_columns:
+        # No catalog/manifest columns — try to resolve from the CTE definition
+        cte_columns = _resolve_star_from_cte(parsed[0], select_stmt, excluded_cols, dialect)
+        if cte_columns:
+            explicit_names = {c.lower() for c in output_columns}
+            cte_columns = [c for c in cte_columns if c.lower() not in explicit_names]
+            output_columns = cte_columns + output_columns
+            logger.debug(
+                "Resolved %d columns from CTE for SELECT * (no catalog data)",
+                len(cte_columns),
+            )
     elif not output_columns and known_columns:
         output_columns = list(known_columns)
 
@@ -129,14 +140,23 @@ def parse_column_lineage(
 
     # Trace lineage for each output column with a per-column timeout
     result: dict[str, list[ColumnDependency]] = {}
+    failures: list[str] = []
     for col_name in output_columns:
         try:
             deps = _trace_column_with_timeout(col_name, trace_sql, schema or {}, dialect)
             if deps:
                 result[col_name] = deps
-        except Exception:  # noqa: BLE001
-            logger.debug("Failed to trace lineage for column '%s'", col_name, exc_info=True)
+        except Exception as e:  # noqa: BLE001
+            logger.debug("Failed to trace lineage for column '%s': %s", col_name, e)
+            failures.append(col_name)
             continue
+
+    if failures:
+        logger.debug(
+            "Column lineage: %d/%d columns could not be traced",
+            len(failures),
+            len(output_columns),
+        )
 
     return result
 
@@ -157,24 +177,32 @@ def _trace_column_with_timeout(
     def _trace() -> Any:
         # Try with schema first (enables SELECT * expansion through CTEs).
         # If it fails, retry without schema (handles cases where schema
-        # keys don't match SQL table references).
-        node = lineage(
-            column=col_name,
-            sql=sql,
-            schema=schema or {},
-            dialect=dialect,
-        )
-        deps = _collect_dependencies(node)
-        if deps:
-            return deps
-        # Retry without schema
-        node = lineage(
-            column=col_name,
-            sql=sql,
-            schema={},
-            dialect=dialect,
-        )
-        return _collect_dependencies(node)
+        # keys don't match SQL table references or columns are missing).
+        try:
+            node = lineage(
+                column=col_name,
+                sql=sql,
+                schema=schema or {},
+                dialect=dialect,
+            )
+            deps = _collect_dependencies(node)
+            if deps:
+                return deps
+        except Exception:  # noqa: BLE001
+            pass  # Fall through to retry without schema
+
+        # Retry without schema (more lenient — won't resolve SELECT * but
+        # won't blow up on unknown columns or variant access syntax)
+        try:
+            node = lineage(
+                column=col_name,
+                sql=sql,
+                schema={},
+                dialect=dialect,
+            )
+            return _collect_dependencies(node)
+        except Exception:  # noqa: BLE001
+            return []
 
     with ThreadPoolExecutor(max_workers=1) as executor:
         future = executor.submit(_trace)
@@ -244,6 +272,66 @@ def _extract_output_columns(select: Any) -> list[str]:
             if alias:
                 columns.append(alias)
     return columns
+
+
+def _resolve_star_from_cte(
+    tree: Any,
+    outer_select: Any,
+    excluded_cols: set[str],
+    dialect: str | None,
+) -> list[str]:
+    """Resolve column names for SELECT * by inspecting the referenced CTE.
+
+    When the outermost SELECT is ``SELECT * FROM some_cte`` and we have no
+    catalog/manifest columns, we can look at the CTE definition to find the
+    output column names. This handles the common dbt pattern::
+
+        WITH renamed AS (
+            SELECT col_a, col_b AS alias_b, ...
+            FROM source
+        )
+        SELECT * FROM renamed
+    """
+    from sqlglot import exp
+
+    # Find the FROM clause of the outermost SELECT
+    from_clause = outer_select.find(exp.From)
+    if not from_clause:
+        return []
+
+    # Get the table name referenced in FROM
+    table = from_clause.find(exp.Table)
+    if not table:
+        return []
+
+    cte_name = table.name.lower()
+
+    # Find the matching CTE definition
+    for cte in tree.find_all(exp.CTE):
+        alias = cte.alias
+        if not alias or alias.lower() != cte_name:
+            continue
+
+        # Found the CTE — extract its output columns
+        cte_select = cte.find(exp.Select)
+        if not cte_select:
+            return []
+
+        # Check if the CTE itself uses SELECT *
+        cte_has_star = any(isinstance(e, exp.Star) for e in cte_select.expressions)
+        if cte_has_star:
+            # CTE also uses SELECT * — we can't resolve further without schema
+            return []
+
+        columns = _extract_output_columns(cte_select)
+
+        # Apply EXCLUDE filter
+        if excluded_cols:
+            columns = [c for c in columns if c.lower() not in excluded_cols]
+
+        return columns
+
+    return []
 
 
 def _get_excluded_columns(select: Any) -> set[str]:
