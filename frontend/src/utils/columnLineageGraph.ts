@@ -181,7 +181,9 @@ export function buildDownstreamMap(
       for (const dep of deps) {
         if (dep.source_model !== modelId) continue
 
-        const sourceCol = dep.source_column
+        // Normalize to lowercase for case-insensitive matching
+        // (Snowflake returns UPPERCASE, model columns are lowercase)
+        const sourceCol = dep.source_column.toLowerCase()
         const existing = result[sourceCol] ?? []
         existing.push({
           target_model: targetModelId,
