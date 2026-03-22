@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { useProjectStore } from '../stores/projectStore'
 import { LineageFlow } from '../components/lineage/LineageFlow'
 import { FilterDropdown } from '../components/ui/FilterDropdown'
@@ -7,6 +7,7 @@ import { applyFilters, useFilterState, computeSubgraphOptions, RESOURCE_TYPES } 
 import type { LineageDirection } from '../utils/graph'
 import type { LineageNode, LineageEdge } from '../types'
 import { buildModelColumnsMap } from '../utils/modelColumns'
+import { useColumnHighlightStore } from '../stores/columnHighlightStore'
 
 interface ModelSuggestion {
   node: LineageNode
@@ -100,6 +101,66 @@ export function LineagePage() {
     clearTags()
     clearFolders()
   }, [clearTypes, clearTags, clearFolders])
+
+  // Column search state
+  const [colSearch, setColSearch] = useState('')
+  const [colSearchOpen, setColSearchOpen] = useState(false)
+  const colSearchRef = useRef<HTMLDivElement>(null)
+  const { selectColumn, clearSelection } = useColumnHighlightStore()
+
+  const colSearchResults = useMemo(() => {
+    if (!data?.column_lineage || !colSearch || colSearch.length < 2) return []
+    const q = colSearch.toLowerCase()
+    const results: Array<{ modelId: string; modelName: string; columnName: string }> = []
+    const allResources = { ...data.models, ...data.seeds, ...data.snapshots }
+
+    for (const [modelId, columns] of Object.entries(data.column_lineage)) {
+      const modelName = allResources[modelId]?.name ?? modelId.split('.').pop() ?? modelId
+      for (const columnName of Object.keys(columns)) {
+        if (columnName.toLowerCase().includes(q)) {
+          results.push({ modelId, modelName, columnName })
+        }
+      }
+    }
+    // Also check columns that are referenced as sources (not just targets)
+    for (const [, columns] of Object.entries(data.column_lineage)) {
+      for (const deps of Object.values(columns)) {
+        for (const dep of deps) {
+          if (dep.source_column.toLowerCase().includes(q)) {
+            const srcName = allResources[dep.source_model]?.name ?? dep.source_model.split('.').pop() ?? dep.source_model
+            const key = `${dep.source_model}::${dep.source_column}`
+            if (!results.some(r => `${r.modelId}::${r.columnName}` === key)) {
+              results.push({ modelId: dep.source_model, modelName: srcName, columnName: dep.source_column })
+            }
+          }
+        }
+      }
+    }
+    return results.slice(0, 20)
+  }, [data, colSearch])
+
+  const handleColSearchSelect = useCallback((modelId: string, columnName: string) => {
+    selectColumn(modelId, columnName)
+    setColSearchOpen(false)
+    setColSearch('')
+  }, [selectColumn])
+
+  const handleColSearchClear = useCallback(() => {
+    clearSelection()
+    setColSearch('')
+    setColSearchOpen(false)
+  }, [clearSelection])
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (colSearchRef.current && !colSearchRef.current.contains(e.target as Node)) {
+        setColSearchOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
 
   const hasActiveFilters = typeFilter.selected.size > 0 || tagFilter.selected.size > 0 || folderFilter.selected.size > 0
 
@@ -217,6 +278,47 @@ export function LineagePage() {
             >
               Clear filters
             </button>
+          )}
+
+          {/* Column search */}
+          {data.column_lineage && (
+            <>
+              <div className="h-4 w-px bg-[var(--border)]" />
+              <div className="relative" ref={colSearchRef}>
+                <input
+                  type="text"
+                  value={colSearch}
+                  onChange={e => { setColSearch(e.target.value); setColSearchOpen(true) }}
+                  onFocus={() => setColSearchOpen(true)}
+                  placeholder="Search column..."
+                  className="w-36 px-2 py-0.5 text-xs border border-[var(--border)] rounded bg-[var(--bg)] outline-none focus:border-primary transition-colors"
+                />
+                {colSearch && (
+                  <button
+                    onClick={handleColSearchClear}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer"
+                  >
+                    <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                      <path d="M18 6 6 18M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+                {colSearchOpen && colSearchResults.length > 0 && (
+                  <div className="absolute top-full left-0 mt-1 z-50 bg-[var(--bg)] border border-[var(--border)] rounded-lg shadow-lg max-h-48 overflow-y-auto min-w-[240px]">
+                    {colSearchResults.map((r, i) => (
+                      <button
+                        key={`${r.modelId}-${r.columnName}-${i}`}
+                        onClick={() => handleColSearchSelect(r.modelId, r.columnName)}
+                        className="w-full text-left px-3 py-1.5 text-xs hover:bg-[var(--bg-surface)] cursor-pointer transition-colors"
+                      >
+                        <span className="font-medium text-[var(--text)]">{r.columnName}</span>
+                        <span className="text-[var(--text-muted)] ml-1.5">in {r.modelName}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
           )}
 
           <span className="text-xs text-[var(--text-muted)] ml-auto">
