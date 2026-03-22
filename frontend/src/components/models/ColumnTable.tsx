@@ -16,6 +16,8 @@ const TRANSFORMATION_STYLES: Record<string, { label: string; color: string; bg: 
   aggregated: { label: 'aggregated', color: '#7c3aed', bg: '#7c3aed14' },
 }
 
+const MAX_BADGES_PER_DIRECTION = 3
+
 function NullBar({ rate }: { rate: number }) {
   const color = rate > 0.5 ? 'bg-danger' : rate > 0.1 ? 'bg-warning' : 'bg-success'
   return (
@@ -75,116 +77,141 @@ function Histogram({ bins }: { bins: HistogramBin[] }) {
   )
 }
 
-function LineageDeps({ deps }: { deps: ColumnLineageDependency[] }) {
+/** A single directional badge: ← model.col or → model.col */
+function LineageBadge({
+  modelId,
+  columns,
+  transformation,
+  direction,
+}: {
+  modelId: string
+  columns: string[]
+  transformation: string
+  direction: 'upstream' | 'downstream'
+}) {
   const navigate = useNavigate()
-
-  // Group by source_model for a cleaner display
-  const grouped = useMemo(() => {
-    const map = new Map<string, ColumnLineageDependency[]>()
-    for (const dep of deps) {
-      const existing = map.get(dep.source_model) ?? []
-      map.set(dep.source_model, [...existing, dep])
-    }
-    return map
-  }, [deps])
+  const modelName = modelId.split('.').pop() ?? modelId
+  const resourceType = modelId.split('.')[0] ?? 'model'
+  const navType = resourceType === 'source' ? 'source' : 'model'
+  const style = TRANSFORMATION_STYLES[transformation] ?? TRANSFORMATION_STYLES.direct
+  const colLabel = columns.length === 1 ? columns[0] : `{${columns.join(', ')}}`
 
   return (
-    <div className="flex flex-wrap gap-1">
-      {Array.from(grouped.entries()).map(([modelId, modelDeps]) => {
-        const modelName = modelId.split('.').pop() ?? modelId
-        const resourceType = modelId.split('.')[0] ?? 'model'
-        const navType = resourceType === 'source' ? 'source' : 'model'
-        const columns = modelDeps.map(d => d.source_column)
-        const transformation = modelDeps[0].transformation
-        const style = TRANSFORMATION_STYLES[transformation] ?? TRANSFORMATION_STYLES.direct
-
-        return (
-          <button
-            key={`${modelId}-${columns.join(',')}`}
-            onClick={(e) => {
-              e.stopPropagation()
-              navigate(`/${navType}/${encodeURIComponent(modelId)}`)
-            }}
-            title={`${modelId}\nColumns: ${columns.join(', ')}\nType: ${transformation}`}
-            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px]
-                       hover:brightness-90 transition-all cursor-pointer border"
-            style={{
-              background: style.bg,
-              color: style.color,
-              borderColor: `${style.color}30`,
-            }}
-          >
-            <span className="font-medium">{modelName}</span>
-            <span style={{ opacity: 0.7 }}>
-              .{columns.length === 1 ? columns[0] : `{${columns.join(', ')}}`}
-            </span>
-          </button>
-        )
-      })}
-    </div>
+    <button
+      onClick={(e) => {
+        e.stopPropagation()
+        navigate(`/${navType}/${encodeURIComponent(modelId)}`)
+      }}
+      title={`${direction === 'upstream' ? 'From' : 'To'}: ${modelId}\nColumns: ${columns.join(', ')}\nType: ${transformation}`}
+      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px]
+                 hover:brightness-90 transition-all cursor-pointer border"
+      style={{
+        background: style.bg,
+        color: style.color,
+        borderColor: `${style.color}30`,
+      }}
+    >
+      {direction === 'upstream' && (
+        <span style={{ opacity: 0.6, fontSize: 11, lineHeight: 1 }}>&#x2190;</span>
+      )}
+      <span className="font-medium">{modelName}</span>
+      <span style={{ opacity: 0.7 }}>.{colLabel}</span>
+      {direction === 'downstream' && (
+        <span style={{ opacity: 0.6, fontSize: 11, lineHeight: 1 }}>&#x2192;</span>
+      )}
+    </button>
   )
 }
 
-const MAX_DOWNSTREAM_VISIBLE = 5
+/** Unified lineage cell showing upstream and downstream in a single column */
+function LineageCell({
+  upstream,
+  downstream,
+}: {
+  upstream?: ColumnLineageDependency[]
+  downstream?: ColumnDownstreamDependency[]
+}) {
+  const [expandedUp, setExpandedUp] = useState(false)
+  const [expandedDown, setExpandedDown] = useState(false)
 
-function DownstreamDeps({ deps }: { deps: ColumnDownstreamDependency[] }) {
-  const navigate = useNavigate()
-  const [expanded, setExpanded] = useState(false)
+  const upstreamGrouped = useMemo(() => {
+    if (!upstream || upstream.length === 0) return []
+    const map = new Map<string, ColumnLineageDependency[]>()
+    for (const dep of upstream) {
+      const existing = map.get(dep.source_model) ?? []
+      map.set(dep.source_model, [...existing, dep])
+    }
+    return Array.from(map.entries())
+  }, [upstream])
 
-  // Group by target_model
-  const grouped = useMemo(() => {
+  const downstreamGrouped = useMemo(() => {
+    if (!downstream || downstream.length === 0) return []
     const map = new Map<string, ColumnDownstreamDependency[]>()
-    for (const dep of deps) {
+    for (const dep of downstream) {
       const existing = map.get(dep.target_model) ?? []
       map.set(dep.target_model, [...existing, dep])
     }
-    return map
-  }, [deps])
+    return Array.from(map.entries())
+  }, [downstream])
 
-  const entries = Array.from(grouped.entries())
-  const visible = expanded ? entries : entries.slice(0, MAX_DOWNSTREAM_VISIBLE)
-  const hiddenCount = entries.length - MAX_DOWNSTREAM_VISIBLE
+  const hasUp = upstreamGrouped.length > 0
+  const hasDown = downstreamGrouped.length > 0
+
+  if (!hasUp && !hasDown) {
+    return <span className="text-[var(--text-muted)]">—</span>
+  }
+
+  const visibleUp = expandedUp ? upstreamGrouped : upstreamGrouped.slice(0, MAX_BADGES_PER_DIRECTION)
+  const hiddenUp = upstreamGrouped.length - MAX_BADGES_PER_DIRECTION
+  const visibleDown = expandedDown ? downstreamGrouped : downstreamGrouped.slice(0, MAX_BADGES_PER_DIRECTION)
+  const hiddenDown = downstreamGrouped.length - MAX_BADGES_PER_DIRECTION
 
   return (
-    <div className="flex flex-wrap gap-1">
-      {visible.map(([modelId, modelDeps]) => {
-        const modelName = modelId.split('.').pop() ?? modelId
-        const resourceType = modelId.split('.')[0] ?? 'model'
-        const navType = resourceType === 'source' ? 'source' : 'model'
-        const columns = modelDeps.map(d => d.target_column)
-        const transformation = modelDeps[0].transformation
-        const style = TRANSFORMATION_STYLES[transformation] ?? TRANSFORMATION_STYLES.direct
+    <div className="flex flex-col gap-1">
+      {/* Upstream badges */}
+      {hasUp && (
+        <div className="flex flex-wrap gap-1 items-center">
+          {visibleUp.map(([modelId, modelDeps]) => (
+            <LineageBadge
+              key={`up-${modelId}`}
+              modelId={modelId}
+              columns={modelDeps.map(d => d.source_column)}
+              transformation={modelDeps[0].transformation}
+              direction="upstream"
+            />
+          ))}
+          {!expandedUp && hiddenUp > 0 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setExpandedUp(true) }}
+              className="text-[11px] text-[var(--text-muted)] hover:text-[var(--text)] px-1 cursor-pointer"
+            >
+              +{hiddenUp} more
+            </button>
+          )}
+        </div>
+      )}
 
-        return (
-          <button
-            key={`${modelId}-${columns.join(',')}`}
-            onClick={(e) => {
-              e.stopPropagation()
-              navigate(`/${navType}/${encodeURIComponent(modelId)}`)
-            }}
-            title={`${modelId}\nColumns: ${columns.join(', ')}\nType: ${transformation}`}
-            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px]
-                       hover:brightness-90 transition-all cursor-pointer border"
-            style={{
-              background: style.bg,
-              color: style.color,
-              borderColor: `${style.color}30`,
-            }}
-          >
-            <span className="font-medium">{modelName}</span>
-            <span style={{ opacity: 0.7 }}>
-              .{columns.length === 1 ? columns[0] : `{${columns.join(', ')}}`}
-            </span>
-          </button>
-        )
-      })}
-      {!expanded && hiddenCount > 0 && (
-        <button
-          onClick={(e) => { e.stopPropagation(); setExpanded(true) }}
-          className="text-[11px] text-[var(--text-muted)] hover:text-[var(--text)] px-1"
-        >
-          +{hiddenCount} more
-        </button>
+      {/* Downstream badges */}
+      {hasDown && (
+        <div className="flex flex-wrap gap-1 items-center">
+          {visibleDown.map(([modelId, modelDeps]) => (
+            <LineageBadge
+              key={`down-${modelId}`}
+              modelId={modelId}
+              columns={modelDeps.map(d => d.target_column)}
+              transformation={modelDeps[0].transformation}
+              direction="downstream"
+            />
+          ))}
+          {!expandedDown && hiddenDown > 0 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setExpandedDown(true) }}
+              className="text-[11px] text-[var(--text-muted)] hover:text-[var(--text)] px-1 cursor-pointer"
+            >
+              +{hiddenDown} more
+            </button>
+          )}
+        </div>
       )}
     </div>
   )
@@ -311,8 +338,8 @@ const CH_PX = 7.2 // approximate px per monospace character at text-xs
 export function ColumnTable({ columns, columnLineage, columnDownstream }: ColumnTableProps) {
   const [expandedCol, setExpandedCol] = useState<string | null>(null)
   const hasAnyProfile = columns.some(c => c.profile != null)
-  const hasAnyLineage = columnLineage != null && Object.keys(columnLineage).length > 0
-  const hasAnyDownstream = columnDownstream != null && Object.keys(columnDownstream).length > 0
+  const hasAnyLineage = (columnLineage != null && Object.keys(columnLineage).length > 0)
+    || (columnDownstream != null && Object.keys(columnDownstream).length > 0)
 
   // Compute a consistent name column width based on the longest name (capped)
   const nameColWidth = useMemo(() => {
@@ -326,7 +353,6 @@ export function ColumnTable({ columns, columnLineage, columnDownstream }: Column
   const totalCols = 4
     + (hasAnyProfile ? 2 : 0)
     + (hasAnyLineage ? 1 : 0)
-    + (hasAnyDownstream ? 1 : 0)
 
   if (columns.length === 0) {
     return <div className="text-sm text-[var(--text-muted)]">No columns found.</div>
@@ -339,8 +365,7 @@ export function ColumnTable({ columns, columnLineage, columnDownstream }: Column
           <col style={{ width: nameColWidth }} />
           <col style={{ width: 160 }} />
           <col />
-          {hasAnyLineage && <col style={{ width: 260 }} />}
-          {hasAnyDownstream && <col style={{ width: 260 }} />}
+          {hasAnyLineage && <col style={{ width: 320 }} />}
           {hasAnyProfile && (
             <>
               <col style={{ width: 120 }} />
@@ -355,10 +380,10 @@ export function ColumnTable({ columns, columnLineage, columnDownstream }: Column
             <th className="text-left px-4 py-2 font-medium">Type</th>
             <th className="text-left px-4 py-2 font-medium">Description</th>
             {hasAnyLineage && (
-              <th className="text-left px-4 py-2 font-medium">Upstream</th>
-            )}
-            {hasAnyDownstream && (
-              <th className="text-left px-4 py-2 font-medium">Downstream</th>
+              <th className="text-left px-4 py-2 font-medium">
+                <span>Lineage</span>
+                <span className="ml-1.5 text-[10px] text-[var(--text-muted)] font-normal">← sources  → consumers</span>
+              </th>
             )}
             {hasAnyProfile && (
               <>
@@ -373,7 +398,7 @@ export function ColumnTable({ columns, columnLineage, columnDownstream }: Column
           {columns.map((col) => {
             const isExpanded = expandedCol === col.name
             const canExpand = col.profile != null
-            const deps = columnLineage?.[col.name]
+            const upDeps = columnLineage?.[col.name]
             const downDeps = columnDownstream?.[col.name]
             return (
               <tr key={col.name} className="group">
@@ -384,7 +409,7 @@ export function ColumnTable({ columns, columnLineage, columnDownstream }: Column
                       ${isExpanded ? 'bg-[var(--bg-surface)]' : ''}`}
                     onClick={() => canExpand && setExpandedCol(isExpanded ? null : col.name)}
                   >
-                    {/* Column name — fixed width, wraps for long names so Ctrl+F works */}
+                    {/* Column name */}
                     <div
                       className="px-4 py-2 font-mono text-xs font-medium shrink-0 flex items-start min-w-0"
                       style={{ width: nameColWidth }}
@@ -404,7 +429,7 @@ export function ColumnTable({ columns, columnLineage, columnDownstream }: Column
                       </span>
                     </div>
 
-                    {/* Type — fixed width, left-aligned */}
+                    {/* Type */}
                     <div
                       className="px-4 py-2 font-mono text-xs text-[var(--text-muted)] uppercase shrink-0"
                       style={{ width: 160 }}
@@ -412,7 +437,7 @@ export function ColumnTable({ columns, columnLineage, columnDownstream }: Column
                       {col.data_type || '—'}
                     </div>
 
-                    {/* Description — fills remaining space, wraps naturally */}
+                    {/* Description */}
                     <div className="px-4 py-2 flex-1 min-w-0">
                       {col.description ? (
                         <span className="text-sm block">{col.description}</span>
@@ -421,25 +446,10 @@ export function ColumnTable({ columns, columnLineage, columnDownstream }: Column
                       )}
                     </div>
 
-                    {/* Column lineage — upstream dependencies */}
+                    {/* Unified lineage cell */}
                     {hasAnyLineage && (
-                      <div className="px-4 py-2 shrink-0" style={{ width: 260 }}>
-                        {deps && deps.length > 0 ? (
-                          <LineageDeps deps={deps} />
-                        ) : (
-                          <span className="text-[var(--text-muted)]">—</span>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Column lineage — downstream consumers */}
-                    {hasAnyDownstream && (
-                      <div className="px-4 py-2 shrink-0" style={{ width: 260 }}>
-                        {downDeps && downDeps.length > 0 ? (
-                          <DownstreamDeps deps={downDeps} />
-                        ) : (
-                          <span className="text-[var(--text-muted)]">—</span>
-                        )}
+                      <div className="px-4 py-1.5 shrink-0" style={{ width: 320 }}>
+                        <LineageCell upstream={upDeps} downstream={downDeps} />
                       </div>
                     )}
 
