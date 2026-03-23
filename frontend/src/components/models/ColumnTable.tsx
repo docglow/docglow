@@ -100,7 +100,8 @@ function LineageBadge({
     <button
       onClick={(e) => {
         e.stopPropagation()
-        navigate(`/${navType}/${encodeURIComponent(modelId)}`)
+        const colAnchor = columns.length === 1 ? `#col-${columns[0].toLowerCase()}` : ''
+        navigate(`/${navType}/${encodeURIComponent(modelId)}${colAnchor}`)
       }}
       title={`${direction === 'upstream' ? 'From' : 'To'}: ${modelId}\nColumns: ${columns.join(', ')}\nType: ${transformation}`}
       className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px]
@@ -401,7 +402,7 @@ export function ColumnTable({ columns, columnLineage, columnDownstream }: Column
             const upDeps = columnLineage?.[col.name]
             const downDeps = columnDownstream?.[col.name]
             return (
-              <tr key={col.name} className="group">
+              <tr key={col.name} id={`col-${col.name}`} className="group">
                 <td colSpan={totalCols} className="p-0">
                   <div
                     className={`flex items-center border-t border-[var(--border)]
