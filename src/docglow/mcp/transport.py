@@ -60,7 +60,8 @@ def read_message(stream: Any = None) -> dict[str, Any] | None:
     body_str = body.decode("utf-8") if isinstance(body, bytes) else body
 
     try:
-        return json.loads(body_str)
+        result: dict[str, Any] = json.loads(body_str)
+        return result
     except json.JSONDecodeError as e:
         raise TransportError(f"Invalid JSON in message body: {e}") from e
 
