@@ -58,6 +58,19 @@ def cli() -> None:
     help="Enable column-level lineage analysis (requires sqlglot)",
 )
 @click.option(
+    "--column-lineage-select",
+    type=str,
+    default=None,
+    help="Only analyze column lineage for this model and its dependencies "
+    "(e.g. fct_orders, +fct_orders, fct_orders+)",
+)
+@click.option(
+    "--column-lineage-depth",
+    type=int,
+    default=None,
+    help="Max hops from the selected model (default: unlimited)",
+)
+@click.option(
     "--include-packages",
     is_flag=True,
     default=False,
@@ -87,6 +100,8 @@ def generate(
     title: str | None,
     theme: str,
     column_lineage: bool,
+    column_lineage_select: str | None,
+    column_lineage_depth: int | None,
     include_packages: bool,
     verbose: bool,
     fail_under: float | None,
@@ -108,6 +123,17 @@ def generate(
         ai = True  # --ai-key implies --ai
     if not title and config.title != "docglow":
         title = config.title
+
+    # --column-lineage-select implies --column-lineage
+    if column_lineage_select:
+        column_lineage = True
+
+    # --column-lineage-depth requires --column-lineage-select
+    if column_lineage_depth is not None and not column_lineage_select:
+        console.print(
+            "[bold red]Error:[/bold red] --column-lineage-depth requires --column-lineage-select"
+        )
+        raise SystemExit(1)
 
     # Validate column-lineage dependency
     if column_lineage:
@@ -153,6 +179,8 @@ def generate(
             select=select,
             exclude=exclude,
             column_lineage_enabled=column_lineage,
+            column_lineage_select=column_lineage_select,
+            column_lineage_depth=column_lineage_depth,
             exclude_packages=not include_packages,
         )
         console.print(f"\n[bold green]Site generated at {output_path}[/bold green]")
@@ -684,6 +712,27 @@ INIT_TEMPLATE = """\
 #       rank: 4
 #       color: "#f3e8ff"
 """
+
+
+@cli.command("mcp-server")
+@click.option("--project-dir", type=click.Path(exists=True, path_type=Path), default=".")
+@click.option("--target-dir", type=click.Path(path_type=Path), default=None)
+def mcp_server(project_dir: Path, target_dir: Path | None) -> None:
+    """Start an MCP server for AI editor integration.
+
+    Runs a Model Context Protocol server on stdio that exposes
+    your dbt project to AI editors like Claude Code, Cursor, and Copilot.
+
+    Configure in your editor's MCP settings:
+
+        "docglow": {
+          "command": "docglow",
+          "args": ["mcp-server", "--project-dir", "/path/to/dbt/project"]
+        }
+    """
+    from docglow.mcp.server import run_server
+
+    run_server(project_dir, target_dir)
 
 
 @cli.command()

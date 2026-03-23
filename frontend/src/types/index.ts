@@ -4,6 +4,12 @@ export interface ColumnLineageDependency {
   transformation: 'direct' | 'derived' | 'aggregated'
 }
 
+export interface ColumnDownstreamDependency {
+  target_model: string
+  target_column: string
+  transformation: 'direct' | 'derived' | 'aggregated'
+}
+
 export type ColumnLineageData = Record<string, Record<string, ColumnLineageDependency[]>>
 
 export interface ColumnEdge {
