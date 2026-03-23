@@ -1,5 +1,5 @@
-import { useMemo, useState, useCallback } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useMemo, useState, useCallback, useEffect } from 'react'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useProjectStore } from '../stores/projectStore'
 import { ColumnTable } from '../components/models/ColumnTable'
 import { SqlViewer } from '../components/models/SqlViewer'
@@ -11,6 +11,7 @@ import { materializationLabel } from '../utils/colors'
 import { getSubgraph, type LineageDirection } from '../utils/graph'
 import { applyFilters, useFilterState, computeSubgraphOptions } from '../utils/lineageFilters'
 import { buildModelColumnsMap } from '../utils/modelColumns'
+import { buildDownstreamMap } from '../utils/columnLineageGraph'
 
 const RESOURCE_TYPE_META: Record<string, { label: string; color: string; bg: string }> = {
   model:    { label: 'M', color: '#2563eb', bg: '#2563eb18' },
@@ -109,12 +110,35 @@ type Tab = 'columns' | 'sql' | 'lineage' | 'tests'
 export function ModelPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
   const { data, getModel, getColumnLineage } = useProjectStore()
   const [activeTab, setActiveTab] = useState<Tab>('columns')
   const [sqlMode, setSqlMode] = useState<'compiled' | 'raw'>('compiled')
 
   const decodedId = id ? decodeURIComponent(id) : ''
   const model = decodedId ? getModel(decodedId) : undefined
+
+  // Scroll to column anchor when navigating with a hash (e.g. #col-closer_id)
+  useEffect(() => {
+    const hash = location.hash
+    if (!hash || !hash.startsWith('#col-')) return
+
+    // Ensure we're on the columns tab
+    setActiveTab('columns')
+
+    // Delay to allow the tab content to render
+    const timer = setTimeout(() => {
+      const el = document.getElementById(hash.slice(1))
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        // Brief highlight flash
+        el.style.transition = 'background-color 0.3s'
+        el.style.backgroundColor = 'var(--primary-bg, rgba(37, 99, 235, 0.12))'
+        setTimeout(() => { el.style.backgroundColor = '' }, 1500)
+      }
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [location.hash, decodedId])
 
   // Lineage state
   const [depth, setDepth] = useState(2)
@@ -242,6 +266,7 @@ export function ModelPage() {
         <ColumnTable
           columns={model.columns}
           columnLineage={getColumnLineage(decodedId)}
+          columnDownstream={data?.column_lineage ? buildDownstreamMap(decodedId, data.column_lineage) : undefined}
         />
       )}
 
