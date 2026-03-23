@@ -1,4 +1,4 @@
-import type { ColumnLineageData, ColumnEdge } from '../types'
+import type { ColumnLineageData, ColumnEdge, ColumnDownstreamDependency } from '../types'
 
 const MAX_TRACE_DEPTH = 6
 
@@ -161,4 +161,39 @@ export function getColumnTraceResult(
   }
 
   return { edges: allEdges, highlightedColumns }
+}
+
+/**
+ * Build a map of column_name -> downstream consumers for a specific model.
+ * Used by ColumnTable to show which models consume each column.
+ */
+export function buildDownstreamMap(
+  modelId: string,
+  columnLineage: ColumnLineageData,
+): Record<string, ColumnDownstreamDependency[]> {
+  const result: Record<string, ColumnDownstreamDependency[]> = {}
+
+  // Scan all models' lineage to find references to columns from modelId
+  for (const [targetModelId, columns] of Object.entries(columnLineage)) {
+    if (targetModelId === modelId) continue
+
+    for (const [targetColumn, deps] of Object.entries(columns)) {
+      for (const dep of deps) {
+        if (dep.source_model !== modelId) continue
+
+        // Normalize to lowercase for case-insensitive matching
+        // (Snowflake returns UPPERCASE, model columns are lowercase)
+        const sourceCol = dep.source_column.toLowerCase()
+        const existing = result[sourceCol] ?? []
+        existing.push({
+          target_model: targetModelId,
+          target_column: targetColumn,
+          transformation: dep.transformation,
+        })
+        result[sourceCol] = existing
+      }
+    }
+  }
+
+  return result
 }

@@ -173,6 +173,8 @@ def build_docglow_data(
     exclude: str | None = None,
     layer_config: LineageLayerConfig | None = None,
     column_lineage_enabled: bool = False,
+    column_lineage_select: str | None = None,
+    column_lineage_depth: int | None = None,
     exclude_packages: bool = True,
 ) -> dict[str, Any]:
     """Transform loaded artifacts into the unified DocglowData payload.
@@ -279,10 +281,26 @@ def build_docglow_data(
     # Column-level lineage
     column_lineage: dict[str, Any] | None = None
     if column_lineage_enabled:
+        from pathlib import Path as _Path
+
         from docglow.lineage.analyzer import analyze_column_lineage
         from docglow.lineage.column_parser import detect_dialect
 
         dialect = detect_dialect(manifest.metadata.adapter_type)
+
+        subset = None
+        if column_lineage_select:
+            from docglow.lineage.analyzer import compute_column_lineage_subset
+
+            subset = compute_column_lineage_subset(
+                pattern=column_lineage_select,
+                models=models,
+                sources=sources,
+                seeds=seeds,
+                snapshots=snapshots,
+                max_depth=column_lineage_depth,
+            )
+
         column_lineage = analyze_column_lineage(
             models=models,
             sources=sources,
@@ -291,7 +309,14 @@ def build_docglow_data(
             dialect=dialect,
             manifest_nodes=dict(manifest.nodes),
             manifest_sources=dict(manifest.sources),
+            cache_path=_Path(".docglow-column-lineage-cache.json"),
+            subset=subset,
         )
+
+        # Backfill columns for models that have lineage but no catalog/manifest columns.
+        # This happens with Dynamic Tables and models not yet compiled.
+        if column_lineage:
+            _backfill_columns_from_lineage(column_lineage, models, seeds, snapshots)
 
     # AI context (compact project summary for chat)
     ai_context: dict[str, Any] | None = None
@@ -494,6 +519,39 @@ def _collect_downstream(
         if ref not in visited and ref in resources:
             visited.add(ref)
             _collect_downstream(ref, resources, visited)
+
+
+def _backfill_columns_from_lineage(
+    column_lineage: dict[str, dict[str, list[dict[str, str]]]],
+    *collections: dict[str, Any],
+) -> None:
+    """Add placeholder column entries for models that have lineage but no columns.
+
+    Dynamic Tables and uncompiled models often have no catalog or manifest
+    column data, but column lineage analysis can still resolve their output
+    columns from CTE definitions. This backfills the model's ``columns``
+    list so the frontend can display them.
+    """
+    for collection in collections:
+        for uid, model_data in collection.items():
+            if uid not in column_lineage:
+                continue
+            if model_data.get("columns"):
+                continue  # Already has columns
+
+            lineage_cols = column_lineage[uid]
+            model_data["columns"] = [
+                {
+                    "name": col_name,
+                    "description": "",
+                    "data_type": "",
+                    "meta": {},
+                    "tags": [],
+                    "tests": [],
+                    "profile": None,
+                }
+                for col_name in sorted(lineage_cols.keys())
+            ]
 
 
 def _get_folder(path: str) -> str:

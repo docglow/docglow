@@ -31,6 +31,8 @@ def generate_site(
     select: str | None = None,
     exclude: str | None = None,
     column_lineage_enabled: bool = False,
+    column_lineage_select: str | None = None,
+    column_lineage_depth: int | None = None,
     exclude_packages: bool = True,
 ) -> Path:
     """Generate the docglow static site.
@@ -72,6 +74,8 @@ def generate_site(
         exclude=exclude,
         layer_config=config.lineage_layers,
         column_lineage_enabled=column_lineage_enabled,
+        column_lineage_select=column_lineage_select,
+        column_lineage_depth=column_lineage_depth,
         exclude_packages=exclude_packages,
     )
 

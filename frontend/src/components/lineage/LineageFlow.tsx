@@ -649,9 +649,16 @@ function LineageFlowInner({
     // Column-level edges
     if (!columnTrace) return modelEdges
 
+    const COLUMN_EDGE_COLORS: Record<string, string> = {
+      direct: '#16a34a',
+      derived: '#f59e0b',
+      aggregated: '#7c3aed',
+    }
+
     const columnEdges: Edge[] = columnTrace.edges.map((ce) => {
       const sourceExpanded = expandedNodeIds.has(ce.sourceModel)
       const targetExpanded = expandedNodeIds.has(ce.targetModel)
+      const edgeColor = COLUMN_EDGE_COLORS[ce.transformation] ?? '#f59e0b'
 
       return {
         id: `col__${ce.sourceModel}__${ce.sourceColumn}__${ce.targetModel}__${ce.targetColumn}`,
@@ -661,8 +668,22 @@ function LineageFlowInner({
         targetHandle: targetExpanded ? `col-${ce.targetColumn}-target` : undefined,
         type: 'smoothstep',
         animated: false,
+        label: ce.transformation,
+        labelStyle: {
+          fontSize: 9,
+          fontWeight: 600,
+          fill: edgeColor,
+          letterSpacing: '0.02em',
+        },
+        labelBgStyle: {
+          fill: 'var(--bg, #fff)',
+          fillOpacity: 0.85,
+          rx: 3,
+          ry: 3,
+        },
+        labelBgPadding: [4, 2] as [number, number],
         style: {
-          stroke: '#f59e0b',
+          stroke: edgeColor,
           strokeWidth: 2,
           strokeDasharray: '6 3',
           opacity: 0.9,
