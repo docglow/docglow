@@ -163,7 +163,7 @@ def generate(
         profiling_connection = _parse_connection(profile_adapter, profile_connection)
 
     try:
-        output_path = generate_site(
+        output_path, health_score = generate_site(
             project_dir=project_dir,
             target_dir=target_dir,
             output_dir=output_dir,
@@ -190,22 +190,15 @@ def generate(
             console.print("  Run [bold]docglow serve[/bold] to view locally")
 
         if fail_under is not None:
-            from docglow.artifacts.loader import load_artifacts as _load_artifacts
-            from docglow.generator.data import build_docglow_data as _build_data
-
-            _artifacts = _load_artifacts(project_dir, target_dir)
-            _data = _build_data(_artifacts)
-            _score = _data["health"]["score"]["overall"]
-
-            if _score < fail_under:
+            if health_score < fail_under:
                 console.print(
-                    f"\n[bold red]Health score {_score:.0f} is below "
+                    f"\n[bold red]Health score {health_score:.0f} is below "
                     f"threshold {fail_under:.0f}[/bold red]"
                 )
                 raise SystemExit(1)
             else:
                 console.print(
-                    f"\n[bold green]Health score: {_score:.0f} "
+                    f"\n[bold green]Health score: {health_score:.0f} "
                     f"(threshold: {fail_under:.0f})[/bold green]"
                 )
     except ArtifactLoadError as e:
