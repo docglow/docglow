@@ -34,7 +34,7 @@ def generate_site(
     column_lineage_select: str | None = None,
     column_lineage_depth: int | None = None,
     exclude_packages: bool = True,
-) -> Path:
+) -> tuple[Path, float]:
     """Generate the docglow static site.
 
     Args:
@@ -98,7 +98,8 @@ def generate_site(
     file_count = len(list(resolved_output.iterdir()))
     logger.info("Site generated at %s (%d files)", resolved_output, file_count)
 
-    return resolved_output
+    health_score: float = docglow_data["health"]["score"]["overall"]
+    return resolved_output, health_score
 
 
 def _run_profiling(

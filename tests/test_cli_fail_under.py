@@ -123,15 +123,7 @@ class TestGenerateFailUnder:
             patch("docglow.config.load_config", return_value=_make_mock_config()),
             patch(
                 "docglow.generator.site.generate_site",
-                return_value=tmp_path / "output",
-            ),
-            patch(
-                "docglow.artifacts.loader.load_artifacts",
-                return_value=MagicMock(),
-            ),
-            patch(
-                "docglow.generator.data.build_docglow_data",
-                return_value=_mock_health_data(60.0),
+                return_value=(tmp_path / "output", 60.0),
             ),
         ):
             result = runner.invoke(
@@ -149,15 +141,7 @@ class TestGenerateFailUnder:
             patch("docglow.config.load_config", return_value=_make_mock_config()),
             patch(
                 "docglow.generator.site.generate_site",
-                return_value=tmp_path / "output",
-            ),
-            patch(
-                "docglow.artifacts.loader.load_artifacts",
-                return_value=MagicMock(),
-            ),
-            patch(
-                "docglow.generator.data.build_docglow_data",
-                return_value=_mock_health_data(85.0),
+                return_value=(tmp_path / "output", 85.0),
             ),
         ):
             result = runner.invoke(
