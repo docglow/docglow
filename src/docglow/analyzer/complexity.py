@@ -45,12 +45,12 @@ def _count_joins(sql: str) -> int:
 
 
 def _count_ctes(sql: str) -> int:
-    # Count WITH ... AS ( and , name AS ( patterns
-    with_count = len(re.findall(r"\bwith\b", sql, re.IGNORECASE))
-    as_paren = len(re.findall(r"\bas\s*\(", sql, re.IGNORECASE))
-    # CTEs = number of AS ( patterns, but only in CTE context
-    # Simple heuristic: count AS ( patterns
-    return max(as_paren - with_count, 0) + with_count if as_paren > 0 else 0
+    # Only count CTEs if there's a WITH keyword
+    if not re.search(r"\bWITH\b", sql, re.IGNORECASE):
+        return 0
+    # Count "name AS (" patterns — CTE definitions.
+    # Uses word boundary + identifier to avoid matching CAST(x AS type).
+    return len(re.findall(r"\b\w+\s+AS\s*\(", sql, re.IGNORECASE))
 
 
 def _count_subqueries(sql: str) -> int:

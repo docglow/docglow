@@ -33,7 +33,17 @@ class ProfilerError(Exception):
 
 
 def _get_connection_url(adapter: str, connection_params: dict[str, Any]) -> str:
-    """Build a SQLAlchemy connection URL from adapter type and params."""
+    """Build a SQLAlchemy connection URL from adapter type and params.
+
+    Accepts either a DSN/URI string (via ``{"dsn": "..."}`` from CLI) or
+    individual component params (host, port, user, etc.).
+    """
+    # If a DSN string was provided, pass it through directly — SQLAlchemy
+    # accepts connection URIs natively for postgres, snowflake, etc.
+    dsn = connection_params.get("dsn")
+    if dsn:
+        return str(dsn)
+
     if adapter == "duckdb":
         path = connection_params.get("path", ":memory:")
         return f"duckdb:///{path}"

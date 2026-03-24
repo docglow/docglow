@@ -685,7 +685,7 @@ INIT_TEMPLATE = """\
 
 # ai:
 #   enabled: false
-#   model: claude-sonnet-4-20250514
+#   model: claude-sonnet-4
 
 # lineage_layers:
 #   layers:
