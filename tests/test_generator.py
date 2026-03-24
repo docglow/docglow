@@ -101,16 +101,17 @@ class TestGenerateSite:
         project = _setup_target(tmp_path)
         output = tmp_path / "custom_output"
 
-        result = generate_site(project, output_dir=output)
+        result, score = generate_site(project, output_dir=output)
 
         assert result == output
         assert output.exists()
         assert (output / "docglow-data.json").exists()
+        assert isinstance(score, float)
 
     def test_generate_default_output_dir(self, tmp_path: Path) -> None:
         project = _setup_target(tmp_path)
 
-        result = generate_site(project)
+        result, _score = generate_site(project)
 
         assert result == project / "target" / "docglow"
         assert (result / "docglow-data.json").exists()
