@@ -29,6 +29,30 @@ Docglow is **adapter-agnostic** — it reads compiled dbt artifacts, not databas
 
 The optional column profiling feature (`docglow[profiling]`) currently supports DuckDB, PostgreSQL, and Snowflake adapters.
 
+## Column Lineage
+
+Column-level lineage (`--column-lineage`) uses [sqlglot](https://github.com/tobymao/sqlglot) to parse SQL and trace column dependencies. It works best with **compiled SQL** — run `dbt compile` before `docglow generate` for best results.
+
+### What works well
+
+- Standard SQL: SELECT, JOIN, CTEs, subqueries, UNION, window functions
+- Snowflake dialect: variant access (`metadata:key::type`), QUALIFY, IFF
+- Common dbt macros: `dbt_utils.surrogate_key`, `dbt_utils.star`, `dbt.date_trunc`, `dbt.safe_cast`, type helpers, and more (12 macros expanded automatically)
+- Models with `SELECT * FROM <cte>` — columns are resolved from the CTE definition even without catalog data
+- Dynamic Tables and other models without compiled SQL fall back to Jinja-stripped raw SQL
+
+### Known limitations
+
+- **Complex Jinja macros**: Custom macros and `dbt_utils.pivot()` are replaced with `NULL` if compiled SQL is unavailable. The column lineage for those expressions is lost.
+- **Deeply nested CTEs**: sqlglot's lineage tracer has a 2-second timeout per column. Very complex SQL with many nested CTEs may time out on some columns.
+- **Adapter-specific functions**: While Snowflake is well-supported, some adapter-specific SQL functions may not parse correctly in other dialects.
+
+### Recommendations
+
+1. Run `dbt compile` before generating column lineage — compiled SQL has all macros resolved
+2. Use `--column-lineage-select <model>` to analyze incrementally — results cache across runs
+3. Check `.docglow-column-lineage-failures.log` for details on models that couldn't be fully analyzed
+
 ## Optional Artifacts
 
 | Artifact | Required | Notes |
