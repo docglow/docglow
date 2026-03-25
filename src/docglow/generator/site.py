@@ -76,6 +76,7 @@ def generate_site(
         column_lineage_enabled=column_lineage_enabled,
         column_lineage_select=column_lineage_select,
         column_lineage_depth=column_lineage_depth,
+        column_lineage_cache_dir=resolved_output,
         exclude_packages=exclude_packages,
     )
 

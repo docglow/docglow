@@ -20,7 +20,7 @@ def _register(pattern: str, flags: int = 0) -> Callable[[_MacroHandler], _MacroH
     """Decorator to register a macro pattern handler."""
 
     def decorator(fn: _MacroHandler) -> _MacroHandler:
-        _HANDLERS.append((re.compile(pattern, flags), fn))
+        _HANDLERS.append((re.compile(pattern, flags | re.DOTALL), fn))
         return fn
 
     return decorator
