@@ -175,6 +175,7 @@ def build_docglow_data(
     column_lineage_enabled: bool = False,
     column_lineage_select: str | None = None,
     column_lineage_depth: int | None = None,
+    column_lineage_cache_dir: Any | None = None,
     exclude_packages: bool = True,
 ) -> dict[str, Any]:
     """Transform loaded artifacts into the unified DocglowData payload.
@@ -309,7 +310,11 @@ def build_docglow_data(
             dialect=dialect,
             manifest_nodes=dict(manifest.nodes),
             manifest_sources=dict(manifest.sources),
-            cache_path=_Path(".docglow-column-lineage-cache.json"),
+            cache_path=(
+                _Path(column_lineage_cache_dir) / ".docglow-column-lineage-cache.json"
+                if column_lineage_cache_dir
+                else _Path(".docglow-column-lineage-cache.json")
+            ),
             subset=subset,
         )
 

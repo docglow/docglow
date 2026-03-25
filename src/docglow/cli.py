@@ -572,6 +572,15 @@ def login(token: str | None) -> None:
 
 
 @cli.command()
+def logout() -> None:
+    """Remove stored docglow.dev credentials."""
+    from docglow.cloud.auth import clear_token
+
+    clear_token()
+    console.print("[bold green]Logged out successfully.[/bold green]")
+
+
+@cli.command()
 @click.option("--token", envvar="DOCGLOW_TOKEN", default=None)
 @click.option("--verbose", is_flag=True)
 def status(token: str | None, verbose: bool) -> None:
