@@ -44,25 +44,33 @@ function LayerBandNode({ data }: { data: { label: string; color: string; width: 
       style={{
         width: data.width,
         height: data.height,
-        background: data.color,
-        opacity: 0.18,
-        borderRadius: 8,
         position: 'relative',
         pointerEvents: 'none',
       }}
     >
+      {/* Background — low opacity */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: data.color,
+          opacity: 0.18,
+          borderRadius: 8,
+        }}
+      />
+      {/* Label — independent opacity so it's readable */}
       <span
         style={{
           position: 'absolute',
           top: 6,
           left: '50%',
           transform: 'translateX(-50%)',
-          fontSize: 10,
-          fontWeight: 600,
+          fontSize: 11,
+          fontWeight: 700,
           textTransform: 'uppercase',
-          letterSpacing: '0.05em',
+          letterSpacing: '0.08em',
           color: 'var(--text-muted, #64748b)',
-          opacity: 1,
+          opacity: 0.7,
           whiteSpace: 'nowrap',
         }}
       >
@@ -782,39 +790,27 @@ function LineageFlowInner({
       minZoom={0.05}
       maxZoom={3}
     >
-      <Controls showInteractive={false} />
-      {highlightId && (
-        <div className="react-flow__panel bottom-left" style={{ left: 10, bottom: 110 }}>
+      <Controls showInteractive={false}>
+        {highlightId && (
           <button
             onClick={centerOnHighlight}
             title="Center on selected model"
             className="react-flow__controls-button"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 26,
-              height: 26,
-              borderRadius: 4,
-              border: '1px solid var(--border, #e2e8f0)',
-              background: 'var(--bg, #fff)',
-              cursor: 'pointer',
-              color: '#f59e0b',
-            }}
+            style={{ color: '#f59e0b' }}
           >
-            <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+            <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
               <circle cx={12} cy={12} r={3} />
               <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
             </svg>
           </button>
-        </div>
-      )}
+        )}
+      </Controls>
       <MiniMap
         nodeColor={(node) => {
           if (node.id.startsWith('folder:')) return '#64748b'
           return RESOURCE_COLORS[(node.data as Record<string, unknown>)?.resource_type as string] ?? '#6b7280'
         }}
-        maskColor="rgba(0,0,0,0.08)"
+        maskColor="rgba(0,0,0,0.25)"
         pannable
         zoomable
       />
