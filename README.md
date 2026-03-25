@@ -1,6 +1,12 @@
-# docglow
+<p align="center">
+  <img src="docs/images/docglow-logo.png" alt="Docglow" width="160" />
+</p>
 
-Next-generation documentation site generator for [dbt™ Core](https://github.com/dbt-labs/dbt-core) projects.
+<h1 align="center">docglow</h1>
+
+<p align="center">
+  Next-generation documentation site generator for <a href="https://github.com/dbt-labs/dbt-core">dbt™ Core</a> projects.
+</p>
 
 ## Why Docglow?
 
