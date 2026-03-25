@@ -1,6 +1,6 @@
 - id: docglow-health
   name: docglow health check
-  entry: docglow health --fail-under 70
+  entry: docglow health --fail-under 75
   language: python
   pass_filenames: false
   additional_dependencies: ['docglow']

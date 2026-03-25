@@ -56,7 +56,7 @@ class HealthConfig:
 @dataclass(frozen=True)
 class AiConfig:
     enabled: bool = False
-    model: str = "claude-sonnet-4-20250514"
+    model: str = "claude-sonnet-4"
     max_requests_per_session: int = 20
 
 
@@ -92,13 +92,7 @@ def load_config(project_dir: Path) -> DocglowConfig:
 
 def _parse_config_file(path: Path) -> DocglowConfig:
     """Parse a docglow.yml config file into a DocglowConfig."""
-    try:
-        import yaml
-    except ImportError as e:
-        raise ImportError(
-            "pyyaml is required to load docglow.yml config files. "
-            "Install it with: pip install pyyaml"
-        ) from e
+    import yaml
 
     raw = yaml.safe_load(path.read_text(encoding="utf-8"))
     if not isinstance(raw, dict):
@@ -166,7 +160,7 @@ def _build_config_from_dict(raw: dict[str, Any]) -> DocglowConfig:
     ai = (
         AiConfig(
             enabled=ai_raw.get("enabled", False),
-            model=ai_raw.get("model", "claude-sonnet-4-20250514"),
+            model=ai_raw.get("model", "claude-sonnet-4"),
             max_requests_per_session=ai_raw.get("max_requests_per_session", 20),
         )
         if ai_raw

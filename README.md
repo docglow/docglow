@@ -1,6 +1,12 @@
-# docglow
+<p align="center">
+  <img src="docs/images/docglow-logo.png" alt="Docglow" width="160" />
+</p>
 
-Next-generation documentation site generator for [dbt Core](https://github.com/dbt-labs/dbt-core) projects.
+<h1 align="center">docglow</h1>
+
+<p align="center">
+  Next-generation documentation site generator for <a href="https://github.com/dbt-labs/dbt-core">dbt™ Core</a> projects.
+</p>
 
 ## Why Docglow?
 
@@ -14,8 +20,17 @@ Docglow replaces it with a **modern, interactive single-page application** — a
 - **Interactive lineage explorer** — drag, filter, and trace upstream/downstream dependencies visually
 - **Project health scoring** — get a coverage report for descriptions, tests, and documentation completeness
 
-<!-- TODO: Add screenshot or GIF of lineage explorer here -->
-<!-- Place image assets in docs/images/ -->
+**Interactive lineage explorer** — layer-grouped DAG with upstream/downstream filtering, depth control, and folder grouping
+
+![Lineage explorer with layer bands](docs/images/lineage-view.png)
+
+**Column-level lineage** — expand nodes to trace individual columns across models with transformation labels (direct, derived, aggregated)
+
+![Column-level lineage tracing](docs/images/column-lineage-view.png)
+
+**Column table with lineage** — view types, descriptions, tests, and upstream/downstream dependencies for every column. Click a lineage badge to jump directly to that column in the linked model.
+
+![Column table with upstream and downstream lineage](docs/images/columns-view.png)
 
 ## Install
 
@@ -122,7 +137,7 @@ Add Docglow's health check to your existing pre-commit workflow:
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/docglow/docglow
-    rev: v0.3.0
+    rev: v0.4.0
     hooks:
       - id: docglow-health
         args: ['--fail-under', '75']
@@ -137,3 +152,7 @@ repos:
 ## License
 
 MIT
+
+---
+
+*dbt is a trademark of dbt Labs, Inc. Docglow is not affiliated with or endorsed by dbt Labs.*
