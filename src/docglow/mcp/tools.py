@@ -116,7 +116,7 @@ def _get_source(data: dict[str, Any], params: dict[str, Any]) -> Any:
 def _get_lineage(data: dict[str, Any], params: dict[str, Any]) -> Any:
     """Get upstream and downstream lineage for a model."""
     identifier = params.get("name") or params.get("unique_id", "")
-    depth = params.get("depth", 100)
+    depth = params.get("depth", 10)
     direction = params.get("direction", "both")  # upstream | downstream | both
 
     # Find the model
@@ -292,6 +292,11 @@ def _find_untested(data: dict[str, Any], params: dict[str, Any]) -> Any:
     }
 
 
+def _resource_type_from_uid(uid: str) -> str:
+    """Derive resource type from a dbt unique_id prefix."""
+    return uid.split(".")[0] if "." in uid else "unknown"
+
+
 def _search(data: dict[str, Any], params: dict[str, Any]) -> Any:
     """Search across models, sources, columns, and tags."""
     query = params.get("query", "").lower()
@@ -302,11 +307,11 @@ def _search(data: dict[str, Any], params: dict[str, Any]) -> Any:
 
     results: list[dict[str, Any]] = []
 
-    all_resources = {
-        **{uid: {**m, "_type": "model"} for uid, m in data["models"].items()},
-        **{uid: {**s, "_type": "source"} for uid, s in data["sources"].items()},
-        **{uid: {**s, "_type": "seed"} for uid, s in data["seeds"].items()},
-        **{uid: {**s, "_type": "snapshot"} for uid, s in data["snapshots"].items()},
+    all_resources: dict[str, dict[str, Any]] = {
+        **data["models"],
+        **data["sources"],
+        **data["seeds"],
+        **data["snapshots"],
     }
 
     for uid, resource in all_resources.items():
@@ -336,7 +341,7 @@ def _search(data: dict[str, Any], params: dict[str, Any]) -> Any:
                 {
                     "unique_id": uid,
                     "name": name,
-                    "resource_type": resource["_type"],
+                    "resource_type": _resource_type_from_uid(uid),
                     "description": description[:200],
                     "score": score,
                 }
@@ -413,6 +418,7 @@ TOOLS: list[ToolDefinition] = [
                     "default": False,
                 },
             },
+            "additionalProperties": False,
         },
         handler=_list_models,
     ),
@@ -434,6 +440,7 @@ TOOLS: list[ToolDefinition] = [
                     "description": "Model unique_id (e.g. 'model.jaffle_shop.stg_orders')",
                 },
             },
+            "additionalProperties": False,
         },
         handler=_get_model,
     ),
@@ -454,6 +461,7 @@ TOOLS: list[ToolDefinition] = [
                     "description": "Source unique_id",
                 },
             },
+            "additionalProperties": False,
         },
         handler=_get_source,
     ),
@@ -476,8 +484,8 @@ TOOLS: list[ToolDefinition] = [
                 },
                 "depth": {
                     "type": "integer",
-                    "description": "Maximum depth to traverse (default: 100)",
-                    "default": 100,
+                    "description": "Maximum depth to traverse (default: 10)",
+                    "default": 10,
                 },
                 "direction": {
                     "type": "string",
@@ -486,6 +494,7 @@ TOOLS: list[ToolDefinition] = [
                     "default": "both",
                 },
             },
+            "additionalProperties": False,
         },
         handler=_get_lineage,
     ),
@@ -495,7 +504,7 @@ TOOLS: list[ToolDefinition] = [
             "Get the project health score with per-category breakdown "
             "(documentation, testing, freshness, complexity, naming, orphans)."
         ),
-        input_schema={"type": "object", "properties": {}},
+        input_schema={"type": "object", "properties": {}, "additionalProperties": False},
         handler=_get_health,
     ),
     ToolDefinition(
@@ -519,6 +528,7 @@ TOOLS: list[ToolDefinition] = [
                     "default": 50,
                 },
             },
+            "additionalProperties": False,
         },
         handler=_find_undocumented,
     ),
@@ -534,6 +544,7 @@ TOOLS: list[ToolDefinition] = [
                     "default": 50,
                 },
             },
+            "additionalProperties": False,
         },
         handler=_find_untested,
     ),
@@ -557,6 +568,7 @@ TOOLS: list[ToolDefinition] = [
                 },
             },
             "required": ["query"],
+            "additionalProperties": False,
         },
         handler=_search,
     ),
@@ -575,6 +587,7 @@ TOOLS: list[ToolDefinition] = [
                 },
             },
             "required": ["column_name"],
+            "additionalProperties": False,
         },
         handler=_get_column_info,
     ),
