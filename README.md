@@ -14,6 +14,12 @@ Docglow replaces it with a **modern, interactive single-page application** — a
 - **Interactive lineage explorer** — drag, filter, and trace upstream/downstream dependencies visually
 - **Project health scoring** — get a coverage report for descriptions, tests, and documentation completeness
 
+![Lineage explorer with layer bands](docs/images/lineage-view.png)
+
+![Column-level lineage tracing](docs/images/column-lineage-view.png)
+
+![Column table with upstream and downstream lineage](docs/images/columns-view.png)
+
 ## Install
 
 ```bash
