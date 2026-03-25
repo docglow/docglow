@@ -15,7 +15,7 @@ Over **60,000 teams** use dbt Core without access to dbt Cloud's documentation f
 Docglow replaces it with a **modern, interactive single-page application** — and it works with any dbt Core project out of the box.
 
 - **No dbt Cloud required** — generate and serve docs locally or deploy anywhere
-- **Unlimited models, unlimited viewers** — no seat caps, no model limits (unlike hosted alternatives like Tributary Docs)
+- **Unlimited models, unlimited viewers** — no seat caps, no model limits
 - **Zero configuration** — just point it at a dbt project with compiled artifacts and go
 - **Interactive lineage explorer** — drag, filter, and trace upstream/downstream dependencies visually
 - **Project health scoring** — get a coverage report for descriptions, tests, and documentation completeness
