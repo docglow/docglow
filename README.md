@@ -14,9 +14,15 @@ Docglow replaces it with a **modern, interactive single-page application** — a
 - **Interactive lineage explorer** — drag, filter, and trace upstream/downstream dependencies visually
 - **Project health scoring** — get a coverage report for descriptions, tests, and documentation completeness
 
+**Interactive lineage explorer** — layer-grouped DAG with upstream/downstream filtering, depth control, and folder grouping
+
 ![Lineage explorer with layer bands](docs/images/lineage-view.png)
 
+**Column-level lineage** — expand nodes to trace individual columns across models with transformation labels (direct, derived, aggregated)
+
 ![Column-level lineage tracing](docs/images/column-lineage-view.png)
+
+**Column table with lineage** — view types, descriptions, tests, and upstream/downstream dependencies for every column. Click a lineage badge to jump directly to that column in the linked model.
 
 ![Column table with upstream and downstream lineage](docs/images/columns-view.png)
 
