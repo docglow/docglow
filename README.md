@@ -76,6 +76,7 @@ docglow serve --dir ./site
 | `docglow generate` | Generate the documentation site from dbt artifacts |
 | `docglow serve` | Serve the generated site locally |
 | `docglow health` | Show project health score and coverage metrics |
+| `docglow mcp-server` | Start MCP server for AI editor integration |
 | `docglow init` | Generate a starter `docglow.yml` configuration file |
 | `docglow profile` | Run column-level profiling (requires `docglow[profiling]`) |
 
@@ -114,6 +115,25 @@ Or in `docglow.yml`:
 theme: dark  # auto | light | dark
 ```
 
+## AI Editor Integration (MCP)
+
+Docglow includes a [Model Context Protocol](https://modelcontextprotocol.io/) server that exposes your dbt project to AI editors like Claude Code, Cursor, and Copilot.
+
+Add to your editor's MCP config (e.g. `~/.claude.json`):
+
+```json
+{
+  "mcpServers": {
+    "docglow": {
+      "command": "docglow",
+      "args": ["mcp-server", "--project-dir", "/path/to/dbt/project"]
+    }
+  }
+}
+```
+
+The server provides 9 tools: model/source lookup, lineage traversal, health scores, undocumented/untested discovery, cross-model column search, and full-text search. No API keys or network access required — it runs locally over stdio.
+
 ## CI/CD
 
 Use Docglow as a CI quality gate with the `--fail-under` flag:
@@ -137,7 +157,7 @@ Add Docglow's health check to your existing pre-commit workflow:
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/docglow/docglow
-    rev: v0.4.0
+    rev: v0.4.1
     hooks:
       - id: docglow-health
         args: ['--fail-under', '75']
