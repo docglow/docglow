@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import fnmatch
 import os
 from dataclasses import dataclass, field
 from typing import Any
@@ -13,7 +12,10 @@ from docglow.artifacts.catalog import Catalog, CatalogColumnInfo
 from docglow.artifacts.loader import LoadedArtifacts
 from docglow.artifacts.manifest import Manifest, ManifestNode, ManifestSource
 from docglow.artifacts.run_results import RunResult, RunResults
-from docglow.generator.layers import LineageLayerConfig, layers_to_dict, resolve_all_layers
+from docglow.generator.filters import filter_resources as _filter_resources
+from docglow.generator.layers import LineageLayerConfig
+from docglow.generator.lineage_builder import build_lineage as _build_lineage
+from docglow.generator.search_index import build_search_index as _build_search_index
 
 
 @dataclass(frozen=True)
@@ -175,6 +177,7 @@ def build_docglow_data(
     column_lineage_enabled: bool = False,
     column_lineage_select: str | None = None,
     column_lineage_depth: int | None = None,
+    column_lineage_cache_dir: Any | None = None,
     exclude_packages: bool = True,
 ) -> dict[str, Any]:
     """Transform loaded artifacts into the unified DocglowData payload.
@@ -309,7 +312,11 @@ def build_docglow_data(
             dialect=dialect,
             manifest_nodes=dict(manifest.nodes),
             manifest_sources=dict(manifest.sources),
-            cache_path=_Path(".docglow-column-lineage-cache.json"),
+            cache_path=(
+                _Path(column_lineage_cache_dir) / ".docglow-column-lineage-cache.json"
+                if column_lineage_cache_dir
+                else _Path(".docglow-column-lineage-cache.json")
+            ),
             subset=subset,
         )
 
@@ -417,108 +424,6 @@ def _build_reverse_dependency_map(manifest: Manifest) -> dict[str, list[str]]:
                 reverse[dep_id] = []
             reverse[dep_id].append(unique_id)
     return reverse
-
-
-def _filter_resources(
-    models: dict[str, Any],
-    seeds: dict[str, Any],
-    snapshots: dict[str, Any],
-    *,
-    select: str | None = None,
-    exclude: str | None = None,
-) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
-    """Filter models/seeds/snapshots by --select and --exclude patterns.
-
-    Supports:
-      - Glob patterns matching model name: ``stg_*``, ``*orders*``
-      - Folder paths: ``staging/*``, ``marts/finance/*``
-      - ``+name`` prefix: include all upstream dependencies
-      - ``name+`` suffix: include all downstream dependents
-    """
-    all_resources = {**models, **seeds, **snapshots}
-
-    if select:
-        selected = _resolve_selection(select, all_resources)
-    else:
-        selected = set(all_resources.keys())
-
-    if exclude:
-        excluded = _resolve_selection(exclude, all_resources)
-        selected -= excluded
-
-    return (
-        {k: v for k, v in models.items() if k in selected},
-        {k: v for k, v in seeds.items() if k in selected},
-        {k: v for k, v in snapshots.items() if k in selected},
-    )
-
-
-def _resolve_selection(
-    pattern: str,
-    resources: dict[str, Any],
-) -> set[str]:
-    """Resolve a selection pattern to a set of unique_ids."""
-    include_upstream = pattern.startswith("+")
-    include_downstream = pattern.endswith("+")
-    clean = pattern.strip("+")
-
-    matched: set[str] = set()
-    for uid, data in resources.items():
-        name = data.get("name", "")
-        folder = data.get("folder", "")
-        path = data.get("path", "")
-
-        matches_filter = (
-            fnmatch.fnmatch(name, clean)
-            or fnmatch.fnmatch(folder, clean)
-            or fnmatch.fnmatch(path, clean)
-        )
-        if matches_filter:
-            matched.add(uid)
-
-    if include_upstream:
-        upstream: set[str] = set()
-        for uid in matched:
-            _collect_upstream(uid, resources, upstream)
-        matched |= upstream
-
-    if include_downstream:
-        downstream: set[str] = set()
-        for uid in matched:
-            _collect_downstream(uid, resources, downstream)
-        matched |= downstream
-
-    return matched
-
-
-def _collect_upstream(
-    uid: str,
-    resources: dict[str, Any],
-    visited: set[str],
-) -> None:
-    """Recursively collect upstream dependencies."""
-    data = resources.get(uid)
-    if not data:
-        return
-    for dep in data.get("depends_on", []):
-        if dep not in visited and dep in resources:
-            visited.add(dep)
-            _collect_upstream(dep, resources, visited)
-
-
-def _collect_downstream(
-    uid: str,
-    resources: dict[str, Any],
-    visited: set[str],
-) -> None:
-    """Recursively collect downstream dependents."""
-    data = resources.get(uid)
-    if not data:
-        return
-    for ref in data.get("referenced_by", []):
-        if ref not in visited and ref in resources:
-            visited.add(ref)
-            _collect_downstream(ref, resources, visited)
 
 
 def _backfill_columns_from_lineage(
@@ -858,175 +763,3 @@ def _transform_source(
         "freshness_max_loaded_at": freshness_max_loaded_at,
         "freshness_snapshotted_at": freshness_snapshotted_at,
     }
-
-
-def _build_lineage(
-    manifest: Manifest,
-    models: dict[str, Any],
-    sources: dict[str, Any],
-    seeds: dict[str, Any],
-    snapshots: dict[str, Any],
-    *,
-    layer_config: LineageLayerConfig,
-    exclude_packages: bool = True,
-) -> dict[str, Any]:
-    """Build lineage graph nodes and edges."""
-    # Determine which node IDs to exclude (package models/seeds/snapshots)
-    excluded_ids: set[str] = set()
-    if exclude_packages:
-        for collection in (models, seeds, snapshots):
-            for uid, data in collection.items():
-                if data.get("is_package", False):
-                    excluded_ids.add(uid)
-
-    nodes: list[dict[str, Any]] = []
-    edges: list[dict[str, Any]] = []
-    seen_node_ids: set[str] = set()
-
-    def _add_lineage_node(
-        unique_id: str,
-        name: str,
-        resource_type: str,
-        materialization: str,
-        schema: str,
-        test_status: str,
-        has_description: bool,
-        folder: str,
-        tags: list[str],
-        meta: dict[str, Any] | None = None,
-    ) -> None:
-        if unique_id in seen_node_ids:
-            return
-        seen_node_ids.add(unique_id)
-        nodes.append(
-            {
-                "id": unique_id,
-                "name": name,
-                "resource_type": resource_type,
-                "materialization": materialization,
-                "schema": schema,
-                "test_status": test_status,
-                "has_description": has_description,
-                "folder": folder,
-                "tags": tags,
-                "meta": meta or {},
-            }
-        )
-
-    def _get_test_status(model_data: dict[str, Any]) -> str:
-        test_results = model_data.get("test_results", [])
-        if not test_results:
-            return "none"
-        statuses = {t["status"] for t in test_results}
-        if "fail" in statuses or "error" in statuses:
-            return "fail"
-        if "warn" in statuses:
-            return "warn"
-        if "pass" in statuses:
-            return "pass"
-        return "none"
-
-    # Add model/seed/snapshot nodes
-    for collection, resource_type in [
-        (models, "model"),
-        (seeds, "seed"),
-        (snapshots, "snapshot"),
-    ]:
-        for uid, data in collection.items():
-            if uid in excluded_ids:
-                continue
-            _add_lineage_node(
-                unique_id=uid,
-                name=data["name"],
-                resource_type=resource_type,
-                materialization=data.get("materialization", ""),
-                schema=data.get("schema", ""),
-                test_status=_get_test_status(data),
-                has_description=bool(data.get("description")),
-                folder=data.get("folder", ""),
-                tags=data.get("tags", []),
-                meta=data.get("meta", {}),
-            )
-            for dep in data.get("depends_on", []):
-                if dep not in excluded_ids:
-                    edges.append({"source": dep, "target": uid})
-
-    # Add source nodes
-    for uid, data in sources.items():
-        _add_lineage_node(
-            unique_id=uid,
-            name=f"{data['source_name']}.{data['name']}",
-            resource_type="source",
-            materialization="",
-            schema=data.get("schema", ""),
-            test_status="none",
-            has_description=bool(data.get("description")),
-            folder="",
-            tags=data.get("tags", []),
-            meta=data.get("meta", {}),
-        )
-
-    # Add exposure nodes from manifest
-    for uid, exposure in manifest.exposures.items():
-        _add_lineage_node(
-            unique_id=uid,
-            name=exposure.name,
-            resource_type="exposure",
-            materialization="",
-            schema="",
-            test_status="none",
-            has_description=bool(exposure.description),
-            folder="",
-            tags=list(exposure.tags),
-        )
-        for dep in exposure.depends_on.nodes:
-            if dep not in excluded_ids:
-                edges.append({"source": dep, "target": uid})
-
-    # Resolve layer ranks for all nodes
-    layer_ranks, auto_assigned = resolve_all_layers(nodes, edges, layer_config)
-    for node in nodes:
-        node["layer"] = layer_ranks.get(node["id"])
-        node["layer_auto"] = node["id"] in auto_assigned
-        # Remove meta from lineage output (only needed for layer resolution)
-        node.pop("meta", None)
-
-    return {
-        "nodes": nodes,
-        "edges": edges,
-        "layer_config": layers_to_dict(layer_config),
-    }
-
-
-def _build_search_index(
-    models: dict[str, Any],
-    sources: dict[str, Any],
-    seeds: dict[str, Any],
-    snapshots: dict[str, Any],
-) -> list[dict[str, Any]]:
-    """Build the search index for Fuse.js."""
-    entries: list[dict[str, Any]] = []
-
-    for collection, resource_type in [
-        (models, "model"),
-        (sources, "source"),
-        (seeds, "seed"),
-        (snapshots, "snapshot"),
-    ]:
-        for uid, data in collection.items():
-            column_names = [c["name"] for c in data.get("columns", [])]
-            sql = data.get("compiled_sql", "") or data.get("raw_sql", "")
-
-            entries.append(
-                {
-                    "unique_id": uid,
-                    "name": data.get("name", ""),
-                    "resource_type": resource_type,
-                    "description": data.get("description", ""),
-                    "columns": ", ".join(column_names),
-                    "tags": ", ".join(data.get("tags", [])),
-                    "sql_snippet": sql[:500],
-                }
-            )
-
-    return entries

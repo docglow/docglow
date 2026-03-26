@@ -169,7 +169,14 @@ def run_server(project_dir: Path, target_dir: Path | None = None) -> None:
             response = make_response(msg_id, _handle_initialize(params))
 
         elif method == "tools/list":
-            response = make_response(msg_id, _handle_tools_list())
+            if not initialized:
+                response = make_error(
+                    msg_id,
+                    INVALID_PARAMS,
+                    "Server not yet initialized",
+                )
+            else:
+                response = make_response(msg_id, _handle_tools_list())
 
         elif method == "tools/call":
             if not initialized:
@@ -184,6 +191,12 @@ def run_server(project_dir: Path, target_dir: Path | None = None) -> None:
 
         elif method == "ping":
             response = make_response(msg_id, {})
+
+        elif method == "resources/list":
+            response = make_response(msg_id, {"resources": []})
+
+        elif method == "prompts/list":
+            response = make_response(msg_id, {"prompts": []})
 
         else:
             response = make_error(
