@@ -61,6 +61,12 @@ class AiConfig:
 
 
 @dataclass(frozen=True)
+class InsightsConfig:
+    enabled: bool = True
+    descriptions: str = "append"  # append | replace | skip
+
+
+@dataclass(frozen=True)
 class DocglowConfig:
     version: int = 1
     title: str = "docglow"
@@ -68,6 +74,7 @@ class DocglowConfig:
     profiling: ProfilingConfig = field(default_factory=ProfilingConfig)
     health: HealthConfig = field(default_factory=HealthConfig)
     ai: AiConfig = field(default_factory=AiConfig)
+    insights: InsightsConfig = field(default_factory=InsightsConfig)
     lineage_layers: LineageLayerConfig = field(default_factory=LineageLayerConfig)
 
     # Runtime paths (not from config file)
@@ -169,6 +176,16 @@ def _build_config_from_dict(raw: dict[str, Any]) -> DocglowConfig:
 
     lineage_layers = parse_layer_config(lineage_raw) if lineage_raw else LineageLayerConfig()
 
+    insights_raw = raw.get("insights", {})
+    insights = (
+        InsightsConfig(
+            enabled=insights_raw.get("enabled", True),
+            descriptions=insights_raw.get("descriptions", "append"),
+        )
+        if insights_raw
+        else InsightsConfig()
+    )
+
     return DocglowConfig(
         version=raw.get("version", 1),
         title=raw.get("title", "docglow"),
@@ -176,5 +193,6 @@ def _build_config_from_dict(raw: dict[str, Any]) -> DocglowConfig:
         profiling=profiling,
         health=HealthConfig(weights=weights, naming_rules=naming_rules, complexity=complexity),
         ai=ai,
+        insights=insights,
         lineage_layers=lineage_layers,
     )
