@@ -80,6 +80,18 @@ def generate_site(
         exclude_packages=exclude_packages,
     )
 
+    # Run column insights if enabled
+    if config.insights.enabled:
+        from docglow.insights import enrich_columns
+        from docglow.lineage.column_parser import detect_dialect
+
+        logger.info("Running column insights...")
+        enrich_columns(
+            docglow_data,
+            description_mode=config.insights.descriptions,
+            dialect=detect_dialect(artifacts.manifest.metadata.adapter_type),
+        )
+
     # Run profiling if enabled
     if profiling_enabled and profiling_adapter and profiling_connection:
         _run_profiling(
