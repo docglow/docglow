@@ -89,6 +89,14 @@ export interface DocglowModel {
   catalog_stats: CatalogStats
 }
 
+export interface ColumnInsights {
+  role: string | null
+  semantic_type: string | null
+  sql_usage: string[]
+  confidence: number
+  generated_description: string | null
+}
+
 export interface DocglowColumn {
   name: string
   description: string
@@ -97,6 +105,7 @@ export interface DocglowColumn {
   tags: string[]
   tests: ColumnTest[]
   profile: ColumnProfile | null
+  insights?: ColumnInsights | null
 }
 
 export interface ColumnTest {
