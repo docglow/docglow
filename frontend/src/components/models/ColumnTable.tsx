@@ -16,6 +16,36 @@ const TRANSFORMATION_STYLES: Record<string, { label: string; color: string; bg: 
   aggregated: { label: 'aggregated', color: '#7c3aed', bg: '#7c3aed14' },
 }
 
+const ROLE_STYLES: Record<string, { label: string; color: string; bg: string }> = {
+  primary_key: { label: 'PK',         color: '#16a34a', bg: '#16a34a18' },
+  foreign_key: { label: 'FK',         color: '#2563eb', bg: '#2563eb18' },
+  timestamp:   { label: 'timestamp',  color: '#d97706', bg: '#d9770618' },
+  metric:      { label: 'metric',     color: '#7c3aed', bg: '#7c3aed18' },
+  categorical: { label: 'categorical',color: '#0891b2', bg: '#0891b218' },
+  dimension:   { label: 'dimension',  color: '#6b7280', bg: '#6b728018' },
+}
+
+function RoleBadge({ role, confidence }: { role: string; confidence: number }) {
+  const style = ROLE_STYLES[role]
+  if (!style) return null
+
+  const confColor = confidence >= 0.8 ? '#16a34a' : confidence >= 0.6 ? '#d97706' : '#6b7280'
+
+  return (
+    <span
+      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold"
+      title={`Inferred role: ${role} (${Math.round(confidence * 100)}% confidence)`}
+      style={{ background: style.bg, color: style.color }}
+    >
+      {style.label}
+      <span
+        className="inline-block w-1.5 h-1.5 rounded-full"
+        style={{ background: confColor }}
+      />
+    </span>
+  )
+}
+
 const MAX_BADGES_PER_DIRECTION = 3
 
 function NullBar({ rate }: { rate: number }) {
@@ -425,25 +455,51 @@ export function ColumnTable({ columns, columnLineage, columnDownstream }: Column
                                 clipRule="evenodd" />
                         </svg>
                       )}
-                      <span style={{ wordBreak: 'break-all' }}>
-                        {col.name}
-                      </span>
+                      <div>
+                        <span style={{ wordBreak: 'break-all' }}>
+                          {col.name}
+                        </span>
+                        {col.insights?.role && (
+                          <div className="mt-0.5">
+                            <RoleBadge role={col.insights.role} confidence={col.insights.confidence} />
+                          </div>
+                        )}
+                      </div>
                     </div>
 
-                    {/* Type */}
+                    {/* Type + semantic type */}
                     <div
                       className="px-4 py-2 font-mono text-xs text-[var(--text-muted)] uppercase shrink-0"
                       style={{ width: 160 }}
                     >
-                      {col.data_type || '—'}
+                      <div>{col.data_type || '—'}</div>
+                      {col.insights?.semantic_type && (
+                        <div className="text-[9px] normal-case opacity-60 mt-0.5">
+                          {col.insights.semantic_type}
+                        </div>
+                      )}
                     </div>
 
-                    {/* Description */}
+                    {/* Description + insights */}
                     <div className="px-4 py-2 flex-1 min-w-0">
                       {col.description ? (
-                        <span className="text-sm block">{col.description}</span>
+                        <span className="text-sm block">
+                          {col.description}
+                          {col.insights?.generated_description && col.description === col.insights.generated_description && (
+                            <span className="ml-1.5 text-[9px] text-[var(--text-muted)] opacity-60 font-medium uppercase">auto</span>
+                          )}
+                        </span>
                       ) : (
                         <span className="text-sm text-[var(--text-muted)] italic">No description</span>
+                      )}
+                      {col.insights?.sql_usage && col.insights.sql_usage.length > 0 && !col.insights.sql_usage.every(u => u === 'selected_only') && (
+                        <div className="flex gap-1 mt-0.5">
+                          {col.insights.sql_usage.filter(u => u !== 'selected_only').map(usage => (
+                            <span key={usage} className="text-[9px] text-[var(--text-muted)] opacity-70">
+                              {usage.replace('_', ' ')}
+                            </span>
+                          ))}
+                        </div>
                       )}
                     </div>
 
