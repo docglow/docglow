@@ -696,6 +696,10 @@ INIT_TEMPLATE = """\
 #   enabled: false
 #   model: claude-sonnet-4
 
+# insights:
+#   enabled: true
+#   descriptions: append  # append | replace | skip
+
 # lineage_layers:
 #   layers:
 #     - name: source
