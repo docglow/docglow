@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/images/docglow-logo.png" alt="Docglow" width="160" />
+  <img src=".github/assets/docglow-logo.png" alt="Docglow" width="160" />
 </p>
 
 <h1 align="center">docglow</h1>
@@ -22,15 +22,15 @@ Docglow replaces it with a **modern, interactive single-page application** — a
 
 **Interactive lineage explorer** — layer-grouped DAG with upstream/downstream filtering, depth control, and folder grouping
 
-![Lineage explorer with layer bands](docs/images/lineage-view.png)
+![Lineage explorer with layer bands](.github/assets/lineage-view.png)
 
 **Column-level lineage** — expand nodes to trace individual columns across models with transformation labels (direct, derived, aggregated)
 
-![Column-level lineage tracing](docs/images/column-lineage-view.png)
+![Column-level lineage tracing](.github/assets/column-lineage-view.png)
 
 **Column table with lineage** — view types, descriptions, tests, and upstream/downstream dependencies for every column. Click a lineage badge to jump directly to that column in the linked model.
 
-![Column table with upstream and downstream lineage](docs/images/columns-view.png)
+![Column table with upstream and downstream lineage](.github/assets/columns-view.png)
 
 ## Install
 
