@@ -1,0 +1,36 @@
+{
+  "name": "@docglow/shared-types",
+  "version": "0.1.0",
+  "description": "Shared TypeScript types for Docglow — dbt artifact schemas, health scoring, lineage, and site data structures",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "tsup"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.0",
+    "typescript": "~5.9.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/docglow/docglow.git",
+    "directory": "packages/shared-types"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}
