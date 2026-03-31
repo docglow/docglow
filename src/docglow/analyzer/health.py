@@ -115,8 +115,7 @@ def compute_health(
 
     # Freshness score (None when no sources are monitored)
     freshness_result = _compute_freshness_score(sources)
-    freshness_applicable = freshness_result is not None
-    freshness_score = freshness_result if freshness_applicable else 0.0
+    freshness_score: float = freshness_result if freshness_result is not None else 0.0
 
     # Complexity analysis
     complexity = analyze_complexity(models, seeds, snapshots, config.complexity)
@@ -134,7 +133,7 @@ def compute_health(
 
     # Weighted overall score — exclude freshness when no sources are monitored
     # and redistribute its weight proportionally to the other dimensions
-    if freshness_applicable:
+    if freshness_result is not None:
         overall = (
             doc_score * weights.documentation
             + test_score * weights.testing
