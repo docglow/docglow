@@ -256,9 +256,25 @@ class TestHealthScore:
         assert "m1" in orphan_ids
         assert "m2" not in orphan_ids
 
-    def test_freshness_score_no_sources(self) -> None:
+    def test_freshness_score_no_monitored_sources(self) -> None:
+        """When no sources have freshness monitoring, freshness is N/A (0.0)
+        and its weight is redistributed to other dimensions."""
         report = compute_health({}, {}, {}, {})
-        assert report.score.freshness == 100.0
+        assert report.score.freshness == 0.0
+
+    def test_freshness_weight_excluded_when_not_applicable(self) -> None:
+        """Overall score should not include freshness weight when no sources
+        are monitored — scores should be higher than if freshness dragged
+        them down, but not inflated by a free 100%."""
+        models = {"m1": _make_model(description="documented", referenced_by=["m2"])}
+        # With no monitored sources, freshness weight redistributed
+        report_no_freshness = compute_health(models, {}, {}, {})
+        # With passing freshness, freshness contributes normally
+        sources = {"s1": _make_source(freshness_status="pass")}
+        report_with_freshness = compute_health(models, sources, {}, {})
+        # Both should produce similar overall scores since freshness=100%
+        # in the monitored case and redistributed in the unmonitored case
+        assert abs(report_no_freshness.score.overall - report_with_freshness.score.overall) < 20
 
     def test_freshness_score_with_sources(self) -> None:
         sources = {

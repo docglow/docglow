@@ -46,11 +46,15 @@ def _grade(score: float) -> str:
 
 def _compute_freshness_score(
     sources: dict[str, dict[str, Any]],
-) -> float:
-    """Compute freshness score from source freshness data."""
+) -> float | None:
+    """Compute freshness score from source freshness data.
+
+    Returns None when no sources have freshness monitoring configured,
+    so the caller can exclude the freshness dimension from the weighted score.
+    """
     monitored = [s for s in sources.values() if s.get("freshness_status") is not None]
     if not monitored:
-        return 100.0  # No monitored sources = not applicable, full score
+        return None
 
     passing = sum(
         1
@@ -109,8 +113,10 @@ def compute_health(
     # Test score: avg of model + column test coverage
     test_score = ((coverage.models_tested.rate + coverage.columns_tested.rate) / 2) * 100.0
 
-    # Freshness score
-    freshness_score = _compute_freshness_score(sources)
+    # Freshness score (None when no sources are monitored)
+    freshness_result = _compute_freshness_score(sources)
+    freshness_applicable = freshness_result is not None
+    freshness_score = freshness_result if freshness_applicable else 0.0
 
     # Complexity analysis
     complexity = analyze_complexity(models, seeds, snapshots, config.complexity)
@@ -126,15 +132,33 @@ def compute_health(
     orphan_rate = len(orphans) / total_models if total_models > 0 else 0.0
     orphan_score = (1.0 - orphan_rate) * 100.0
 
-    # Weighted overall score
-    overall = (
-        doc_score * weights.documentation
-        + test_score * weights.testing
-        + freshness_score * weights.freshness
-        + complexity_score * weights.complexity
-        + naming_score * weights.naming
-        + orphan_score * weights.orphans
-    )
+    # Weighted overall score — exclude freshness when no sources are monitored
+    # and redistribute its weight proportionally to the other dimensions
+    if freshness_applicable:
+        overall = (
+            doc_score * weights.documentation
+            + test_score * weights.testing
+            + freshness_score * weights.freshness
+            + complexity_score * weights.complexity
+            + naming_score * weights.naming
+            + orphan_score * weights.orphans
+        )
+    else:
+        active_weight = (
+            weights.documentation
+            + weights.testing
+            + weights.complexity
+            + weights.naming
+            + weights.orphans
+        )
+        scale = 1.0 / active_weight if active_weight > 0 else 1.0
+        overall = (
+            doc_score * weights.documentation * scale
+            + test_score * weights.testing * scale
+            + complexity_score * weights.complexity * scale
+            + naming_score * weights.naming * scale
+            + orphan_score * weights.orphans * scale
+        )
 
     score = HealthScore(
         overall=round(overall, 1),
