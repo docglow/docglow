@@ -8,6 +8,10 @@
   Next-generation documentation site generator for <a href="https://github.com/dbt-labs/dbt-core">dbt™ Core</a> projects.
 </p>
 
+<p align="center">
+  <a href="https://docglow.github.io/docglow/"><strong>Live Demo</strong></a> · <a href="https://docglow.com">Website</a> · <a href="https://pypi.org/project/docglow/">PyPI</a> · <a href="CHANGELOG.md">Changelog</a>
+</p>
+
 ## Why Docglow?
 
 Over **60,000 teams** use dbt Core without access to dbt Cloud's documentation features. The built-in `dbt docs serve` generates a dated, hard-to-navigate static site that doesn't scale.
