@@ -1,15 +1,11 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useProjectStore } from '../../stores/projectStore'
+import { useTagFilterStore } from '../../stores/tagFilterStore'
+import { collectAllTags, nodeMatchesTags, type SidebarTreeNode } from '../../utils/sidebarFilters'
 import type { DocglowModel, DocglowSource } from '../../types'
 
-interface TreeNode {
-  name: string
-  path: string
-  uniqueId?: string
-  resourceType?: string
-  children: Map<string, TreeNode>
-}
+type TreeNode = SidebarTreeNode
 
 function buildTree(
   models: Record<string, DocglowModel>,
@@ -38,6 +34,7 @@ function buildTree(
       path: model.unique_id,
       uniqueId: model.unique_id,
       resourceType: 'model',
+      tags: model.tags,
       children: new Map(),
     })
   }
@@ -59,6 +56,7 @@ function buildTree(
       path: source.unique_id,
       uniqueId: source.unique_id,
       resourceType: 'source',
+      tags: source.tags,
       children: new Map(),
     })
   }
@@ -83,24 +81,30 @@ interface TreeItemProps {
   depth?: number
   expandedPaths: Set<string>
   onToggle: (path: string) => void
+  tagSelected: ReadonlySet<string>
+  tagMode: 'include' | 'exclude'
 }
 
-function TreeItem({ node, depth = 0, expandedPaths, onToggle }: TreeItemProps) {
+function TreeItem({ node, depth = 0, expandedPaths, onToggle, tagSelected, tagMode }: TreeItemProps) {
   const navigate = useNavigate()
   const { id } = useParams()
   const isLeaf = node.children.size === 0
   const isActive = node.uniqueId && id === encodeURIComponent(node.uniqueId)
   const expanded = expandedPaths.has(node.path)
+  const hasTagFilter = tagSelected.size > 0
 
   const sortedChildren = useMemo(() => {
-    return [...node.children.entries()].sort(([, a], [, b]) => {
-      const aIsFolder = a.children.size > 0 && !a.uniqueId
-      const bIsFolder = b.children.size > 0 && !b.uniqueId
-      if (aIsFolder && !bIsFolder) return -1
-      if (!aIsFolder && bIsFolder) return 1
-      return a.name.localeCompare(b.name)
-    })
-  }, [node.children])
+    const entries = [...node.children.entries()]
+      .filter(([, child]) => !hasTagFilter || nodeMatchesTags(child, tagSelected, tagMode))
+      .sort(([, a], [, b]) => {
+        const aIsFolder = a.children.size > 0 && !a.uniqueId
+        const bIsFolder = b.children.size > 0 && !b.uniqueId
+        if (aIsFolder && !bIsFolder) return -1
+        if (!aIsFolder && bIsFolder) return 1
+        return a.name.localeCompare(b.name)
+      })
+    return entries
+  }, [node.children, hasTagFilter, tagSelected, tagMode])
 
   if (isLeaf && node.uniqueId) {
     return (
@@ -136,13 +140,13 @@ function TreeItem({ node, depth = 0, expandedPaths, onToggle }: TreeItemProps) {
         </svg>
         <span className="truncate">{node.name}</span>
         <span className="ml-auto text-xs text-[var(--text-muted)]">
-          {node.children.size}
+          {sortedChildren.length}
         </span>
       </button>
       {expanded && (
         <div>
           {sortedChildren.map(([key, child]) => (
-            <TreeItem key={key} node={child} depth={depth + 1} expandedPaths={expandedPaths} onToggle={onToggle} />
+            <TreeItem key={key} node={child} depth={depth + 1} expandedPaths={expandedPaths} onToggle={onToggle} tagSelected={tagSelected} tagMode={tagMode} />
           ))}
         </div>
       )}
@@ -153,10 +157,16 @@ function TreeItem({ node, depth = 0, expandedPaths, onToggle }: TreeItemProps) {
 export function Sidebar() {
   const { data } = useProjectStore()
   const navigate = useNavigate()
+  const { selected: tagSelected, mode: tagMode, toggle: toggleTag, clear: clearTags } = useTagFilterStore()
 
   const tree = useMemo(() => {
     if (!data) return null
     return buildTree(data.models, data.sources)
+  }, [data])
+
+  const allTags = useMemo(() => {
+    if (!data) return []
+    return collectAllTags(data.models, data.sources)
   }, [data])
 
   // Only "models" expanded by default; sub-folders collapsed
@@ -187,10 +197,18 @@ export function Sidebar() {
     setExpandedPaths(new Set())
   }, [])
 
-  if (!tree) return null
-
   const modelCount = data ? Object.keys(data.models).length : 0
   const sourceCount = data ? Object.keys(data.sources).length : 0
+
+  const filteredModelCount = useMemo(() => {
+    if (!data || tagSelected.size === 0) return modelCount
+    return Object.values(data.models).filter(m => {
+      const hasMatch = m.tags.some(t => tagSelected.has(t))
+      return tagMode === 'include' ? hasMatch : !hasMatch
+    }).length
+  }, [data, tagSelected, tagMode, modelCount])
+
+  if (!tree) return null
 
   return (
     <aside className="w-full h-full border-r border-[var(--border)] bg-[var(--bg)] overflow-y-auto flex flex-col">
@@ -213,9 +231,50 @@ export function Sidebar() {
           Collapse All
         </button>
       </div>
+
+      {/* Tag filter chips */}
+      {allTags.length > 0 && (
+        <div className="px-2 pb-2 border-b border-[var(--border)]">
+          <div className="flex items-center gap-1 mb-1.5">
+            <svg className="w-3 h-3 text-[var(--text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" />
+            </svg>
+            <span className="text-xs font-medium text-[var(--text-muted)]">Tags</span>
+            {tagSelected.size > 0 && (
+              <button
+                onClick={clearTags}
+                className="ml-auto text-xs text-danger hover:text-danger/80 cursor-pointer transition-colors"
+                title="Clear tag filter"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {allTags.map(tag => {
+              const isActive = tagSelected.has(tag)
+              return (
+                <button
+                  key={tag}
+                  onClick={() => toggleTag(tag)}
+                  className={`px-2 py-0.5 text-xs rounded-full cursor-pointer transition-colors
+                    ${isActive
+                      ? 'bg-primary text-white'
+                      : 'bg-[var(--bg-surface)] text-[var(--text-muted)] hover:text-[var(--text)] border border-[var(--border)]'
+                    }`}
+                >
+                  {tag}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       <nav className="py-2 flex-1">
         {[...tree.children.entries()].map(([key, node]) => (
-          <TreeItem key={key} node={node} depth={0} expandedPaths={expandedPaths} onToggle={togglePath} />
+          <TreeItem key={key} node={node} depth={0} expandedPaths={expandedPaths} onToggle={togglePath} tagSelected={tagSelected} tagMode={tagMode} />
         ))}
 
         <div className="mt-3 pt-3 border-t border-[var(--border)] px-2">
@@ -268,7 +327,10 @@ export function Sidebar() {
       </nav>
 
       <div className="p-3 border-t border-[var(--border)] text-xs text-[var(--text-muted)]">
-        {modelCount} models &middot; {sourceCount} sources
+        {tagSelected.size > 0
+          ? <>{filteredModelCount} of {modelCount} models &middot; {sourceCount} sources</>
+          : <>{modelCount} models &middot; {sourceCount} sources</>
+        }
       </div>
     </aside>
   )
