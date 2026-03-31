@@ -75,6 +75,7 @@ class DocglowConfig:
     health: HealthConfig = field(default_factory=HealthConfig)
     ai: AiConfig = field(default_factory=AiConfig)
     insights: InsightsConfig = field(default_factory=InsightsConfig)
+    slim: bool = False
     lineage_layers: LineageLayerConfig = field(default_factory=LineageLayerConfig)
 
     # Runtime paths (not from config file)
@@ -190,6 +191,7 @@ def _build_config_from_dict(raw: dict[str, Any]) -> DocglowConfig:
         version=raw.get("version", 1),
         title=raw.get("title", "docglow"),
         theme=raw.get("theme", "auto"),
+        slim=raw.get("slim", False),
         profiling=profiling,
         health=HealthConfig(weights=weights, naming_rules=naming_rules, complexity=complexity),
         ai=ai,

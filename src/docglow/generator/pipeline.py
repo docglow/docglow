@@ -36,6 +36,7 @@ class PipelineContext:
     column_lineage_depth: int | None = None
     column_lineage_cache_dir: Any | None = None
     exclude_packages: bool = True
+    slim: bool = False
 
     # Lookup maps (populated by build_lookups stage)
     run_results_by_id: dict[str, Any] = field(default_factory=dict)
@@ -225,6 +226,24 @@ def stage_build_column_lineage(ctx: PipelineContext) -> None:
     )
 
 
+def stage_strip_sql(ctx: PipelineContext) -> None:
+    """Strip raw_sql and compiled_sql from all nodes when --slim is enabled.
+
+    This runs AFTER lineage/health/search analysis so those stages can use the
+    SQL, but BEFORE JSON serialization so the output payload is smaller.
+    """
+    if not ctx.slim:
+        return
+
+    for collection in (ctx.models, ctx.seeds, ctx.snapshots):
+        for uid in collection:
+            collection[uid] = {
+                **collection[uid],
+                "raw_sql": "",
+                "compiled_sql": "",
+            }
+
+
 def stage_build_ai_context(ctx: PipelineContext) -> None:
     """Build AI context for chat panel (optional)."""
     if not ctx.ai_enabled:
@@ -294,6 +313,7 @@ def default_stages(ctx: PipelineContext) -> list[PipelineStage]:
             stage_build_column_lineage,
             enabled=ctx.column_lineage_enabled,
         ),
+        PipelineStage("strip_sql", stage_strip_sql, enabled=ctx.slim),
         PipelineStage(
             "build_ai_context",
             stage_build_ai_context,
