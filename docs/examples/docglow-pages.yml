@@ -1,0 +1,71 @@
+# Deploy dbt documentation to GitHub Pages with Docglow
+#
+# This is a complete, production-ready workflow. Copy it into your repo at
+# .github/workflows/docglow-pages.yml and push to main.
+#
+# Prerequisites:
+#   1. Enable GitHub Pages in repo Settings > Pages > Source: "GitHub Actions"
+#   2. Run `dbt compile` (or `dbt run`) so target/manifest.json exists
+#   3. Either commit dbt artifacts or generate them in an earlier CI step
+#
+# Optional:
+#   - Set DOCGLOW_FAIL_UNDER as a repository variable to control the health
+#     threshold (defaults to 70).
+#   - Add --slim to reduce output size for large projects (strips SQL source).
+
+name: Deploy Docs to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install docglow
+        run: pip install docglow
+
+      # Fail the build if documentation health drops below the threshold.
+      # Override the default (70) by setting DOCGLOW_FAIL_UNDER in
+      # Settings > Variables > Actions.
+      - name: Check documentation health
+        run: >
+          docglow health
+          --project-dir .
+          --fail-under ${{ vars.DOCGLOW_FAIL_UNDER || '70' }}
+
+      - name: Generate documentation site
+        run: docglow generate --project-dir . --output-dir site --static
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
