@@ -11,9 +11,11 @@ interface ColumnTableProps {
 }
 
 const TRANSFORMATION_STYLES: Record<string, { label: string; color: string; bg: string }> = {
-  direct:     { label: 'direct',     color: '#16a34a', bg: '#16a34a14' },
-  derived:    { label: 'derived',    color: '#d97706', bg: '#d9770614' },
-  aggregated: { label: 'aggregated', color: '#7c3aed', bg: '#7c3aed14' },
+  passthrough: { label: 'passthrough', color: '#16a34a', bg: '#16a34a14' },
+  derived:     { label: 'derived',     color: '#d97706', bg: '#d9770614' },
+  aggregated:  { label: 'aggregated',  color: '#7c3aed', bg: '#7c3aed14' },
+  unknown:     { label: 'unknown',     color: '#6b7280', bg: '#6b728014' },
+  direct:      { label: 'passthrough', color: '#16a34a', bg: '#16a34a14' }, // backward compat
 }
 
 const ROLE_STYLES: Record<string, { label: string; color: string; bg: string }> = {
@@ -123,7 +125,7 @@ function LineageBadge({
   const modelName = modelId.split('.').pop() ?? modelId
   const resourceType = modelId.split('.')[0] ?? 'model'
   const navType = resourceType === 'source' ? 'source' : 'model'
-  const style = TRANSFORMATION_STYLES[transformation] ?? TRANSFORMATION_STYLES.direct
+  const style = TRANSFORMATION_STYLES[transformation] ?? TRANSFORMATION_STYLES.passthrough
   const colLabel = columns.length === 1 ? columns[0] : `{${columns.join(', ')}}`
 
   return (
