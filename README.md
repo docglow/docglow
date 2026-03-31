@@ -12,6 +12,14 @@
   <a href="https://docglow.github.io/docglow/"><strong>Live Demo</strong></a> · <a href="https://docglow.com">Website</a> · <a href="https://pypi.org/project/docglow/">PyPI</a> · <a href="CHANGELOG.md">Changelog</a>
 </p>
 
+<p align="center">
+  <a href="https://pypi.org/project/docglow/"><img src="https://img.shields.io/pypi/v/docglow" alt="PyPI version"></a>
+  <a href="https://pypi.org/project/docglow/"><img src="https://img.shields.io/pypi/dm/docglow" alt="PyPI downloads"></a>
+  <a href="https://github.com/docglow/docglow"><img src="https://img.shields.io/github/stars/docglow/docglow?style=social" alt="GitHub stars"></a>
+  <a href="https://github.com/docglow/docglow/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/docglow/docglow/ci.yml?label=CI" alt="CI status"></a>
+  <a href="https://github.com/docglow/docglow/blob/main/LICENSE"><img src="https://img.shields.io/pypi/l/docglow" alt="License"></a>
+</p>
+
 ## Why Docglow?
 
 Over **60,000 teams** use dbt Core without access to dbt Cloud's documentation features. The built-in `dbt docs serve` generates a dated, hard-to-navigate static site that doesn't scale.
@@ -68,7 +76,7 @@ docglow serve --dir ./site
 
 - **Interactive lineage explorer** — drag, filter, and explore upstream/downstream dependencies with configurable depth and layer visualization
 - **Column-level documentation** — searchable column tables with descriptions, types, and test status
-- **Project health score** — coverage metrics for descriptions, tests, and documentation completeness
+- **Project health score** — coverage metrics for descriptions, tests, and documentation completeness ([details](docs/health-scoring.md))
 - **Full-text search** — instant search across all models, sources, and columns
 - **Single static site** — no backend required, deploy anywhere (S3, GitHub Pages, Netlify, etc.)
 - **Dark mode** — auto, light, and dark themes (follows system preference by default)
