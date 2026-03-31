@@ -9,4 +9,9 @@ export default defineConfig({
     outDir: 'dist',
     assetsInlineLimit: 100000,
   },
+  test: {
+    globals: true,
+    environment: 'node',
+    include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+  },
 })

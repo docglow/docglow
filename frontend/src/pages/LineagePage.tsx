@@ -1,9 +1,11 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { useProjectStore } from '../stores/projectStore'
+import { useTagFilterStore } from '../stores/tagFilterStore'
 import { LineageFlow } from '../components/lineage/LineageFlow'
 import { FilterDropdown } from '../components/ui/FilterDropdown'
 import { getSubgraph } from '../utils/graph'
 import { applyFilters, useFilterState, computeSubgraphOptions, RESOURCE_TYPES } from '../utils/lineageFilters'
+import type { FilterState } from '../components/ui/FilterDropdown'
 import type { LineageDirection } from '../utils/graph'
 import type { LineageNode, LineageEdge } from '../types'
 import { buildModelColumnsMap } from '../utils/modelColumns'
@@ -44,7 +46,8 @@ export function LineagePage() {
   const [search, setSearch] = useState('')
 
   const [typeFilter, toggleType, setTypeMode, clearTypes] = useFilterState()
-  const [tagFilter, toggleTag, setTagMode, clearTags] = useFilterState()
+  const { selected: globalTagSelected, mode: globalTagMode, toggle: toggleTag, setMode: setTagMode, clear: clearTags } = useTagFilterStore()
+  const tagFilter: FilterState = useMemo(() => ({ mode: globalTagMode, selected: new Set(globalTagSelected) }), [globalTagSelected, globalTagMode])
   const [folderFilter, toggleFolder, setFolderMode, clearFolders] = useFilterState()
 
   const suggestions = useMemo(() => {
@@ -98,9 +101,8 @@ export function LineagePage() {
     setSelectedNodeId(null)
     setSearch('')
     clearTypes()
-    clearTags()
     clearFolders()
-  }, [clearTypes, clearTags, clearFolders])
+  }, [clearTypes, clearFolders])
 
   // Column search state
   const [colSearch, setColSearch] = useState('')
