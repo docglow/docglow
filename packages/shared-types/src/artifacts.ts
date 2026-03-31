@@ -8,13 +8,13 @@
 export interface ColumnLineageDependency {
   readonly source_model: string;
   readonly source_column: string;
-  readonly transformation: "direct" | "derived" | "aggregated";
+  readonly transformation: "passthrough" | "rename" | "aggregated" | "derived" | "unknown" | "direct";
 }
 
 export interface ColumnDownstreamDependency {
   readonly target_model: string;
   readonly target_column: string;
-  readonly transformation: "direct" | "derived" | "aggregated";
+  readonly transformation: "passthrough" | "rename" | "aggregated" | "derived" | "unknown" | "direct";
 }
 
 export type ColumnLineageData = Record<
@@ -27,7 +27,7 @@ export interface ColumnEdge {
   readonly sourceColumn: string;
   readonly targetModel: string;
   readonly targetColumn: string;
-  readonly transformation: "direct" | "derived" | "aggregated";
+  readonly transformation: "passthrough" | "rename" | "aggregated" | "derived" | "unknown" | "direct";
 }
 
 // -- Artifact version metadata -----------------------------------------------

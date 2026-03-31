@@ -43,13 +43,17 @@ class TestDetectDialect:
 class TestParseColumnLineage:
     """Tests for SQL parsing and column dependency extraction."""
 
-    def test_simple_select_direct_columns(self) -> None:
+    def test_simple_select_passthrough_columns(self) -> None:
+        """Simple column references are classified as 'passthrough'."""
         sql = "SELECT id, name FROM users"
         result = parse_column_lineage(sql)
         assert "id" in result
         assert "name" in result
         assert any(d.source_column == "id" for d in result["id"])
         assert any(d.source_column == "name" for d in result["name"])
+        # Phase 1: simple column refs are passthrough, not direct
+        assert all(d.transformation == "passthrough" for d in result["id"])
+        assert all(d.transformation == "passthrough" for d in result["name"])
 
     def test_aliased_column(self) -> None:
         sql = "SELECT id AS user_id FROM users"
@@ -115,7 +119,7 @@ class TestParseColumnLineage:
         result = parse_column_lineage(sql)
         assert "is_active" in result
         deps = result["is_active"]
-        assert any(d.transformation == "derived" for d in deps)
+        assert all(d.transformation == "derived" for d in deps)
 
     def test_empty_sql_returns_empty(self) -> None:
         assert parse_column_lineage("") == {}
@@ -188,6 +192,73 @@ class TestParseColumnLineage:
         result = parse_column_lineage(sql, schema=schema)
         assert "id" in result
         assert any(d.source_table == "base_table" for d in result["id"])
+
+    def test_unknown_transformation_for_unparseable(self) -> None:
+        """When the expression is None (unparseable), classify as 'unknown'."""
+        # COUNT(*) produces no column-level dependencies but the parser may
+        # encounter None expressions in edge cases.  We test via the internal
+        # helper directly.
+        from docglow.lineage.column_parser import _classify_transformation
+
+        assert _classify_transformation(None) == "unknown"
+
+    def test_passthrough_simple_column(self) -> None:
+        """A bare exp.Column reference is 'passthrough'."""
+        from sqlglot import exp
+
+        from docglow.lineage.column_parser import _classify_transformation
+
+        col = exp.Column(this=exp.to_identifier("id"))
+        assert _classify_transformation(col) == "passthrough"
+
+    def test_passthrough_aliased_column(self) -> None:
+        """An aliased column (SELECT a AS b) is still 'passthrough'."""
+        from sqlglot import exp
+
+        from docglow.lineage.column_parser import _classify_transformation
+
+        alias = exp.Alias(
+            this=exp.Column(this=exp.to_identifier("a")),
+            alias=exp.to_identifier("b"),
+        )
+        assert _classify_transformation(alias) == "passthrough"
+
+    def test_aggregation_still_aggregated(self) -> None:
+        """Aggregate functions remain 'aggregated'."""
+        from sqlglot import exp
+
+        from docglow.lineage.column_parser import _classify_transformation
+
+        agg = exp.Sum(this=exp.Column(this=exp.to_identifier("amount")))
+        assert _classify_transformation(agg) == "aggregated"
+
+    def test_window_function_derived(self) -> None:
+        """Window functions should be classified as 'derived'."""
+        sql = "SELECT id, ROW_NUMBER() OVER (ORDER BY id) AS rn FROM users"
+        result = parse_column_lineage(sql)
+        if "rn" in result:
+            assert all(d.transformation == "derived" for d in result["rn"])
+
+    def test_case_expression_still_derived(self) -> None:
+        """CASE expressions remain 'derived'."""
+        sql = """
+        SELECT
+            CASE WHEN status = 'active' THEN 1 ELSE 0 END AS is_active
+        FROM users
+        """
+        result = parse_column_lineage(sql)
+        assert "is_active" in result
+        assert all(d.transformation == "derived" for d in result["is_active"])
+
+    def test_direct_no_longer_appears_in_output(self) -> None:
+        """'direct' should never appear in new lineage output."""
+        sql = (
+            "SELECT id, name, CONCAT(a, b) AS full, SUM(x) AS total FROM t GROUP BY id, name, full"
+        )
+        result = parse_column_lineage(sql)
+        for deps in result.values():
+            for dep in deps:
+                assert dep.transformation != "direct", f"'direct' found in output for {dep}"
 
     def test_dependency_is_frozen_dataclass(self) -> None:
         sql = "SELECT id FROM users"
