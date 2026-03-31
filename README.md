@@ -32,6 +32,8 @@ Docglow replaces it with a **modern, interactive single-page application** — a
 - **Interactive lineage explorer** — drag, filter, and trace upstream/downstream dependencies visually
 - **Project health scoring** — get a coverage report for descriptions, tests, and documentation completeness
 
+Switching from `dbt docs serve`? See the [migration guide](docs/migrating-from-dbt-docs.md) for a side-by-side comparison and step-by-step instructions.
+
 **Interactive lineage explorer** — layer-grouped DAG with upstream/downstream filtering, depth control, and folder grouping
 
 ![Lineage explorer with layer bands](.github/assets/lineage-view.png)

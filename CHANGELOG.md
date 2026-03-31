@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-03-26
+
+### Fixed
+- Resolved mypy errors in freshness score refactor
+- Badge rendering and freshness scoring bug fixes
+- MCP hardening, cache location, and macro expansion fixes
+- Pre-commit hook rev and init guard fixes
+
+### Added
+- Demo link, homepage URL, and changelog link in README hero
+- Health scoring documentation
+- Column insights — infer roles, semantic types, and descriptions
+- `@docglow/shared-types` shared TypeScript package for frontend
+
+### Improved
+- Split `data.py` into focused modules for maintainability
+- Consumed shared types in frontend, removed private docs
+
 ## [0.4.0] - 2026-03-24
 
 ### Added
@@ -109,7 +127,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Suppressed hover highlights during node drag to prevent flicker
 - Shared SVG markers to reduce DOM overhead
 
-[Unreleased]: https://github.com/docglow/docglow/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/docglow/docglow/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/docglow/docglow/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/docglow/docglow/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/docglow/docglow/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/docglow/docglow/compare/v0.1.0...v0.2.0
