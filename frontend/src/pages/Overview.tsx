@@ -1,10 +1,23 @@
+import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useProjectStore } from '../stores/projectStore'
+import { useTagFilterStore } from '../stores/tagFilterStore'
 import { formatNumber, formatPercent } from '../utils/formatting'
 
 export function Overview() {
   const { data } = useProjectStore()
   const navigate = useNavigate()
+  const { selected: tagSelected, mode: tagMode } = useTagFilterStore()
+
+  const filteredModels = useMemo(() => {
+    if (!data) return []
+    const all = Object.values(data.models)
+    if (tagSelected.size === 0) return all
+    return all.filter(m => {
+      const hasMatch = m.tags.some(t => tagSelected.has(t))
+      return tagMode === 'include' ? hasMatch : !hasMatch
+    })
+  }, [data, tagSelected, tagMode])
 
   if (!data) return null
 
@@ -93,7 +106,16 @@ export function Overview() {
         </div>
       </div>
 
-      <h2 className="text-lg font-semibold mb-3">Recent Models</h2>
+      <div className="flex items-baseline gap-2 mb-3">
+        <h2 className="text-lg font-semibold">
+          {tagSelected.size > 0 ? 'Filtered Models' : 'Recent Models'}
+        </h2>
+        {tagSelected.size > 0 && (
+          <span className="text-xs text-[var(--text-muted)]">
+            {filteredModels.length} of {modelCount}
+          </span>
+        )}
+      </div>
       <div className="border border-[var(--border)] rounded-lg overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-[var(--bg-surface)]">
@@ -105,7 +127,7 @@ export function Overview() {
             </tr>
           </thead>
           <tbody>
-            {Object.values(data.models).slice(0, 10).map((model) => {
+            {filteredModels.slice(0, 10).map((model) => {
               const passing = model.test_results.filter(t => t.status === 'pass').length
               const total = model.test_results.length
               return (
