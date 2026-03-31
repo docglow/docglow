@@ -148,7 +148,7 @@ Add to your editor's MCP config (e.g. `~/.claude.json`):
 
 The server provides 9 tools: model/source lookup, lineage traversal, health scores, undocumented/untested discovery, cross-model column search, and full-text search. No API keys or network access required — it runs locally over stdio.
 
-## CI/CD
+## CI/CD Deployment
 
 Use Docglow as a CI quality gate with the `--fail-under` flag:
 
@@ -161,7 +161,11 @@ Use Docglow as a CI quality gate with the `--fail-under` flag:
   run: docglow generate --project-dir . --output-dir ./site
 ```
 
-Ready-to-copy workflow files for [GitHub Pages](docs/ci-examples/github-actions-pages.yml), [S3](docs/ci-examples/github-actions-s3.yml), and [health checks](docs/ci-examples/github-actions-health-check.yml) are available in `docs/ci-examples/`.
+For large projects, add `--slim` to strip SQL source from the output and reduce payload size by 40–60%.
+
+See the **[CI/CD Deployment Guide](docs/ci-cd-guide.md)** for complete walkthroughs covering GitHub Pages, S3, GitLab CI, health score thresholds, and enterprise private Pages.
+
+Ready-to-copy workflow files: [GitHub Pages](docs/examples/docglow-pages.yml) (recommended), [S3](docs/ci-examples/github-actions-s3.yml), and [PR health check](docs/ci-examples/github-actions-health-check.yml).
 
 ### Pre-commit
 
