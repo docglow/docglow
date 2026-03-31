@@ -34,7 +34,7 @@ class ColumnDependency:
 
     source_table: str  # Table name as parsed from SQL (e.g. "schema.table")
     source_column: str  # Column name in the source table
-    transformation: str  # "direct" | "derived" | "aggregated"
+    transformation: str  # "passthrough" | "rename" | "aggregated" | "derived" | "unknown"
 
 
 def detect_dialect(adapter_type: str | None) -> str | None:
@@ -440,23 +440,24 @@ def _classify_transformation(expression: Any) -> str:
     """Classify the transformation type based on the root node's expression.
 
     Returns:
-        "direct" — column passes through unchanged (SELECT a FROM ...)
+        "passthrough" — column passes through unchanged (SELECT a FROM ...)
         "aggregated" — column is inside an aggregate function (SUM, COUNT, etc.)
         "derived" — column is transformed in some other way (CASE, CONCAT, etc.)
+        "unknown" — expression is None (could not be parsed)
     """
     from sqlglot import exp
 
     if expression is None:
-        return "direct"
+        return "unknown"
 
     # Unwrap Alias to get the actual expression
     inner = expression
     if isinstance(inner, exp.Alias):
         inner = inner.this
 
-    # Simple column reference
+    # Simple column reference — passthrough (rename detection deferred to Phase 2)
     if isinstance(inner, exp.Column):
-        return "direct"
+        return "passthrough"
 
     # Direct aggregate function
     agg_types = (exp.Sum, exp.Count, exp.Avg, exp.Min, exp.Max, exp.AnyValue)
