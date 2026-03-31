@@ -34,6 +34,7 @@ def generate_site(
     column_lineage_select: str | None = None,
     column_lineage_depth: int | None = None,
     exclude_packages: bool = True,
+    slim: bool = False,
 ) -> tuple[Path, float]:
     """Generate the docglow static site.
 
@@ -78,6 +79,7 @@ def generate_site(
         column_lineage_depth=column_lineage_depth,
         column_lineage_cache_dir=resolved_output,
         exclude_packages=exclude_packages,
+        slim=slim,
     )
 
     # Run column insights if enabled
