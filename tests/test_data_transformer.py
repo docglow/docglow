@@ -301,6 +301,33 @@ class TestBuildDocglowData:
         assert "model" in resource_types
         assert "source" in resource_types
 
+    def test_search_index_contains_column_entries(self, tmp_path: Path) -> None:
+        """Column-level entries allow searching for a column across models."""
+        data = _load_fixtures(tmp_path)
+        search_index = data["search_index"]
+
+        column_entries = [e for e in search_index if e["resource_type"] == "column"]
+        assert len(column_entries) > 0, "Expected column entries in search index"
+
+        entry = column_entries[0]
+        assert "column_name" in entry
+        assert "model_name" in entry
+        assert entry["column_name"] == entry["name"]
+        assert entry["unique_id"]  # points to the parent model
+
+    def test_search_index_column_entries_reference_parent_model(self, tmp_path: Path) -> None:
+        """Each column entry's unique_id must match a resource-level entry."""
+        data = _load_fixtures(tmp_path)
+        search_index = data["search_index"]
+
+        resource_uids = {e["unique_id"] for e in search_index if e["resource_type"] != "column"}
+        for entry in search_index:
+            if entry["resource_type"] == "column":
+                assert entry["unique_id"] in resource_uids, (
+                    f"Column entry '{entry['column_name']}' references unknown "
+                    f"unique_id '{entry['unique_id']}'"
+                )
+
     def test_test_status_normalization(self, tmp_path: Path) -> None:
         """dbt uses 'success' for passing tests, we normalize to 'pass'."""
         data = _load_fixtures(tmp_path)
