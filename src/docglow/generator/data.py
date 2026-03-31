@@ -2,24 +2,11 @@
 
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass, field
 from typing import Any
 
-from docglow import __version__
-from docglow.analyzer.health import compute_health, health_to_dict
 from docglow.artifacts.loader import LoadedArtifacts
-from docglow.generator.filters import filter_resources as _filter_resources
 from docglow.generator.layers import LineageLayerConfig
-from docglow.generator.lineage_builder import build_lineage as _build_lineage
-from docglow.generator.search_index import build_search_index as _build_search_index
-from docglow.generator.transforms.lookups import (
-    build_reverse_dependency_map,
-    build_run_results_map,
-    build_test_map,
-)
-from docglow.generator.transforms.models import transform_model
-from docglow.generator.transforms.sources import transform_source
 
 
 @dataclass(frozen=True)
@@ -186,170 +173,35 @@ def build_docglow_data(
 ) -> dict[str, Any]:
     """Transform loaded artifacts into the unified DocglowData payload.
 
+    Delegates to the generation pipeline, which executes discrete named stages.
     Returns a plain dict suitable for JSON serialization.
     """
-    manifest = artifacts.manifest
-    catalog = artifacts.catalog
-    run_results = artifacts.run_results
+    from docglow.generator.pipeline import (
+        PipelineContext,
+        context_to_dict,
+        default_stages,
+        run_pipeline,
+    )
 
-    # Determine root project name for package filtering
-    root_project_name = manifest.metadata.project_name or ""
-
-    # Build lookup maps
-    run_results_by_id = build_run_results_map(run_results)
-    test_nodes_by_model = build_test_map(manifest)
-    reverse_deps = build_reverse_dependency_map(manifest)
-
-    # Transform models, seeds, snapshots
-    models: dict[str, Any] = {}
-    seeds: dict[str, Any] = {}
-    snapshots: dict[str, Any] = {}
-
-    for unique_id, node in manifest.nodes.items():
-        is_package = bool(root_project_name and node.package_name != root_project_name)
-        if node.resource_type in ("model", "seed", "snapshot"):
-            data = transform_model(
-                node, catalog, run_results_by_id, test_nodes_by_model, reverse_deps
-            )
-            data["is_package"] = is_package
-            if node.resource_type == "model":
-                models[unique_id] = data
-            elif node.resource_type == "seed":
-                seeds[unique_id] = data
-            else:
-                snapshots[unique_id] = data
-
-    # Apply --select / --exclude filtering
-    if select or exclude:
-        models, seeds, snapshots = _filter_resources(
-            models,
-            seeds,
-            snapshots,
-            select=select,
-            exclude=exclude,
-        )
-
-    # Transform sources
-    sources: dict[str, Any] = {}
-    for unique_id, source in manifest.sources.items():
-        sources[unique_id] = transform_source(source, catalog, artifacts.source_freshness)
-
-    # Transform exposures
-    exposures: dict[str, Any] = {}
-    for unique_id, exposure in manifest.exposures.items():
-        exposures[unique_id] = {
-            "unique_id": unique_id,
-            "name": exposure.name,
-            "type": exposure.type,
-            "description": exposure.description,
-            "depends_on": exposure.depends_on.nodes,
-            "owner": dict(exposure.owner),
-            "tags": list(exposure.tags),
-        }
-
-    # Transform metrics
-    metrics: dict[str, Any] = {}
-    for unique_id, metric in manifest.metrics.items():
-        metrics[unique_id] = {
-            "unique_id": unique_id,
-            "name": metric.name,
-            "description": metric.description,
-            "label": metric.label,
-            "type": metric.type,
-            "depends_on": metric.depends_on.nodes,
-            "tags": list(metric.tags),
-        }
-
-    # Build lineage graph
-    lineage = _build_lineage(
-        manifest,
-        models,
-        sources,
-        seeds,
-        snapshots,
+    ctx = PipelineContext(
+        artifacts=artifacts,
+        profiling_enabled=profiling_enabled,
+        ai_enabled=ai_enabled,
+        ai_key=ai_key,
+        select=select,
+        exclude=exclude,
         layer_config=layer_config or LineageLayerConfig(),
+        column_lineage_enabled=column_lineage_enabled,
+        column_lineage_select=column_lineage_select,
+        column_lineage_depth=column_lineage_depth,
+        column_lineage_cache_dir=column_lineage_cache_dir,
         exclude_packages=exclude_packages,
     )
 
-    # Build search index
-    search_index = _build_search_index(models, sources, seeds, snapshots)
+    stages = default_stages(ctx)
+    run_pipeline(stages, ctx)
 
-    # Health analysis
-    health_report = compute_health(models, sources, seeds, snapshots)
-    health = health_to_dict(health_report)
-
-    # Column-level lineage
-    column_lineage = _build_column_lineage(
-        column_lineage_enabled,
-        column_lineage_select,
-        column_lineage_depth,
-        column_lineage_cache_dir,
-        manifest,
-        models,
-        sources,
-        seeds,
-        snapshots,
-    )
-
-    # AI context (compact project summary for chat)
-    ai_context: dict[str, Any] | None = None
-    if ai_enabled:
-        from docglow.ai.context import build_ai_context
-
-        ai_context = build_ai_context(
-            models,
-            sources,
-            seeds,
-            metadata={
-                "project_name": manifest.metadata.project_name or "",
-                "dbt_version": manifest.metadata.dbt_version,
-            },
-            health=health,
-        )
-
-    # Metadata
-    metadata = {
-        "generated_at": manifest.metadata.generated_at,
-        "docglow_version": __version__,
-        "dbt_version": manifest.metadata.dbt_version,
-        "project_name": manifest.metadata.project_name or "",
-        "project_id": manifest.metadata.project_id or "",
-        "target_name": "",
-        "artifact_versions": {
-            "manifest": manifest.metadata.dbt_schema_version,
-            "catalog": catalog.metadata.dbt_schema_version,
-            "run_results": (run_results.metadata.dbt_schema_version if run_results else None),
-            "sources": None,
-        },
-        "profiling_enabled": profiling_enabled,
-        "ai_enabled": ai_enabled,
-        "hosted": False,
-        "workspace_slug": None,
-        "project_slug": None,
-        "api_base_url": None,
-        "published_at": None,
-    }
-
-    # Resolve AI key: explicit param > env var
-    resolved_ai_key: str | None = None
-    if ai_enabled:
-        resolved_ai_key = ai_key or os.environ.get("ANTHROPIC_API_KEY")
-
-    return {
-        "metadata": metadata,
-        "models": models,
-        "sources": sources,
-        "seeds": seeds,
-        "snapshots": snapshots,
-        "exposures": exposures,
-        "metrics": metrics,
-        "lineage": lineage,
-        "health": health,
-        "search_index": search_index,
-        "ai_context": ai_context,
-        "ai_key": resolved_ai_key,
-        "column_lineage": column_lineage,
-    }
+    return context_to_dict(ctx)
 
 
 def _build_column_lineage(
