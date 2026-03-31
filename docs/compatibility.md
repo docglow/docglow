@@ -26,6 +26,12 @@ Docglow is **adapter-agnostic** — it reads compiled dbt artifacts, not databas
 - Databricks
 - Spark
 - Trino
+- ClickHouse
+- Athena (Presto)
+- SQL Server (TSQL)
+- Fabric (TSQL)
+- Oracle
+- Starburst (Trino)
 
 The optional column profiling feature (`docglow[profiling]`) currently supports DuckDB, PostgreSQL, and Snowflake adapters.
 

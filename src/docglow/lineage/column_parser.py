@@ -20,6 +20,11 @@ _DIALECT_MAP: dict[str, str] = {
     "spark": "spark",
     "trino": "trino",
     "clickhouse": "clickhouse",
+    "athena": "presto",
+    "sqlserver": "tsql",
+    "fabric": "tsql",
+    "oracle": "oracle",
+    "starburst": "trino",
 }
 
 
