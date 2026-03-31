@@ -1,11 +1,13 @@
 import { useMemo, useState, useCallback, useEffect } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useProjectStore } from '../stores/projectStore'
+import { useTagFilterStore } from '../stores/tagFilterStore'
 import { ColumnTable } from '../components/models/ColumnTable'
 import { SqlViewer } from '../components/models/SqlViewer'
 import { TestBadge } from '../components/tests/TestBadge'
 import { LineageFlow } from '../components/lineage/LineageFlow'
 import { FilterDropdown } from '../components/ui/FilterDropdown'
+import type { FilterState } from '../components/ui/FilterDropdown'
 import { Markdown } from '../components/Markdown'
 import { materializationLabel } from '../utils/colors'
 import { getSubgraph, type LineageDirection } from '../utils/graph'
@@ -145,7 +147,8 @@ export function ModelPage() {
   const [direction, setDirection] = useState<LineageDirection>('both')
   const [lineageFullscreen, setLineageFullscreen] = useState(false)
   const [typeFilter, toggleType, setTypeMode, clearTypes] = useFilterState()
-  const [tagFilter, toggleTag, setTagMode, clearTags] = useFilterState()
+  const { selected: globalTagSelected, mode: globalTagMode, toggle: toggleTag, setMode: setTagMode, clear: clearTags } = useTagFilterStore()
+  const tagFilter: FilterState = useMemo(() => ({ mode: globalTagMode, selected: new Set(globalTagSelected) }), [globalTagSelected, globalTagMode])
   const [folderFilter, toggleFolder, setFolderMode, clearFolders] = useFilterState()
 
   const rawSubgraph = useMemo(() => {
