@@ -51,4 +51,8 @@ export interface SearchEntry {
   readonly columns: string;
   readonly tags: string;
   readonly sql_snippet: string;
+  /** Present only on column entries — the column name itself. */
+  readonly column_name?: string;
+  /** Present only on column entries — the parent model/source name. */
+  readonly model_name?: string;
 }
