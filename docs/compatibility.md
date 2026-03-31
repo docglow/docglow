@@ -6,13 +6,17 @@ Docglow has been tested with the following dbt versions:
 
 | dbt-core Version | Manifest Schema | Status |
 |-----------------|-----------------|--------|
+| 1.8.x | v12 | Tested |
+| 1.9.x | v12 | Tested |
 | 1.11.x | v12 | Tested |
+
+Test fixtures for each version are located in `tests/fixtures/dbt-{version}/` and validated by parameterized tests in `tests/test_dbt_versions.py`.
 
 ## Minimum Version
 
-Docglow reads standard dbt artifacts (`manifest.json`, `catalog.json`, `run_results.json`). The Pydantic models use `extra="allow"` for forward compatibility with newer schema versions.
+The minimum tested version is **dbt-core 1.8.x**. Docglow reads standard dbt artifacts (`manifest.json`, `catalog.json`, `run_results.json`). The Pydantic models use `extra="allow"` for forward compatibility with newer schema versions, so newer dbt releases are expected to work without code changes.
 
-The minimum supported manifest schema version has not been formally established. If you encounter issues with an older dbt version, please [open an issue](https://github.com/docglow/docglow/issues).
+If you encounter issues with a different dbt version, please [open an issue](https://github.com/docglow/docglow/issues).
 
 ## Adapter Compatibility
 
