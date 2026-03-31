@@ -23,6 +23,11 @@ class TestDetectDialect:
         assert detect_dialect("redshift") == "redshift"
         assert detect_dialect("duckdb") == "duckdb"
         assert detect_dialect("databricks") == "databricks"
+        assert detect_dialect("athena") == "presto"
+        assert detect_dialect("sqlserver") == "tsql"
+        assert detect_dialect("fabric") == "tsql"
+        assert detect_dialect("oracle") == "oracle"
+        assert detect_dialect("starburst") == "trino"
 
     def test_case_insensitive(self) -> None:
         assert detect_dialect("Snowflake") == "snowflake"
