@@ -382,8 +382,31 @@ def _load_cache(
         logger.debug("Column lineage cache invalidated (version/dialect change)")
         return {}
 
-    # Remove meta key before returning
-    return {k: v for k, v in raw.items() if k != _CACHE_VERSION_KEY}
+    # Remove meta key and migrate legacy "direct" → "passthrough"
+    cache = {k: v for k, v in raw.items() if k != _CACHE_VERSION_KEY}
+    _migrate_direct_to_passthrough(cache)
+    return cache
+
+
+def _migrate_direct_to_passthrough(cache: dict[str, Any]) -> None:
+    """Migrate legacy 'direct' transformation values to 'passthrough'.
+
+    Prior to the transformation reclassification (DOC-76), simple column
+    references were labelled 'direct'. This rewrites them in-place so
+    downstream code only sees the new vocabulary.
+    """
+    for entry in cache.values():
+        if not isinstance(entry, dict):
+            continue
+        lineage = entry.get("lineage")
+        if not isinstance(lineage, dict):
+            continue
+        for deps in lineage.values():
+            if not isinstance(deps, list):
+                continue
+            for dep in deps:
+                if isinstance(dep, dict) and dep.get("transformation") == "direct":
+                    dep["transformation"] = "passthrough"
 
 
 def _save_cache(

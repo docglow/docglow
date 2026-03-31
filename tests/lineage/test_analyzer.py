@@ -46,7 +46,11 @@ class TestCacheRoundTrip:
                 "sql_hash": "abc123",
                 "lineage": {
                     "col_a": [
-                        {"source_model": "x", "source_column": "y", "transformation": "direct"}
+                        {
+                            "source_model": "x",
+                            "source_column": "y",
+                            "transformation": "passthrough",
+                        }
                     ]
                 },
             },
@@ -90,6 +94,36 @@ class TestCacheInvalidation:
 
         loaded = _load_cache(cache_file, "snowflake")
         assert loaded == {}
+
+    def test_direct_migrated_to_passthrough(self, cache_file: Path) -> None:
+        """Old caches with 'direct' should be migrated to 'passthrough' on load."""
+        cache: dict[str, Any] = {
+            "model.test.bar": {
+                "sql_hash": "def456",
+                "lineage": {
+                    "col_x": [
+                        {
+                            "source_model": "a",
+                            "source_column": "b",
+                            "transformation": "direct",
+                        }
+                    ],
+                    "col_y": [
+                        {
+                            "source_model": "a",
+                            "source_column": "c",
+                            "transformation": "aggregated",
+                        }
+                    ],
+                },
+            },
+        }
+        _save_cache(cache_file, cache, "postgres")
+        loaded = _load_cache(cache_file, "postgres")
+        deps_x = loaded["model.test.bar"]["lineage"]["col_x"]
+        deps_y = loaded["model.test.bar"]["lineage"]["col_y"]
+        assert deps_x[0]["transformation"] == "passthrough"
+        assert deps_y[0]["transformation"] == "aggregated"
 
     def test_same_version_and_dialect_preserves(self, cache_file: Path) -> None:
         cache: dict[str, Any] = {"model.test.foo": {"sql_hash": "abc", "lineage": {}}}
