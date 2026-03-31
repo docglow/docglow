@@ -29,9 +29,13 @@ export function SearchModal() {
     }
   }, [isOpen])
 
-  const handleSelect = useCallback((uniqueId: string, resourceType: string) => {
-    const type = resourceType === 'source' ? 'source' : 'model'
-    navigate(`/${type}/${encodeURIComponent(uniqueId)}`)
+  const handleSelect = useCallback((entry: { unique_id: string; resource_type: string; column_name?: string }) => {
+    const isSource = entry.unique_id.startsWith('source.')
+    const type = isSource ? 'source' : 'model'
+    const hash = entry.resource_type === 'column' && entry.column_name
+      ? `#col-${entry.column_name}`
+      : ''
+    navigate(`/${type}/${encodeURIComponent(entry.unique_id)}${hash}`)
     reset()
   }, [navigate, reset])
 
@@ -43,7 +47,7 @@ export function SearchModal() {
       e.preventDefault()
       setSelectedIndex(Math.max(selectedIndex - 1, 0))
     } else if (e.key === 'Enter' && results[selectedIndex]) {
-      handleSelect(results[selectedIndex].unique_id, results[selectedIndex].resource_type)
+      handleSelect(results[selectedIndex])
     }
   }, [selectedIndex, results, setSelectedIndex, handleSelect])
 
@@ -77,27 +81,41 @@ export function SearchModal() {
 
         {results.length > 0 && (
           <ul className="max-h-80 overflow-y-auto py-2">
-            {results.map((result, i) => (
-              <li key={result.unique_id}>
-                <button
-                  onClick={() => handleSelect(result.unique_id, result.resource_type)}
-                  className={`w-full text-left px-4 py-2 flex items-center gap-3 cursor-pointer
-                    ${i === selectedIndex ? 'bg-primary/10' : 'hover:bg-[var(--bg-surface)]'}`}
-                >
-                  <span className="text-xs font-medium uppercase text-[var(--text-muted)] w-14 shrink-0">
-                    {result.resource_type}
-                  </span>
-                  <div className="min-w-0">
-                    <div className="text-sm font-medium truncate">{result.name}</div>
-                    {result.description && (
-                      <div className="text-xs text-[var(--text-muted)] truncate">
-                        {result.description}
-                      </div>
-                    )}
-                  </div>
-                </button>
-              </li>
-            ))}
+            {results.map((result, i) => {
+              const isColumn = result.resource_type === 'column'
+              return (
+                <li key={isColumn ? `${result.unique_id}::${result.column_name}` : result.unique_id}>
+                  <button
+                    onClick={() => handleSelect(result)}
+                    className={`w-full text-left px-4 py-2 flex items-center gap-3 cursor-pointer
+                      ${i === selectedIndex ? 'bg-primary/10' : 'hover:bg-[var(--bg-surface)]'}`}
+                  >
+                    <span className="text-xs font-medium uppercase text-[var(--text-muted)] w-14 shrink-0">
+                      {isColumn ? 'col' : result.resource_type}
+                    </span>
+                    <div className="min-w-0">
+                      {isColumn ? (
+                        <>
+                          <div className="text-sm font-medium truncate font-mono">{result.column_name}</div>
+                          <div className="text-xs text-[var(--text-muted)] truncate">
+                            in {result.model_name}
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="text-sm font-medium truncate">{result.name}</div>
+                          {result.description && (
+                            <div className="text-xs text-[var(--text-muted)] truncate">
+                              {result.description}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </button>
+                </li>
+              )
+            })}
           </ul>
         )}
 
