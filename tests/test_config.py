@@ -103,6 +103,14 @@ class TestBuildConfigFromDict:
         assert config.ai.enabled is True
         assert config.ai.max_requests_per_session == 50
 
+    def test_slim_option(self):
+        config = _build_config_from_dict({"slim": True})
+        assert config.slim is True
+
+    def test_slim_default_false(self):
+        config = _build_config_from_dict({})
+        assert config.slim is False
+
     def test_unknown_keys_ignored(self):
         config = _build_config_from_dict(
             {

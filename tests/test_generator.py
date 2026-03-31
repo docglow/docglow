@@ -135,3 +135,82 @@ class TestGenerateSite:
 
         data = json.loads((output / "docglow-data.json").read_text())
         assert data["metadata"]["project_name"] == "My Custom Docs"
+
+
+class TestSlimFlag:
+    """Test the --slim flag strips SQL from output."""
+
+    def test_slim_strips_sql_from_models(self, tmp_path: Path) -> None:
+        """With --slim, raw_sql and compiled_sql should be empty strings."""
+        project = _setup_target(tmp_path)
+        output = tmp_path / "slim_output"
+
+        generate_site(project, output_dir=output, slim=True)
+
+        data = json.loads((output / "docglow-data.json").read_text())
+        for model in data["models"].values():
+            assert model["raw_sql"] == "", f"raw_sql not stripped for {model['name']}"
+            assert model["compiled_sql"] == "", f"compiled_sql not stripped for {model['name']}"
+
+    def test_slim_strips_sql_from_seeds(self, tmp_path: Path) -> None:
+        """With --slim, seeds should also have empty SQL fields."""
+        project = _setup_target(tmp_path)
+        output = tmp_path / "slim_output"
+
+        generate_site(project, output_dir=output, slim=True)
+
+        data = json.loads((output / "docglow-data.json").read_text())
+        for seed in data["seeds"].values():
+            assert seed["raw_sql"] == ""
+            assert seed["compiled_sql"] == ""
+
+    def test_slim_preserves_non_sql_fields(self, tmp_path: Path) -> None:
+        """--slim should not affect non-SQL model fields."""
+        project = _setup_target(tmp_path)
+        output = tmp_path / "slim_output"
+
+        generate_site(project, output_dir=output, slim=True)
+
+        data = json.loads((output / "docglow-data.json").read_text())
+        for model in data["models"].values():
+            assert model["name"]
+            assert model["unique_id"]
+            assert "columns" in model
+            assert "depends_on" in model
+
+    def test_slim_preserves_lineage(self, tmp_path: Path) -> None:
+        """Lineage should still be built correctly with --slim."""
+        project = _setup_target(tmp_path)
+        output = tmp_path / "slim_output"
+
+        generate_site(project, output_dir=output, slim=True)
+
+        data = json.loads((output / "docglow-data.json").read_text())
+        assert len(data["lineage"]["nodes"]) > 0
+        assert len(data["lineage"]["edges"]) > 0
+
+    def test_slim_reduces_file_size(self, tmp_path: Path) -> None:
+        """--slim output should be smaller than default output."""
+        project = _setup_target(tmp_path)
+        normal_output = tmp_path / "normal"
+        slim_output = tmp_path / "slim"
+
+        generate_site(project, output_dir=normal_output)
+        generate_site(project, output_dir=slim_output, slim=True)
+
+        normal_size = (normal_output / "docglow-data.json").stat().st_size
+        slim_size = (slim_output / "docglow-data.json").stat().st_size
+        assert slim_size < normal_size, (
+            f"Slim output ({slim_size}) should be smaller than normal ({normal_size})"
+        )
+
+    def test_without_slim_sql_is_present(self, tmp_path: Path) -> None:
+        """Without --slim, SQL fields should contain actual SQL."""
+        project = _setup_target(tmp_path)
+        output = tmp_path / "normal_output"
+
+        generate_site(project, output_dir=output)
+
+        data = json.loads((output / "docglow-data.json").read_text())
+        has_sql = any(model.get("raw_sql", "") != "" for model in data["models"].values())
+        assert has_sql, "Without --slim, at least some models should have SQL"

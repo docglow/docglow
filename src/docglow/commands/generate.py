@@ -54,6 +54,12 @@ import click
     default=False,
     help="Include dbt package models in lineage graph",
 )
+@click.option(
+    "--slim",
+    is_flag=True,
+    default=False,
+    help="Omit raw and compiled SQL from output to reduce file size",
+)
 @click.option("--verbose", is_flag=True)
 @click.option(
     "--fail-under",
@@ -81,6 +87,7 @@ def generate(
     column_lineage_select: str | None,
     column_lineage_depth: int | None,
     include_packages: bool,
+    slim: bool,
     verbose: bool,
     fail_under: float | None,
 ) -> None:
@@ -103,6 +110,8 @@ def generate(
         ai = True  # --ai-key implies --ai
     if not title and config.title != "docglow":
         title = config.title
+    if not slim and config.slim:
+        slim = True
 
     # --column-lineage-select implies --column-lineage
     if column_lineage_select:
@@ -162,6 +171,7 @@ def generate(
             column_lineage_select=column_lineage_select,
             column_lineage_depth=column_lineage_depth,
             exclude_packages=not include_packages,
+            slim=slim,
         )
         console.print(f"\n[bold green]Site generated at {output_path}[/bold green]")
         if static:
