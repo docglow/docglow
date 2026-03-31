@@ -170,6 +170,7 @@ def build_docglow_data(
     column_lineage_depth: int | None = None,
     column_lineage_cache_dir: Any | None = None,
     exclude_packages: bool = True,
+    slim: bool = False,
 ) -> dict[str, Any]:
     """Transform loaded artifacts into the unified DocglowData payload.
 
@@ -196,6 +197,7 @@ def build_docglow_data(
         column_lineage_depth=column_lineage_depth,
         column_lineage_cache_dir=column_lineage_cache_dir,
         exclude_packages=exclude_packages,
+        slim=slim,
     )
 
     stages = default_stages(ctx)
