@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-03-31
+
+### Added
+- **Tag-based model filtering** — filter sidebar and lineage by model tags (DOC-83)
+- **Column-name search** — search for column names across all models in the project (DOC-84)
+- **`--slim` flag** — strip raw and compiled SQL from output to reduce file size (DOC-75)
+- **Expanded SQL dialect support** — Athena, SQL Server, Oracle, Fabric, Starburst (DOC-74)
+- **"Switching from dbt docs serve" migration guide** — feature comparison, step-by-step migration, CI examples (DOC-69)
+- **CI/CD deployment guide** — comprehensive workflow examples for GitHub Pages, S3, and health checks (DOC-82)
+- **Health scoring documentation** — explains all six dimensions, default weights, grade thresholds, and `docglow.yml` customization (DOC-65)
+- **GitHub issue templates** — bug report and feature request templates (DOC-80)
+- **dbt version test fixtures** — per-version fixtures for dbt 1.8 and 1.9 (DOC-81)
+- **PyPI, stars, CI, and license badges** in README (DOC-61)
+- **Live demo link and docglow.com homepage** in README and repo metadata (DOC-58, DOC-59)
+
+### Fixed
+- **Freshness score inflation** — no longer gives 100% when no sources are monitored; weight is redistributed to other dimensions (DOC-64)
+- **Column lineage transformation types** — reclassified as passthrough, rename, aggregated, derived, unknown (DOC-76)
+- Mypy type errors in freshness score refactor
+
+### Improved
+- **CLI extraction** — `cli.py` reduced from 774 to 60 lines; commands split into `src/docglow/commands/` (DOC-66)
+- **Data transform split** — `generator/data.py` reduced from 766 to 295 lines; transform logic in `generator/transforms/` (DOC-67)
+- **Generation pipeline** — `build_docglow_data` now executes 11 discrete, named stages via `generator/pipeline.py` (DOC-68)
+- **Stale version references** audited and fixed (DOC-70)
+- CHANGELOG linked from README (DOC-62)
+
 ## [0.4.1] - 2026-03-26
 
 ### Fixed
@@ -127,7 +154,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Suppressed hover highlights during node drag to prevent flicker
 - Shared SVG markers to reduce DOM overhead
 
-[Unreleased]: https://github.com/docglow/docglow/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/docglow/docglow/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/docglow/docglow/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/docglow/docglow/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/docglow/docglow/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/docglow/docglow/compare/v0.2.0...v0.3.0
