@@ -1,0 +1,37 @@
+port: 3001
+defaults:
+  runtime: tmux
+  agent: claude-code
+  workspace: worktree
+  notifiers:
+    - desktop
+projects:
+  docglow:
+    name: docglow
+    sessionPrefix: doc
+    repo: docglow/docglow
+    path: /home/josh/Documents/projects/personal/docglow
+    defaultBranch: main
+    postCreate:
+      - "uv sync"
+    agentRules: |-
+      Always run tests before pushing.
+      Use conventional commits (feat:, fix:, chore:, docs:, refactor:, test:).
+      Link issue numbers in commit messages.
+      Write clear commit messages that explain WHY, not just WHAT.
+
+      Follow Python best practices:
+
+      - Use type hints for function parameters and return values
+      - Follow PEP 8 style guide
+      - Use f-strings for string formatting
+      - Use context managers (with statements) for resource management
+      - Write docstrings for classes and functions
+      - Prefer composition over inheritance
+
+      Always use `uv run` to execute Python tools (pytest, black, mypy, etc.) to ensure the correct virtual environment is used.
+
+      Before pushing, run these commands:
+      - uv run pytest (run tests)
+      - uv run black . (format code)
+      - uv run mypy . (type checking)
