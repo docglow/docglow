@@ -1,5 +1,5 @@
 <p align="center">
-  <img src=".github/assets/docglow-logo.png" alt="Docglow" width="160" />
+  <img src="https://raw.githubusercontent.com/docglow/docglow/main/.github/assets/docglow-logo.png" alt="Docglow" width="160" />
 </p>
 
 <h1 align="center">docglow</h1>
@@ -36,15 +36,15 @@ Switching from `dbt docs serve`? See the [migration guide](docs/migrating-from-d
 
 **Interactive lineage explorer** — layer-grouped DAG with upstream/downstream filtering, depth control, and folder grouping
 
-![Lineage explorer with layer bands](.github/assets/lineage-view.png)
+![Lineage explorer with layer bands](https://raw.githubusercontent.com/docglow/docglow/main/.github/assets/lineage-view.png)
 
 **Column-level lineage** — expand nodes to trace individual columns across models with transformation labels (direct, derived, aggregated)
 
-![Column-level lineage tracing](.github/assets/column-lineage-view.png)
+![Column-level lineage tracing](https://raw.githubusercontent.com/docglow/docglow/main/.github/assets/column-lineage-view.png)
 
 **Column table with lineage** — view types, descriptions, tests, and upstream/downstream dependencies for every column. Click a lineage badge to jump directly to that column in the linked model.
 
-![Column table with upstream and downstream lineage](.github/assets/columns-view.png)
+![Column table with upstream and downstream lineage](https://raw.githubusercontent.com/docglow/docglow/main/.github/assets/columns-view.png)
 
 ## Install
 
