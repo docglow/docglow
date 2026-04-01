@@ -175,7 +175,7 @@ Add Docglow's health check to your existing pre-commit workflow:
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/docglow/docglow
-    rev: v0.5.0
+    rev: v0.5.1
     hooks:
       - id: docglow-health
         args: ['--fail-under', '75']
