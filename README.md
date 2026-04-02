@@ -22,7 +22,7 @@
 
 ## Why Docglow?
 
-Over **60,000 teams** use dbt Core without access to dbt Cloud's documentation features. The built-in `dbt docs serve` generates a dated, hard-to-navigate static site that doesn't scale.
+Thousands of teams use dbt Core without access to dbt Cloud's documentation features. The built-in `dbt docs generate && dbt docs serve` generates a useful, but somewhat dated static site, with limited functionality that doesn't scale well.
 
 Docglow replaces it with a **modern, interactive single-page application** — and it works with any dbt Core project out of the box.
 
