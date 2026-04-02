@@ -50,15 +50,11 @@ function DagNode({
   node,
   isHighlighted,
   isActive,
-  onMouseEnter,
-  onMouseLeave,
   onClick,
 }: {
   node: LayoutNode
   isHighlighted: boolean
   isActive: boolean
-  onMouseEnter: () => void
-  onMouseLeave: () => void
   onClick: () => void
 }) {
   const fill = RESOURCE_COLORS[node.resource_type] ?? '#6b7280'
@@ -68,8 +64,6 @@ function DagNode({
   return (
     <g
       transform={`translate(${node.x}, ${node.y})`}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
       onClick={onClick}
       style={{ cursor: 'pointer', opacity }}
     >
@@ -118,14 +112,13 @@ export function LineageGraph({ nodes, edges, highlightId, onNodeClick }: Lineage
   const layout = useLineageLayout(nodes, edges)
   const navigate = useNavigate()
   const containerRef = useRef<HTMLDivElement>(null)
-  const [hoveredId, setHoveredId] = useState<string | null>(null)
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [zoom, setZoom] = useState(1)
   const [isPanning, setIsPanning] = useState(false)
   const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 })
 
-  // Build full-chain highlighting (upstream + downstream)
-  const activeId = hoveredId ?? highlightId ?? null
+  // Highlight only on explicit click/selection — hover disabled to prevent flicker
+  const activeId = highlightId ?? null
   const highlighted = useMemo(() => {
     if (!activeId) return new Set(nodes.map(n => n.id))
     return getFullChain(activeId, edges)
@@ -228,9 +221,7 @@ export function LineageGraph({ nodes, edges, highlightId, onNodeClick }: Lineage
               key={node.id}
               node={node}
               isHighlighted={highlighted.has(node.id)}
-              isActive={node.id === (hoveredId ?? highlightId)}
-              onMouseEnter={() => setHoveredId(node.id)}
-              onMouseLeave={() => setHoveredId(null)}
+              isActive={node.id === highlightId}
               onClick={() => handleNodeClick(node.id)}
             />
           ))}

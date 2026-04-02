@@ -1,4 +1,4 @@
-import { memo, useState, useRef, useCallback } from 'react'
+import { memo, useCallback } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { useColumnHighlightStore } from '../../stores/columnHighlightStore'
 
@@ -57,9 +57,6 @@ function DagNodeComponent({ data, id }: NodeProps) {
     noColumnData,
   } = data as DagNodeData
 
-  const [showTooltip, setShowTooltip] = useState(false)
-  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-
   const isExpanded = useColumnHighlightStore(s => s.expandedNodeIds.has(id))
   const isThisSelected = useColumnHighlightStore(
     s => s.selectedColumn?.modelId === id
@@ -69,18 +66,6 @@ function DagNodeComponent({ data, id }: NodeProps) {
   )
   const toggleNodeExpanded = useColumnHighlightStore(s => s.toggleNodeExpanded)
   const selectColumn = useColumnHighlightStore(s => s.selectColumn)
-
-  const handleMouseEnter = useCallback(() => {
-    hoverTimer.current = setTimeout(() => setShowTooltip(true), 500)
-  }, [])
-
-  const handleMouseLeave = useCallback(() => {
-    if (hoverTimer.current) {
-      clearTimeout(hoverTimer.current)
-      hoverTimer.current = null
-    }
-    setShowTooltip(false)
-  }, [])
 
   const handleExpandClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
@@ -110,7 +95,7 @@ function DagNodeComponent({ data, id }: NodeProps) {
       ? `0 0 0 2px ${AMBER}22`
       : undefined
 
-  const hasTooltipContent = folder || schema
+  const tooltipText = [schema && `Schema: ${schema}`, folder && `Folder: ${folder}`].filter(Boolean).join('\n')
   const canExpand = hasColumnLineage && columns && columns.length > 0
 
   const visibleColumns = columns
@@ -122,8 +107,8 @@ function DagNodeComponent({ data, id }: NodeProps) {
     <>
       <Handle type="target" position={Position.Left} className="!opacity-0 !w-0 !h-0" />
       <div
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
+        className="dag-node-container"
+        title={tooltipText || undefined}
         style={{
           width: 180,
           borderRadius: 6,
@@ -279,38 +264,7 @@ function DagNodeComponent({ data, id }: NodeProps) {
           </div>
         )}
 
-        {/* Hover tooltip */}
-        {showTooltip && hasTooltipContent && !isExpanded && (
-          <div
-            style={{
-              position: 'absolute',
-              bottom: '100%',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              marginBottom: 6,
-              background: 'var(--bg, #1e293b)',
-              border: '1px solid var(--border, #334155)',
-              borderRadius: 6,
-              padding: '6px 10px',
-              fontSize: 11,
-              color: 'var(--text, #e2e8f0)',
-              whiteSpace: 'nowrap',
-              zIndex: 50,
-              pointerEvents: 'none',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 2,
-            }}
-          >
-            {schema && (
-              <div><span style={{ color: 'var(--text-muted, #94a3b8)' }}>Schema: </span>{schema}</div>
-            )}
-            {folder && (
-              <div><span style={{ color: 'var(--text-muted, #94a3b8)' }}>Folder: </span>{folder}</div>
-            )}
-          </div>
-        )}
+        {/* Tooltip via native title — no React state, no re-renders */}
       </div>
       <Handle type="source" position={Position.Right} className="!opacity-0 !w-0 !h-0" />
     </>
