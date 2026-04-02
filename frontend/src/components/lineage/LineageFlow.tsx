@@ -361,7 +361,10 @@ function LineageFlowInner({
 }: LineageFlowProps) {
   const navigate = useNavigate()
   const { fitView, getNodes } = useReactFlow()
-  const [hoveredId, setHoveredId] = useState<string | null>(null)
+  // Hover highlighting disabled — it caused flicker when moving rapidly
+  // across nodes. Click-based highlighting (highlightId from sidebar/click)
+  // and the side panel are the proper interaction patterns.
+  const hoveredId: string | null = null
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
 
   // Column highlight state
@@ -386,25 +389,10 @@ function LineageFlowInner({
     )
   }, [selectedColumn, columnLineageData, reverseIndex])
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isDraggingRef = useRef(false)
   const [dragOverrides, setDragOverrides] = useState<Record<string, { x: number; y: number }>>({})
 
-  // Debounced hover setter — avoids BFS recomputation on fast mouse movement
-  // Suppressed entirely during drag or when column trace is active
-  const setHoveredIdDebounced = useCallback((id: string | null) => {
-    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current)
-    if (isDraggingRef.current) return
-    // Suppress hover highlighting when a column is selected to prevent flicker
-    if (selectedColumn) return
-    if (id === null) {
-      setHoveredId(null)
-      return
-    }
-    hoverTimerRef.current = setTimeout(() => {
-      if (!isDraggingRef.current) setHoveredId(id)
-    }, 60)
-  }, [selectedColumn])
+  // Hover highlighting disabled — caused flicker when rapidly moving across nodes.
 
   const centerOnHighlight = useCallback(() => {
     if (!highlightId) return
@@ -527,8 +515,8 @@ function LineageFlowInner({
             isExpanded: expandedFolders?.has(ln.id) ?? false,
           },
           style: {
-            opacity: !highlightedSet || highlightedSet.has(ln.id) ? 1 : 0.4,
-            transition: 'opacity 0.15s ease',
+            opacity: 1, // Updated in applyHighlightPass below
+            transition: 'none',
           },
         }
       }
@@ -540,7 +528,6 @@ function LineageFlowInner({
 
       // When column trace is active, dim nodes not involved
       const dimmedByColumnTrace = columnTrace != null && !inColumnTrace
-      const baseOpacity = !highlightedSet || highlightedSet.has(ln.id) ? 1 : 0.4
 
       return {
         id: ln.id,
@@ -553,24 +540,24 @@ function LineageFlowInner({
           resource_type: ln.data.resource_type,
           materialization: ln.data.materialization,
           test_status: ln.data.test_status,
-          isActive: ln.id === activeId,
+          isActive: false, // Updated in applyHighlightPass below
           folder: ln.data.folder,
           schema: ln.data.schema,
           columns: nodeColumns,
           hasColumnLineage,
           highlightedColumns: nodeHighlightedCols,
           inColumnTrace: inColumnTrace && !expandedNodeIds.has(ln.id),
-          noColumnData: columnTrace != null && !hasColumnLineage && highlightedSet?.has(ln.id),
+          noColumnData: false, // Updated in applyHighlightPass below
         },
         style: {
-          opacity: dimmedByColumnTrace ? 0.3 : baseOpacity,
-          transition: 'opacity 0.15s ease',
+          opacity: dimmedByColumnTrace ? 0.3 : 1,
+          transition: 'none',
         },
       }
     })
 
     return [...bandNodes, ...dataNodes]
-  }, [layout.nodes, highlightedSet, activeId, folderData, expandedFolders, layerBands, modelColumns, columnLineageData, columnTrace, expandedNodeIds])
+  }, [layout.nodes, folderData, expandedFolders, layerBands, modelColumns, columnLineageData, columnTrace, expandedNodeIds])
 
   // Reset drag overrides when the layout recomputes (depth/filter changes)
   const layoutRef = useRef(layout)
@@ -581,15 +568,51 @@ function LineageFlowInner({
     }
   }, [layout])
 
-  // Apply drag position overrides on top of computed nodes
+  // Lightweight pass: apply highlight opacity + isActive + drag overrides
+  // This recomputes on hover but only patches style/data fields — rfNodes
+  // itself is NOT recreated, so DagNode memo sees stable data references
+  // for nodes whose highlight state hasn't changed.
   const displayNodes = useMemo((): Node[] => {
-    if (Object.keys(dragOverrides).length === 0) return rfNodes
+    const hasDragOverrides = Object.keys(dragOverrides).length > 0
+
     return rfNodes.map(node => {
-      const override = dragOverrides[node.id]
-      if (!override) return node
-      return { ...node, position: { x: override.x, y: override.y } }
+      const override = hasDragOverrides ? dragOverrides[node.id] : undefined
+      const isBand = node.id.startsWith('__layer_band_')
+
+      if (isBand) {
+        return override ? { ...node, position: { x: override.x, y: override.y } } : node
+      }
+
+      const isFolder = node.type === 'folder'
+      const highlighted = !highlightedSet || highlightedSet.has(node.id)
+      const isActiveNode = node.id === activeId
+
+      // Only create new objects if something actually changed
+      const currentOpacity = (node.style as Record<string, unknown>)?.opacity
+      const targetOpacity = highlighted ? (currentOpacity === 0.3 ? 0.3 : 1) : 0.4
+      const currentIsActive = (node.data as Record<string, unknown>)?.isActive
+      const currentNoColumnData = (node.data as Record<string, unknown>)?.noColumnData
+      const targetNoColumnData = !isFolder && columnTrace != null
+        && !(columnLineageData != null && columnLineageData[node.id] != null)
+        && highlightedSet?.has(node.id)
+
+      const styleChanged = currentOpacity !== targetOpacity
+      const dataChanged = currentIsActive !== isActiveNode || currentNoColumnData !== targetNoColumnData
+
+      if (!styleChanged && !dataChanged && !override) return node
+
+      return {
+        ...node,
+        ...(override ? { position: { x: override.x, y: override.y } } : {}),
+        ...(dataChanged ? {
+          data: { ...node.data, isActive: isActiveNode, noColumnData: targetNoColumnData },
+        } : {}),
+        ...(styleChanged ? {
+          style: { ...node.style, opacity: targetOpacity },
+        } : {}),
+      }
     })
-  }, [rfNodes, dragOverrides])
+  }, [rfNodes, dragOverrides, highlightedSet, activeId, columnTrace, columnLineageData])
 
   // Handle node drag changes
   const handleNodesChange = useCallback((changes: NodeChange[]) => {
@@ -630,29 +653,21 @@ function LineageFlowInner({
     height: 10,
   }), [])
 
-  // Build React Flow edges (model-level + column-level)
-  const rfEdges = useMemo((): Edge[] => {
-    const isColumnTraceActive = columnTrace != null
-
-    const modelEdges: Edge[] = layout.edges.map((e) => {
-      const isHighlighted = highlightedSet
-        ? highlightedSet.has(e.source) && highlightedSet.has(e.target)
-        : false
-      return {
-        id: `${e.source}__${e.target}`,
-        source: e.source,
-        target: e.target,
-        type: 'smoothstep',
-        animated: false,
-        style: {
-          stroke: isHighlighted ? '#2563eb' : 'var(--text-muted, #94a3b8)',
-          strokeWidth: isHighlighted ? 2 : 1.5,
-          opacity: isColumnTraceActive ? 0.08 : !highlightedSet ? 0.5 : isHighlighted ? 0.8 : 0.15,
-          transition: 'opacity 0.15s ease, stroke 0.15s ease',
-        },
-        markerEnd: isHighlighted ? MARKER_HIGHLIGHTED : MARKER_DEFAULT,
-      }
-    })
+  // Build React Flow edges — base structure without highlight styling
+  const rfEdgesBase = useMemo((): Edge[] => {
+    const modelEdges: Edge[] = layout.edges.map((e) => ({
+      id: `${e.source}__${e.target}`,
+      source: e.source,
+      target: e.target,
+      type: 'smoothstep',
+      animated: false,
+      style: {
+        stroke: 'var(--text-muted, #94a3b8)',
+        strokeWidth: 1.5,
+        opacity: 0.5,
+      },
+      markerEnd: MARKER_DEFAULT,
+    }))
 
     // Column-level edges
     if (!columnTrace) return modelEdges
@@ -702,7 +717,33 @@ function LineageFlowInner({
     })
 
     return [...modelEdges, ...columnEdges]
-  }, [layout.edges, highlightedSet, MARKER_HIGHLIGHTED, MARKER_DEFAULT, MARKER_COLUMN, columnTrace, expandedNodeIds])
+  }, [layout.edges, MARKER_DEFAULT, MARKER_COLUMN, columnTrace, expandedNodeIds])
+
+  // Lightweight pass: apply highlight styling to edges without recreating the base array
+  const rfEdges = useMemo((): Edge[] => {
+    if (!highlightedSet && !columnTrace) return rfEdgesBase
+
+    const isColumnTraceActive = columnTrace != null
+
+    return rfEdgesBase.map(edge => {
+      // Skip column edges — they're already styled
+      if (edge.id.startsWith('col__')) return edge
+
+      const isHighlighted = highlightedSet
+        ? highlightedSet.has(edge.source) && highlightedSet.has(edge.target)
+        : false
+
+      return {
+        ...edge,
+        style: {
+          stroke: isHighlighted ? '#2563eb' : 'var(--text-muted, #94a3b8)',
+          strokeWidth: isHighlighted ? 2 : 1.5,
+          opacity: isColumnTraceActive ? 0.08 : !highlightedSet ? 0.5 : isHighlighted ? 0.8 : 0.15,
+        },
+        markerEnd: isHighlighted ? MARKER_HIGHLIGHTED : MARKER_DEFAULT,
+      }
+    })
+  }, [rfEdgesBase, highlightedSet, columnTrace, MARKER_HIGHLIGHTED, MARKER_DEFAULT])
 
   // Fit view when data changes
   useEffect(() => {
@@ -718,14 +759,6 @@ function LineageFlowInner({
   const handleNodeDragStop = useCallback(() => {
     isDraggingRef.current = false
   }, [])
-
-  const handleNodeMouseEnter: NodeMouseHandler = useCallback((_, node) => {
-    setHoveredIdDebounced(node.id)
-  }, [setHoveredIdDebounced])
-
-  const handleNodeMouseLeave: NodeMouseHandler = useCallback(() => {
-    setHoveredIdDebounced(null)
-  }, [setHoveredIdDebounced])
 
   // Single click → open side panel; double click → navigate to detail page
   const handleNodeClick: NodeMouseHandler = useCallback((_, node) => {
@@ -780,12 +813,16 @@ function LineageFlowInner({
       onNodesChange={handleNodesChange}
       onNodeDragStart={handleNodeDragStart}
       onNodeDragStop={handleNodeDragStop}
-      onNodeMouseEnter={handleNodeMouseEnter}
-      onNodeMouseLeave={handleNodeMouseLeave}
       onNodeClick={handleNodeClick}
       onPaneClick={handlePaneClick}
       nodesDraggable={true}
       nodesConnectable={false}
+      nodesFocusable={false}
+      edgesFocusable={false}
+      edgesReconnectable={false}
+      elementsSelectable={false}
+      selectNodesOnDrag={false}
+      autoPanOnNodeDrag={false}
       fitView
       minZoom={0.05}
       maxZoom={3}
