@@ -48,13 +48,17 @@ docglow serve --dir ./site
 
 The `--project-dir` flag should point to your dbt project root (the directory containing `dbt_project.yml`). Docglow reads the `target/` subdirectory automatically.
 
-### 3. Optional: add column-level lineage
+### 3. Column-level lineage (enabled by default)
+
+Column-level lineage runs automatically when the `sqlglot` extra is installed. It parses compiled SQL to trace column dependencies across models. Results are cached in `.docglow-column-lineage-cache.json` for fast incremental rebuilds.
+
+To skip column lineage analysis (e.g. for faster iteration), use:
 
 ```bash
-docglow generate --project-dir . --output-dir ./site --column-lineage
+docglow generate --project-dir . --output-dir ./site --skip-column-lineage
 ```
 
-This parses compiled SQL to trace column dependencies across models. Results are cached in `.docglow-column-lineage-cache.json` for fast incremental rebuilds.
+Or set `column_lineage: false` in your `docglow.yml`.
 
 ### 4. Optional: generate a self-contained file
 
