@@ -41,7 +41,9 @@ The optional column profiling feature (`docglow[profiling]`) currently supports 
 
 ## Column Lineage
 
-Column-level lineage (`--column-lineage`) uses [sqlglot](https://github.com/tobymao/sqlglot) to parse SQL and trace column dependencies. It works best with **compiled SQL** — run `dbt compile` before `docglow generate` for best results.
+Column-level lineage is **enabled by default** and uses [sqlglot](https://github.com/tobymao/sqlglot) to parse SQL and trace column dependencies. It works best with **compiled SQL** — run `dbt compile` before `docglow generate` for best results.
+
+To disable column lineage, use `--skip-column-lineage` on the CLI or set `column_lineage: false` in your `docglow.yml`. For large projects (75+ models), Docglow prints a time estimate and suggests using `--column-lineage-select <model>` to scope the analysis.
 
 ### What works well
 
@@ -59,9 +61,10 @@ Column-level lineage (`--column-lineage`) uses [sqlglot](https://github.com/toby
 
 ### Recommendations
 
-1. Run `dbt compile` before generating column lineage — compiled SQL has all macros resolved
+1. Run `dbt compile` before generating — compiled SQL has all macros resolved
 2. Use `--column-lineage-select <model>` to analyze incrementally — results cache across runs
-3. Check `.docglow-column-lineage-failures.log` for details on models that couldn't be fully analyzed
+3. Use `--skip-column-lineage` or `column_lineage: false` in `docglow.yml` to disable entirely
+4. Check `.docglow-column-lineage-failures.log` for details on models that couldn't be fully analyzed
 
 ## Optional Artifacts
 

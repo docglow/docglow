@@ -202,7 +202,7 @@ Use Docglow as a CI quality gate with the `--fail-under` flag:
   run: docglow generate --project-dir . --output-dir ./site
 ```
 
-For large projects, add `--slim` to strip SQL source from the output and reduce payload size by 40–60%.
+Column-level lineage runs by default. For large projects, use `--skip-column-lineage` to speed up generation, or `--slim` to strip SQL source from the output and reduce payload size by 40–60%.
 
 See the **[CI/CD Deployment Guide](docs/ci-cd-guide.md)** for complete walkthroughs covering GitHub Pages, S3, GitLab CI, health score thresholds, and enterprise private Pages.
 
