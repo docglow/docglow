@@ -81,6 +81,7 @@ docglow serve --dir ./site
 - **Project health score** — coverage metrics for descriptions, tests, and documentation completeness ([details](docs/health-scoring.md))
 - **Full-text search** — instant search across all models, sources, and columns
 - **Single static site** — no backend required, deploy anywhere (S3, GitHub Pages, Netlify, etc.)
+- **AI chat (BYOK)** — ask natural language questions about your project using your own Anthropic API key
 - **Dark mode** — auto, light, and dark themes (follows system preference by default)
 
 ## CLI Commands
@@ -128,6 +129,46 @@ Or in `docglow.yml`:
 ```yaml
 theme: dark  # auto | light | dark
 ```
+
+## AI Chat (Bring Your Own Key)
+
+Docglow includes a built-in AI chat panel powered by Claude. Ask natural language questions about your dbt project and get answers grounded in your actual metadata — models, columns, lineage, tests, and health scores.
+
+**Enable it:**
+
+```bash
+# Option 1: Pass your key as a flag (for local use only)
+docglow generate --ai --ai-key sk-ant-...
+
+# Option 2: Set the environment variable
+export ANTHROPIC_API_KEY=sk-ant-...
+docglow generate --ai
+
+# Option 3: Enable in docglow.yml
+# ai:
+#   enabled: true
+```
+
+Open the chat panel with `Ctrl+J` (or click the chat icon in the header), enter your Anthropic API key, and start asking questions.
+
+**Example questions:**
+
+| Question | What it does |
+|----------|-------------|
+| *What models depend on the orders source?* | Traces the lineage graph to find all downstream consumers |
+| *Which columns might contain PII?* | Scans column names and descriptions for personally identifiable information |
+| *What would break if I changed stg_customers?* | Lists all downstream models that depend on `stg_customers` |
+| *Show me all models related to revenue* | Searches model names, descriptions, and tags for revenue-related content |
+| *Which models have the most failing tests?* | Cross-references test results with model metadata |
+| *What's the overall health of this project?* | Summarizes the health score breakdown across all six dimensions |
+| *Explain what dim_employee does* | Describes the model using its SQL, columns, upstream dependencies, and description |
+| *What's the difference between stg_orders and fct_orders?* | Compares two models side-by-side using their metadata |
+
+**How it works:** When you generate with `--ai`, Docglow builds a compact project context (model names, descriptions, columns, lineage, test status, health scores) and embeds it in the site. The chat panel sends this context as a system prompt to the Anthropic API along with your question. Responses stream back in real-time with clickable model references.
+
+**Security note:** The `--ai` flag embeds your API key in the generated site files. This is safe for local use (`docglow serve`) but **do not deploy AI-enabled sites publicly**. For hosted docs with secure AI features, use [Docglow Cloud](https://docglow.com) (coming soon).
+
+**Limits:** 20 requests per session (clear chat to reset). Uses Claude Sonnet 4 with streaming.
 
 ## AI Editor Integration (MCP)
 
