@@ -47,7 +47,6 @@ export type {
   LineageEdge,
   LineageNode,
   ResourceType,
-  SearchEntry,
   TestStatus,
 
   // Site data
@@ -69,3 +68,12 @@ export type {
 } from "@docglow/shared-types";
 
 export { gradeFromScore, HEALTH_GRADE_THRESHOLDS, PLAN_LIMITS } from "@docglow/shared-types";
+
+// SearchEntry extended with column-search fields (pending @docglow/shared-types v0.2.0)
+export type { SearchEntry } from "@docglow/shared-types";
+declare module "@docglow/shared-types" {
+  interface SearchEntry {
+    readonly column_name?: string;
+    readonly model_name?: string;
+  }
+}

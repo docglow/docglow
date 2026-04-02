@@ -146,3 +146,20 @@ body {
 :root.dark .react-flow__minimap-mask {
   fill-opacity: 0.6 !important;
 }
+
+/* Disable React Flow's internal hover/focus tracking on edges to prevent
+   massive DOM mutations (edge SVG re-renders) when mousing over nodes. */
+.react-flow__edge {
+  pointer-events: none !important;
+}
+.react-flow__edge .react-flow__edge-interaction {
+  pointer-events: none !important;
+}
+
+/* Disable the grab cursor on nodes — cursor changes trigger browser repaints */
+.react-flow__node.draggable {
+  cursor: default !important;
+}
+.react-flow__node.draggable:active {
+  cursor: grabbing !important;
+}
