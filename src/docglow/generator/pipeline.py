@@ -8,6 +8,8 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
+from rich.console import Console
+
 from docglow import __version__
 from docglow.artifacts.loader import LoadedArtifacts
 from docglow.generator.layers import LineageLayerConfig
@@ -206,6 +208,46 @@ def stage_compute_health(ctx: PipelineContext) -> None:
     ctx.health = health_to_dict(report)
 
 
+def stage_warn_column_lineage(ctx: PipelineContext) -> None:
+    """Print a time-estimate warning for large projects before column lineage runs.
+
+    Warns when model count >= 75 and the user hasn't already scoped analysis
+    via --column-lineage-select.  The warning is informational only — execution
+    continues automatically so CI pipelines are not blocked.
+    """
+    if not ctx.column_lineage_enabled:
+        return
+    if ctx.column_lineage_select:
+        return  # user already scoped the analysis
+
+    model_threshold = 75
+    seconds_per_column = 2  # worst-case estimate
+
+    model_count = len(ctx.models)
+    if model_count < model_threshold:
+        return
+
+    total_columns = sum(len(model_data.get("columns", [])) for model_data in ctx.models.values())
+    estimated_seconds = total_columns * seconds_per_column
+    minutes, secs = divmod(estimated_seconds, 60)
+
+    if minutes > 0:
+        time_str = f"~{minutes}m {secs}s"
+    else:
+        time_str = f"~{secs}s"
+
+    console = Console(stderr=True)
+    console.print(
+        f"\n[bold yellow]Warning:[/bold yellow] Column lineage analysis for "
+        f"[bold]{model_count}[/bold] models ({total_columns} columns) may take "
+        f"[bold]{time_str}[/bold] (worst case).\n"
+        f"  Suggestions:\n"
+        f"    • Use [bold]--column-lineage-select <model>[/bold] to analyze a subset\n"
+        f"    • Use [bold]--skip-column-lineage[/bold] to skip entirely\n"
+        f"  Proceeding automatically (Ctrl+C to cancel)...\n",
+    )
+
+
 def stage_build_column_lineage(ctx: PipelineContext) -> None:
     """Build column-level lineage (optional, requires sqlglot)."""
     if not ctx.column_lineage_enabled:
@@ -308,6 +350,11 @@ def default_stages(ctx: PipelineContext) -> list[PipelineStage]:
         PipelineStage("build_lineage", stage_build_lineage),
         PipelineStage("build_search_index", stage_build_search_index),
         PipelineStage("compute_health", stage_compute_health),
+        PipelineStage(
+            "warn_column_lineage",
+            stage_warn_column_lineage,
+            enabled=ctx.column_lineage_enabled,
+        ),
         PipelineStage(
             "build_column_lineage",
             stage_build_column_lineage,

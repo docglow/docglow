@@ -31,9 +31,10 @@ import click
 @click.option("--title", type=str, default=None, help="Custom site title")
 @click.option("--theme", type=click.Choice(["light", "dark", "auto"]), default="auto")
 @click.option(
-    "--column-lineage/--no-column-lineage",
+    "--skip-column-lineage",
+    is_flag=True,
     default=False,
-    help="Enable column-level lineage analysis (requires sqlglot)",
+    help="Skip column-level lineage analysis (enabled by default)",
 )
 @click.option(
     "--column-lineage-select",
@@ -58,7 +59,8 @@ import click
     "--slim",
     is_flag=True,
     default=False,
-    help="Omit raw and compiled SQL from output to reduce file size",
+    help="Omit raw and compiled SQL from output to reduce file size "
+    "(does not affect computation time)",
 )
 @click.option("--verbose", is_flag=True)
 @click.option(
@@ -83,7 +85,7 @@ def generate(
     ai_key: str | None,
     title: str | None,
     theme: str,
-    column_lineage: bool,
+    skip_column_lineage: bool,
     column_lineage_select: str | None,
     column_lineage_depth: int | None,
     include_packages: bool,
@@ -113,7 +115,12 @@ def generate(
     if not slim and config.slim:
         slim = True
 
-    # --column-lineage-select implies --column-lineage
+    # Resolve column lineage: on by default, off via --skip-column-lineage or config
+    column_lineage = not skip_column_lineage
+    if column_lineage and not config.column_lineage:
+        column_lineage = False
+
+    # --column-lineage-select overrides skip (user explicitly scoped it)
     if column_lineage_select:
         column_lineage = True
 
