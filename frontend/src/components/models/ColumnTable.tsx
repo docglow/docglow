@@ -1,13 +1,16 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { DocglowColumn, ColumnProfile, TopValue, HistogramBin, ColumnLineageDependency, ColumnDownstreamDependency } from '../../types'
+import type { DocglowColumn, ColumnProfile, TopValue, HistogramBin, ColumnLineageDependency, ColumnDownstreamDependency, ColumnLineageData } from '../../types'
 import { TestBadge } from '../tests/TestBadge'
 import { formatNumber, formatPercent } from '../../utils/formatting'
+import { ColumnTraceDrawer } from './ColumnTraceDrawer'
 
 interface ColumnTableProps {
   columns: DocglowColumn[]
   columnLineage?: Record<string, ColumnLineageDependency[]>
   columnDownstream?: Record<string, ColumnDownstreamDependency[]>
+  modelId?: string
+  columnLineageData?: ColumnLineageData
 }
 
 const TRANSFORMATION_STYLES: Record<string, { label: string; color: string; bg: string }> = {
@@ -368,8 +371,10 @@ const MAX_NAME_CH = 30
 const MIN_NAME_CH = 12
 const CH_PX = 7.2 // approximate px per monospace character at text-xs
 
-export function ColumnTable({ columns, columnLineage, columnDownstream }: ColumnTableProps) {
+export function ColumnTable({ columns, columnLineage, columnDownstream, modelId, columnLineageData }: ColumnTableProps) {
   const [expandedCol, setExpandedCol] = useState<string | null>(null)
+  const [traceColumn, setTraceColumn] = useState<string | null>(null)
+  const canTrace = modelId != null && columnLineageData != null
   const hasAnyProfile = columns.some(c => c.profile != null)
   const hasAnyLineage = (columnLineage != null && Object.keys(columnLineage).length > 0)
     || (columnDownstream != null && Object.keys(columnDownstream).length > 0)
@@ -507,8 +512,27 @@ export function ColumnTable({ columns, columnLineage, columnDownstream }: Column
 
                     {/* Unified lineage cell */}
                     {hasAnyLineage && (
-                      <div className="px-4 py-1.5 shrink-0" style={{ width: 320 }}>
-                        <LineageCell upstream={upDeps} downstream={downDeps} />
+                      <div className="px-4 py-1.5 shrink-0 flex items-center gap-1.5" style={{ width: 320 }}>
+                        <div className="flex-1 min-w-0">
+                          <LineageCell upstream={upDeps} downstream={downDeps} />
+                        </div>
+                        {canTrace && (upDeps || downDeps) && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setTraceColumn(col.name)
+                            }}
+                            className="shrink-0 p-1 rounded hover:bg-[var(--bg-surface)] cursor-pointer
+                                       transition-colors text-[var(--text-muted)] hover:text-[var(--text)]
+                                       opacity-0 group-hover:opacity-100"
+                            title="View full column trace"
+                          >
+                            <svg width={14} height={14} viewBox="0 0 24 24" fill="none"
+                                 stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M7 17L17 7M7 7h10v10" />
+                            </svg>
+                          </button>
+                        )}
                       </div>
                     )}
 
@@ -557,6 +581,14 @@ export function ColumnTable({ columns, columnLineage, columnDownstream }: Column
           })}
         </tbody>
       </table>
+      {traceColumn && canTrace && (
+        <ColumnTraceDrawer
+          modelId={modelId}
+          columnName={traceColumn}
+          columnLineageData={columnLineageData}
+          onClose={() => setTraceColumn(null)}
+        />
+      )}
     </div>
   )
 }
