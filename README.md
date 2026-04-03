@@ -38,7 +38,7 @@ Switching from `dbt docs serve`? See the [migration guide](docs/migrating-from-d
 
 ![Lineage explorer with layer bands](https://raw.githubusercontent.com/docglow/docglow/main/.github/assets/lineage-view.png)
 
-**Column-level lineage** — expand nodes to trace individual columns across models with transformation labels (direct, derived, aggregated)
+**Column-level lineage** — expand nodes to trace individual columns across models with transformation labels (direct, derived, aggregated) ([guide](docs/column-lineage.md))
 
 ![Column-level lineage tracing](https://raw.githubusercontent.com/docglow/docglow/main/.github/assets/column-lineage-view.png)
 
