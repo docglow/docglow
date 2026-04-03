@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://docglow.github.io/docglow/"><strong>Live Demo</strong></a> · <a href="https://docglow.com">Website</a> · <a href="https://pypi.org/project/docglow/">PyPI</a> · <a href="CHANGELOG.md">Changelog</a>
+  <a href="https://docs.docglow.com"><strong>Docs</strong></a> · <a href="https://docglow.com">Website</a> · <a href="https://pypi.org/project/docglow/">PyPI</a> · <a href="CHANGELOG.md">Changelog</a>
 </p>
 
 <p align="center">

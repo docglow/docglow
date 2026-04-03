@@ -1,5 +1,5 @@
 site_name: Docglow
-site_url: https://docs.docglow.com
+site_url: https://docs.docglow.com/
 site_description: Modern documentation site generator for dbt Core projects
 repo_url: https://github.com/docglow/docglow
 repo_name: docglow/docglow
