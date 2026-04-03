@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import os
 import time
 from dataclasses import dataclass, field
 from typing import Any
@@ -371,11 +370,12 @@ def default_stages(ctx: PipelineContext) -> list[PipelineStage]:
 
 
 def context_to_dict(ctx: PipelineContext) -> dict[str, Any]:
-    """Convert pipeline context to the final JSON-serializable dict."""
-    resolved_ai_key: str | None = None
-    if ctx.ai_enabled:
-        resolved_ai_key = ctx.ai_key or os.environ.get("ANTHROPIC_API_KEY")
+    """Convert pipeline context to the final JSON-serializable dict.
 
+    Note: The API key is never included in the output. Users enter their
+    key in the chat panel UI, which stores it in localStorage. This
+    prevents accidental key exposure in deployed static sites.
+    """
     return {
         "metadata": ctx.metadata,
         "models": ctx.models,
@@ -388,6 +388,6 @@ def context_to_dict(ctx: PipelineContext) -> dict[str, Any]:
         "health": ctx.health,
         "search_index": ctx.search_index,
         "ai_context": ctx.ai_context,
-        "ai_key": resolved_ai_key,
+        "ai_key": None,
         "column_lineage": ctx.column_lineage,
     }
