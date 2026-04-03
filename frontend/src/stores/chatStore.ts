@@ -37,18 +37,6 @@ function getStoredKey(): string {
   }
 }
 
-function getEmbeddedKey(): string {
-  try {
-    const docglowData = (window as unknown as Record<string, unknown>).__DOCGLOW_DATA__ as Record<string, unknown> | undefined
-    if (docglowData?.ai_key && typeof docglowData.ai_key === 'string') {
-      return docglowData.ai_key
-    }
-  } catch {
-    // ignore
-  }
-  return ''
-}
-
 function storeKey(key: string) {
   try {
     if (key) {
@@ -103,7 +91,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   messages: [],
   streaming: false,
   streamContent: '',
-  apiKey: getStoredKey() || getEmbeddedKey(),
+  apiKey: getStoredKey(),
   requestCount: 0,
   maxRequests: MAX_REQUESTS,
   error: null,

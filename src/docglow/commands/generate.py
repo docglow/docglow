@@ -142,15 +142,13 @@ def generate(
             )
             raise SystemExit(1)
 
-    # Security warning for AI mode
+    # AI mode info
     if ai:
         console.print(
-            "\n[bold yellow]Warning:[/bold yellow] AI mode embeds your API key "
-            "in the generated site.\n"
-            "  This is safe for local use but do [bold]NOT[/bold] deploy this "
-            "site publicly.\n"
-            "  Use [bold]docglow publish[/bold] for hosted AI features with "
-            "secure key management.\n",
+            "\n[bold blue]Info:[/bold blue] AI chat enabled. Your API key is "
+            "[bold]not[/bold] embedded in the site.\n"
+            "  Enter your Anthropic API key in the chat panel (it's stored "
+            "in your browser's localStorage).\n",
         )
 
     # Parse profiling connection params
@@ -170,7 +168,6 @@ def generate(
             profiling_sample_size=profile_sample_size,
             profiling_cache=not profile_no_cache,
             ai_enabled=ai,
-            ai_key=ai_key,
             title=title,
             select=select,
             exclude=exclude,
