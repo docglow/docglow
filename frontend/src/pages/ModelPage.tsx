@@ -270,6 +270,8 @@ export function ModelPage() {
           columns={model.columns}
           columnLineage={getColumnLineage(decodedId)}
           columnDownstream={data?.column_lineage ? buildDownstreamMap(decodedId, data.column_lineage) : undefined}
+          modelId={decodedId}
+          columnLineageData={data?.column_lineage}
         />
       )}
 
