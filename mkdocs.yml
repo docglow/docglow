@@ -1,0 +1,80 @@
+site_name: Docglow
+site_url: https://docs.docglow.com
+site_description: Modern documentation site generator for dbt Core projects
+repo_url: https://github.com/docglow/docglow
+repo_name: docglow/docglow
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+  icon:
+    repo: fontawesome/brands/github
+  logo: assets/docglow-logo.png
+  favicon: assets/docglow-logo.png
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - toc:
+      permalink: true
+  - attr_list
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/docglow/docglow
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/docglow/
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Quick Start: getting-started/quickstart.md
+    - Migrating from dbt docs: migrating-from-dbt-docs.md
+  - Features:
+    - Column-Level Lineage: column-lineage.md
+    - Health Scoring: health-scoring.md
+    - AI Chat (BYOK): ai-chat.md
+    - MCP Server: mcp-server.md
+  - Guides:
+    - CI/CD Deployment: ci-cd-guide.md
+    - Configuration: configuration.md
+  - Reference:
+    - CLI Commands: reference/cli.md
+    - Compatibility: compatibility.md

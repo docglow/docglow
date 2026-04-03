@@ -22,6 +22,7 @@ Thumbs.db
 
 # Project
 dev/
+site/
 .docglow-column-lineage-cache.json
 .docglow-column-lineage-failures.log
 target/
