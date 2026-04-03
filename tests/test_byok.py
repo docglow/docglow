@@ -1,8 +1,6 @@
-"""Tests for BYOK (Bring Your Own Key) via env var and CLI flag."""
+"""Tests for BYOK (Bring Your Own Key) — key is never embedded in output."""
 
-import os
 from pathlib import Path
-from unittest.mock import patch
 
 from docglow.artifacts.loader import load_artifacts
 from docglow.generator.data import build_docglow_data
@@ -22,32 +20,25 @@ def _load_fixtures(tmp_path: Path) -> dict:
 
 
 class TestByok:
-    def test_ai_key_none_when_ai_disabled(self, tmp_path):
+    def test_ai_key_always_none_when_ai_disabled(self, tmp_path):
         artifacts = _load_fixtures(tmp_path)
         data = build_docglow_data(artifacts, ai_enabled=False)
         assert data["ai_key"] is None
 
-    def test_ai_key_from_explicit_param(self, tmp_path):
+    def test_ai_key_never_embedded_when_ai_enabled(self, tmp_path):
+        """Even with AI enabled, the key must never appear in the output."""
         artifacts = _load_fixtures(tmp_path)
-        data = build_docglow_data(artifacts, ai_enabled=True, ai_key="sk-test-123")
-        assert data["ai_key"] == "sk-test-123"
-
-    def test_ai_key_from_env_var(self, tmp_path):
-        artifacts = _load_fixtures(tmp_path)
-        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "sk-env-456"}):
-            data = build_docglow_data(artifacts, ai_enabled=True)
-        assert data["ai_key"] == "sk-env-456"
-
-    def test_explicit_key_takes_precedence(self, tmp_path):
-        artifacts = _load_fixtures(tmp_path)
-        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "sk-env-456"}):
-            data = build_docglow_data(artifacts, ai_enabled=True, ai_key="sk-explicit-789")
-        assert data["ai_key"] == "sk-explicit-789"
-
-    def test_ai_key_none_when_no_key_available(self, tmp_path):
-        artifacts = _load_fixtures(tmp_path)
-        with patch.dict(os.environ, {}, clear=True):
-            # Remove ANTHROPIC_API_KEY if set
-            os.environ.pop("ANTHROPIC_API_KEY", None)
-            data = build_docglow_data(artifacts, ai_enabled=True)
+        data = build_docglow_data(artifacts, ai_enabled=True)
         assert data["ai_key"] is None
+
+    def test_ai_context_present_when_ai_enabled(self, tmp_path):
+        """AI context (project metadata for chat) should be present."""
+        artifacts = _load_fixtures(tmp_path)
+        data = build_docglow_data(artifacts, ai_enabled=True)
+        assert data["ai_context"] is not None
+        assert "project_name" in data["ai_context"]
+
+    def test_ai_context_absent_when_ai_disabled(self, tmp_path):
+        artifacts = _load_fixtures(tmp_path)
+        data = build_docglow_data(artifacts, ai_enabled=False)
+        assert data["ai_context"] is None
