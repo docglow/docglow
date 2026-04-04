@@ -4,13 +4,9 @@ Docglow can trace column-level dependencies across your dbt project by parsing c
 
 ## Setup
 
-Install the column-lineage extra:
+Column-level lineage is **included out of the box** — no extra install needed. It runs automatically when you generate a site.
 
-```bash
-pip install "docglow[column-lineage]"
-```
-
-Column lineage is **enabled by default** when sqlglot is installed. To disable it:
+To disable it:
 
 ```bash
 docglow generate --skip-column-lineage
