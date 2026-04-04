@@ -30,10 +30,9 @@ This guide walks you through replacing `dbt docs serve` with Docglow. The switch
 pip install docglow
 ```
 
-Or with optional extras:
+Column-level lineage is included out of the box. For column profiling, install the extra:
 
 ```bash
-pip install "docglow[column-lineage]"   # column-level lineage via sqlglot
 pip install "docglow[profiling]"        # column profiling via DuckDB
 ```
 
@@ -50,7 +49,7 @@ The `--project-dir` flag should point to your dbt project root (the directory co
 
 ### 3. Column-level lineage (enabled by default)
 
-Column-level lineage runs automatically when the `sqlglot` extra is installed. It parses compiled SQL to trace column dependencies across models. Results are cached in `.docglow-column-lineage-cache.json` for fast incremental rebuilds.
+Column-level lineage runs automatically. It parses compiled SQL via sqlglot to trace column dependencies across models. Results are cached in `.docglow-column-lineage-cache.json` for fast incremental rebuilds.
 
 To skip column lineage analysis (e.g. for faster iteration), use:
 
