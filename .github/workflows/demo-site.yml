@@ -28,7 +28,7 @@ jobs:
         run: pip install .
 
       - name: Generate demo site
-        run: docglow generate --project-dir examples/jaffle-shop --output-dir demo-output --static --column-lineage
+        run: docglow generate --project-dir examples/jaffle-shop --output-dir demo-output --static
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
