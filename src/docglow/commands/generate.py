@@ -131,17 +131,6 @@ def generate(
         )
         raise SystemExit(1)
 
-    # Validate column-lineage dependency
-    if column_lineage:
-        try:
-            import sqlglot  # noqa: F401
-        except ImportError:
-            console.print(
-                "[bold red]Error:[/bold red] Column lineage requires sqlglot. "
-                "Install with: [bold]pip install docglow\\[column-lineage][/bold]"
-            )
-            raise SystemExit(1)
-
     # AI mode info
     if ai:
         console.print(
