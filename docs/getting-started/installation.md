@@ -8,22 +8,27 @@ pip install docglow
 
 This installs the core package with all you need to generate and serve documentation sites.
 
+## What's Included
+
+The base install includes everything you need:
+
+- Documentation site generation
+- Interactive lineage explorer
+- **Column-level lineage** (via sqlglot)
+- Health scoring
+- Full-text search
+- AI chat panel (BYOK)
+
 ## Optional Extras
 
-Docglow has optional dependencies for advanced features:
+Some features require additional dependencies:
 
 ```bash
-# Column-level lineage (parses SQL with sqlglot)
-pip install "docglow[column-lineage]"
-
 # Column profiling (connects to your database)
 pip install "docglow[profiling]"
 
 # Cloud publishing (push docs to Docglow Cloud)
 pip install "docglow[cloud]"
-
-# Everything
-pip install "docglow[column-lineage,profiling,cloud]"
 ```
 
 ## Requirements
