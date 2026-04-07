@@ -1,0 +1,38 @@
+name: Deploy Demo Site
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'examples/jaffle-shop/**'
+      - 'src/docglow/**'
+      - 'frontend/**'
+      - '.github/workflows/demo-site.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install docglow
+        run: pip install .
+
+      - name: Generate demo site
+        run: docglow generate --project-dir examples/jaffle-shop --output-dir demo-output --static
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy demo-output --project-name=docglow-demo --commit-dirty=true
