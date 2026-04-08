@@ -523,8 +523,7 @@ export function ColumnTable({ columns, columnLineage, columnDownstream, modelId,
                               setTraceColumn(col.name)
                             }}
                             className="shrink-0 p-1 rounded hover:bg-[var(--bg-surface)] cursor-pointer
-                                       transition-colors text-[var(--text-muted)] hover:text-[var(--text)]
-                                       opacity-0 group-hover:opacity-100"
+                                       transition-colors text-[var(--text-muted)] hover:text-[var(--text)]"
                             title="View full column trace"
                           >
                             <svg width={14} height={14} viewBox="0 0 24 24" fill="none"
