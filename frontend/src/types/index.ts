@@ -8,10 +8,7 @@
 export type {
   // Artifacts
   ArtifactVersions,
-  ColumnDownstreamDependency,
-  ColumnEdge,
   ColumnLineageData,
-  ColumnLineageDependency,
 
   // Models
   CatalogStats,
@@ -68,6 +65,29 @@ export type {
 } from "@docglow/shared-types";
 
 export { gradeFromScore, HEALTH_GRADE_THRESHOLDS, PLAN_LIMITS } from "@docglow/shared-types";
+
+// Types extended with new transformation types (pending @docglow/shared-types v0.2.0)
+export type TransformationType = 'direct' | 'derived' | 'aggregated' | 'passthrough' | 'rename' | 'unknown';
+
+export interface ColumnLineageDependency {
+  readonly source_model: string;
+  readonly source_column: string;
+  readonly transformation: TransformationType;
+}
+
+export interface ColumnDownstreamDependency {
+  readonly target_model: string;
+  readonly target_column: string;
+  readonly transformation: TransformationType;
+}
+
+export interface ColumnEdge {
+  readonly sourceModel: string;
+  readonly sourceColumn: string;
+  readonly targetModel: string;
+  readonly targetColumn: string;
+  readonly transformation: TransformationType;
+}
 
 // SearchEntry extended with column-search fields (pending @docglow/shared-types v0.2.0)
 export type { SearchEntry } from "@docglow/shared-types";
