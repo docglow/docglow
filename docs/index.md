@@ -2,7 +2,7 @@
 
 **Next-generation documentation site generator for dbt Core projects.**
 
-[Live Demo](https://docglow.github.io/docglow/){ .md-button .md-button--primary }
+[Live Demo](https://demo.docglow.com){ .md-button .md-button--primary }
 [GitHub](https://github.com/docglow/docglow){ .md-button }
 [PyPI](https://pypi.org/project/docglow/){ .md-button }
 
