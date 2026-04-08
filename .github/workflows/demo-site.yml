@@ -19,6 +19,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm ci && npm run build
+
+      - name: Copy frontend assets to static
+        run: |
+          rm -rf src/docglow/static/assets/*
+          cp frontend/dist/assets/* src/docglow/static/assets/
+          cp frontend/dist/index.html src/docglow/static/
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
