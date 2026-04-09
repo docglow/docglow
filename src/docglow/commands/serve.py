@@ -12,6 +12,7 @@ import click
 @click.option("--dir", "serve_dir", type=click.Path(path_type=Path), default=None)
 @click.option("--watch", is_flag=True, help="Watch for artifact changes and auto-rebuild")
 @click.option("--project-dir", type=click.Path(exists=True, path_type=Path), default=".")
+@click.option("--verbose", is_flag=True, help="Enable debug logging")
 def serve(
     port: int,
     host: str,
@@ -19,10 +20,13 @@ def serve(
     serve_dir: Path | None,
     watch: bool,
     project_dir: Path,
+    verbose: bool,
 ) -> None:
     """Serve the documentation site locally."""
-    from docglow.cli import console
+    from docglow.cli import _setup_logging, console
     from docglow.server.dev import start_server
+
+    _setup_logging(verbose)
 
     resolved_dir = serve_dir or Path("target/docglow")
     if not resolved_dir.exists():
@@ -31,6 +35,12 @@ def serve(
             "Run [bold]docglow generate[/bold] first."
         )
         raise SystemExit(1)
+
+    # Show file count for feedback
+    file_count = len(list(resolved_dir.iterdir()))
+    console.print(f"\n[bold]docglow[/bold] Serving {file_count} files from {resolved_dir}")
+    console.print(f"  Local: [bold cyan]http://{host}:{port}[/bold cyan]")
+    console.print("  Press [bold]Ctrl+C[/bold] to stop\n")
 
     if watch:
         from docglow.server.watcher import start_watcher
