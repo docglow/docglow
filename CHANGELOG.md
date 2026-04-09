@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-04-09
+
+### Added
+- **Per-model progress output** for column lineage analysis — shows `analyzing model_name (X/N)` so large projects no longer appear to hang
+- **`--verbose` flag on `docglow serve`** for debug logging
+- **Column lineage trace drawer** — click the trace button on any column to see a visual DAG of its upstream/downstream dependencies
+- **Column lineage is now on by default** — sqlglot moved to core dependency, no extra install needed
+- **MkDocs documentation site** at [docs.docglow.com](https://docs.docglow.com) with guides for column lineage, health scoring, AI chat, MCP server, CI/CD, and CLI reference
+- **SECURITY.md** documenting the API key advisory for versions 0.1.0–0.4.1
+
+### Fixed
+- **`docglow serve` now prints output immediately** — was silently using `logger.info()` without configured logging, causing the command to appear hung (#59)
+- **`webbrowser.open()` no longer hangs on WSL/headless** — wrapped in try/except
+- **Lineage hover flicker eliminated** — removed hover highlighting that caused 14,000+ DOM mutations per interaction on large graphs (DOC-85)
+- **API key never embedded in generated sites** — key is now entered in the chat panel UI and stored in sessionStorage (not localStorage)
+- **Column trace button always visible** — no longer hidden behind hover-only opacity
+- **SQL injection risk in profiler** — identifier quoting now escapes embedded quotes and rejects null bytes (DOC-132)
+
+### Improved
+- **AI chat hardened** — DOMPurify sanitization on markdown content, data disclosure notice about metadata sent to Anthropic
+- **Security meta tags** injected in all generated HTML (X-Content-Type-Options, Referrer-Policy)
+- **Config file permissions** — `~/.docglow/config.json` now created with 0600 permissions on Unix
+- **Regex validation** in docglow.yml — invalid naming_rules patterns produce warnings instead of crashes
+- **`uv.lock` committed** for reproducible builds
+- Updated bundled frontend assets
+
 ## [0.5.1] - 2026-03-31
 
 ### Fixed
@@ -159,7 +185,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Suppressed hover highlights during node drag to prevent flicker
 - Shared SVG markers to reduce DOM overhead
 
-[Unreleased]: https://github.com/docglow/docglow/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/docglow/docglow/compare/v0.5.2...HEAD
+[0.5.2]: https://github.com/docglow/docglow/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/docglow/docglow/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/docglow/docglow/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/docglow/docglow/compare/v0.4.0...v0.4.1
