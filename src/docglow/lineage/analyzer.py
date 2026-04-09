@@ -91,6 +91,11 @@ def analyze_column_lineage(
             len(all_models),
         )
 
+    # Count models to analyze for progress reporting
+    models_to_analyze = subset if subset is not None else set(all_models.keys())
+    analyzable_count = len(models_to_analyze & set(all_models.keys()))
+    analyzed_count = 0
+
     for uid, data in all_models.items():
         # Subset filtering: skip models outside the subset but include cached results
         if subset is not None and uid not in subset:
@@ -110,6 +115,7 @@ def analyze_column_lineage(
                 sql = raw
 
         if not sql or not sql.strip():
+            analyzed_count += 1
             continue
 
         total_models += 1
@@ -122,7 +128,17 @@ def analyze_column_lineage(
             if cached_lineage:
                 column_lineage[uid] = cached_lineage
             cache_hits += 1
+            analyzed_count += 1
             continue
+
+        analyzed_count += 1
+        model_name = data.get("name", uid.split(".")[-1])
+        logger.info(
+            "Column lineage: analyzing %s (%d/%d)",
+            model_name,
+            analyzed_count,
+            analyzable_count,
+        )
 
         known_columns = [col["name"] for col in data.get("columns", []) if col.get("name")]
 
@@ -134,7 +150,7 @@ def analyze_column_lineage(
                 known_columns=known_columns or None,
             )
         except Exception as e:  # noqa: BLE001
-            logger.debug("Failed to parse column lineage for %s", uid)
+            logger.debug("Failed to parse column lineage for %s: %s", uid, e)
             parse_failures += 1
             failure_details.append(
                 {

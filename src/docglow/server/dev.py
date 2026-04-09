@@ -30,11 +30,14 @@ def start_server(
     server = HTTPServer((host, port), handler)
 
     url = f"http://{host}:{port}"
-    logger.info("Serving docglow at %s", url)
-    logger.info("Press Ctrl+C to stop")
+    logger.debug("Server bound to %s:%d, serving from %s", host, port, directory)
 
     if open_browser:
-        webbrowser.open(url)
+        try:
+            webbrowser.open(url)
+            logger.debug("Browser opened at %s", url)
+        except Exception:
+            logger.debug("Could not open browser automatically")
 
     try:
         server.serve_forever()
