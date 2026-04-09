@@ -7,9 +7,6 @@ build/
 *.egg
 .venv/
 
-# UV
-uv.lock
-
 # IDE
 .vscode/
 .idea/
@@ -46,3 +43,4 @@ frontend/test-results/
 # Private config (contains internal IDs)
 .claude/commands/linear.md
 agent-orchestrator.yaml
+test-results/

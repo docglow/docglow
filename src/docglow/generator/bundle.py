@@ -94,12 +94,16 @@ def _bundle_static(
     data_json = json.dumps(docglow_data, separators=(",", ":"))
     data_script = f"<script>window.__DOCGLOW_DATA__={data_json};</script>"
 
-    # Inject data script BEFORE the first <script> tag so the app JS can read it
+    # Inject security meta tags and data script BEFORE the first <script> tag
+    security_meta = (
+        '<meta http-equiv="X-Content-Type-Options" content="nosniff">\n'
+        '<meta name="referrer" content="strict-origin-when-cross-origin">\n'
+    )
     script_pos = html.find("<script")
     if script_pos != -1:
-        html = html[:script_pos] + data_script + "\n" + html[script_pos:]
+        html = html[:script_pos] + security_meta + data_script + "\n" + html[script_pos:]
     else:
-        html = html.replace("</head>", f"{data_script}\n</head>")
+        html = html.replace("</head>", f"{security_meta}{data_script}\n</head>")
 
     # Inline CSS and JS assets
     html = _inline_assets(html, frontend_dist)
@@ -114,6 +118,19 @@ def _bundle_static(
     logger.info("Static site written to %s (%d bytes)", output_path, len(html))
 
 
+def _inject_security_meta(html: str) -> str:
+    """Inject security meta tags into an HTML document."""
+    security_meta = (
+        '<meta http-equiv="X-Content-Type-Options" content="nosniff">\n'
+        '<meta name="referrer" content="strict-origin-when-cross-origin">\n'
+    )
+    # Insert before the first <script> tag, or before </head>
+    script_pos = html.find("<script")
+    if script_pos != -1:
+        return html[:script_pos] + security_meta + html[script_pos:]
+    return html.replace("</head>", f"{security_meta}</head>")
+
+
 def _copy_frontend_assets(frontend_dist: Path, output_dir: Path) -> None:
     """Copy frontend build assets to the output directory."""
     import shutil
@@ -125,7 +142,13 @@ def _copy_frontend_assets(frontend_dist: Path, output_dir: Path) -> None:
                 shutil.rmtree(dest)
             shutil.copytree(item, dest)
         else:
-            shutil.copy2(item, dest)
+            if item.name == "index.html":
+                # Inject security meta tags into the copied index.html
+                html = item.read_text(encoding="utf-8")
+                html = _inject_security_meta(html)
+                dest.write_text(html, encoding="utf-8")
+            else:
+                shutil.copy2(item, dest)
 
 
 def _inline_assets(html: str, frontend_dist: Path) -> str:

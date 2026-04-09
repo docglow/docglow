@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -73,7 +74,11 @@ def save_cloud_config(
         existing["api_base_url"] = api_base_url
 
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    if sys.platform != "win32":
+        CONFIG_DIR.chmod(0o700)
     CONFIG_FILE.write_text(json.dumps(existing, indent=2), encoding="utf-8")
+    if sys.platform != "win32":
+        CONFIG_FILE.chmod(0o600)
     logger.info("Cloud config saved to %s", CONFIG_FILE)
 
 

@@ -104,13 +104,19 @@ def build_column_specs(columns: list[dict[str, Any]]) -> list[ColumnSpec]:
 
 
 def _quote(name: str, adapter: str) -> str:
-    """Quote a column name for the given adapter."""
-    if adapter == "snowflake":
-        return f'"{name}"'
+    """Quote a column name for the given adapter.
+
+    Validates the identifier and escapes embedded quotes to prevent SQL injection.
+    """
+    if "\x00" in name:
+        raise ValueError(f"Invalid identifier: contains null byte: {name!r}")
+
     if adapter == "bigquery":
-        return f"`{name}`"
-    # postgres, duckdb
-    return f'"{name}"'
+        escaped = name.replace("`", "``")
+        return f"`{escaped}`"
+    # postgres, duckdb, snowflake — use double-quoted identifiers
+    escaped = name.replace('"', '""')
+    return f'"{escaped}"'
 
 
 def build_stats_query(

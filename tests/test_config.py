@@ -3,6 +3,7 @@
 from docglow.config import (
     DocglowConfig,
     HealthWeights,
+    NamingRules,
     _build_config_from_dict,
     load_config,
 )
@@ -144,3 +145,21 @@ class TestBuildConfigFromDict:
         assert config.profiling.enabled is True
         assert config.profiling.sample_size == 1000
         assert config.ai.enabled is True
+
+    def test_invalid_regex_in_naming_rules_falls_back_to_default(self):
+        """Invalid regex patterns should log a warning and use the default."""
+        config = _build_config_from_dict(
+            {
+                "health": {
+                    "naming_rules": {
+                        "staging": "[invalid(",  # bad regex
+                        "intermediate": "^int_",  # valid
+                    },
+                },
+            }
+        )
+        defaults = NamingRules()
+        # Invalid regex falls back to default
+        assert config.health.naming_rules.staging == defaults.staging
+        # Valid regex is kept
+        assert config.health.naming_rules.intermediate == "^int_"

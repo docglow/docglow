@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import DOMPurify from 'dompurify'
 import { useChatStore } from '../../stores/chatStore'
 import { useProjectStore } from '../../stores/projectStore'
 import type { ChatMessage } from '../../stores/chatStore'
@@ -15,13 +16,18 @@ const STARTER_QUESTIONS = [
 
 function MarkdownContent({ content }: { content: string }) {
   // Simple markdown: bold, code, backticks, newlines
-  const html = content
+  const rawHtml = content
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/`([^`]+)`/g, '<code class="px-1 py-0.5 rounded bg-[var(--bg-surface)] text-xs font-mono">$1</code>')
     .replace(/\n/g, '<br/>')
+
+  const html = DOMPurify.sanitize(rawHtml, {
+    ALLOWED_TAGS: ['strong', 'code', 'br'],
+    ALLOWED_ATTR: ['class'],
+  })
 
   return <div className="text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: html }} />
 }
@@ -78,7 +84,11 @@ function ApiKeySetup() {
         <h3 className="font-semibold mb-2">AI Chat Setup</h3>
         <p className="text-sm text-[var(--text-muted)] mb-4">
           Enter your Anthropic API key to enable AI-powered chat.
-          Your key is stored locally in your browser only.
+          Your key is stored in session storage and cleared when the tab closes.
+        </p>
+        <p className="text-xs text-[var(--text-muted)] mb-4">
+          Note: When using AI chat, your project metadata (model names, descriptions,
+          columns, lineage, health scores) is sent to Anthropic's API.
         </p>
         <input
           type="password"

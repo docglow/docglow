@@ -26,12 +26,13 @@ interface ChatState {
   sendMessage: (content: string, aiContext: AiContext) => Promise<void>
 }
 
+// Key stored in sessionStorage (cleared when tab closes) to limit exposure
 const STORAGE_KEY = 'dg-ai-key'
 const MAX_REQUESTS = 20
 
 function getStoredKey(): string {
   try {
-    return localStorage.getItem(STORAGE_KEY) ?? ''
+    return sessionStorage.getItem(STORAGE_KEY) ?? ''
   } catch {
     return ''
   }
@@ -40,12 +41,12 @@ function getStoredKey(): string {
 function storeKey(key: string) {
   try {
     if (key) {
-      localStorage.setItem(STORAGE_KEY, key)
+      sessionStorage.setItem(STORAGE_KEY, key)
     } else {
-      localStorage.removeItem(STORAGE_KEY)
+      sessionStorage.removeItem(STORAGE_KEY)
     }
   } catch {
-    // localStorage unavailable
+    // sessionStorage unavailable
   }
 }
 

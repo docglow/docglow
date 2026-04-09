@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -111,6 +112,28 @@ def _parse_config_file(path: Path) -> DocglowConfig:
     return _build_config_from_dict(raw)
 
 
+def _build_naming_rules(raw: dict[str, str]) -> NamingRules:
+    """Build NamingRules, validating each regex and falling back to defaults."""
+    defaults = NamingRules()
+    validated: dict[str, str] = {}
+    for k, v in raw.items():
+        if k not in NamingRules.__dataclass_fields__:
+            continue
+        try:
+            re.compile(v)
+            validated[k] = v
+        except re.error:
+            default_val = getattr(defaults, k)
+            logger.warning(
+                "Invalid regex %r for naming_rules.%s — falling back to default %r",
+                v,
+                k,
+                default_val,
+            )
+            validated[k] = default_val
+    return NamingRules(**validated)
+
+
 def _build_config_from_dict(raw: dict[str, Any]) -> DocglowConfig:
     """Build a DocglowConfig from a parsed YAML dict."""
     health_raw = raw.get("health", {})
@@ -131,13 +154,7 @@ def _build_config_from_dict(raw: dict[str, Any]) -> DocglowConfig:
     )
 
     naming_rules = (
-        NamingRules(
-            **{
-                k: v
-                for k, v in health_raw.get("naming_rules", {}).items()
-                if k in NamingRules.__dataclass_fields__
-            }
-        )
+        _build_naming_rules(health_raw.get("naming_rules", {}))
         if health_raw.get("naming_rules")
         else NamingRules()
     )
