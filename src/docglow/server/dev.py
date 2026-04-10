@@ -4,11 +4,26 @@ from __future__ import annotations
 
 import functools
 import logging
+import sys
 import webbrowser
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
+
+
+class _DocglowHandler(SimpleHTTPRequestHandler):
+    """Custom handler with request logging and proper MIME types."""
+
+    def log_message(self, format: str, *args: object) -> None:
+        """Log HTTP requests via the module logger instead of stderr."""
+        logger.info(format, *args)
+
+    def end_headers(self) -> None:
+        """Add CORS and cache headers for local dev."""
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Cache-Control", "no-cache")
+        super().end_headers()
 
 
 def start_server(
@@ -26,8 +41,15 @@ def start_server(
         port: Port to listen on.
         open_browser: Whether to auto-open the browser.
     """
-    handler = functools.partial(SimpleHTTPRequestHandler, directory=str(directory))
-    server = HTTPServer((host, port), handler)
+    handler = functools.partial(_DocglowHandler, directory=str(directory))
+
+    try:
+        server = HTTPServer((host, port), handler)
+    except OSError as e:
+        logger.error("Could not start server on %s:%d — %s", host, port, e)
+        if "Address already in use" in str(e):
+            logger.error("Try a different port: docglow serve --port 8082")
+        sys.exit(1)
 
     url = f"http://{host}:{port}"
     logger.debug("Server bound to %s:%d, serving from %s", host, port, directory)

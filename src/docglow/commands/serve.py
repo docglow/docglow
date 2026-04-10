@@ -5,6 +5,15 @@ from pathlib import Path
 import click
 
 
+def _format_size(size_bytes: int) -> str:
+    """Format byte count to human-readable string."""
+    if size_bytes < 1024:
+        return f"{size_bytes} B"
+    if size_bytes < 1024 * 1024:
+        return f"{size_bytes / 1024:.1f} KB"
+    return f"{size_bytes / (1024 * 1024):.1f} MB"
+
+
 @click.command()
 @click.option("--port", type=int, default=8081)
 @click.option("--host", type=str, default="127.0.0.1")
@@ -24,7 +33,6 @@ def serve(
 ) -> None:
     """Serve the documentation site locally."""
     from docglow.cli import _setup_logging, console
-    from docglow.server.dev import start_server
 
     _setup_logging(verbose)
 
@@ -36,15 +44,36 @@ def serve(
         )
         raise SystemExit(1)
 
-    # Show file count for feedback
-    file_count = len(list(resolved_dir.iterdir()))
+    # Show file info
+    files = list(resolved_dir.iterdir())
+    file_count = len(files)
     console.print(f"\n[bold]docglow[/bold] Serving {file_count} files from {resolved_dir}")
+
+    # Check for data file and warn if large
+    data_file = resolved_dir / "docglow-data.json"
+    if data_file.exists():
+        data_size = data_file.stat().st_size
+        size_str = _format_size(data_size)
+        console.print(f"  Data: docglow-data.json ({size_str})")
+        if data_size > 15 * 1024 * 1024:  # > 15 MB
+            console.print(
+                f"  [yellow]Warning:[/yellow] Large data file ({size_str}). "
+                "Browser may be slow to load."
+            )
+            console.print(
+                "  Tip: Use [bold]--static[/bold] mode or [bold]--slim[/bold] to reduce file size."
+            )
+
     console.print(f"  Local: [bold cyan]http://{host}:{port}[/bold cyan]")
+    if verbose:
+        console.print("  Verbose: request logging enabled")
     console.print("  Press [bold]Ctrl+C[/bold] to stop\n")
 
     if watch:
         from docglow.server.watcher import start_watcher
 
         start_watcher(project_dir, resolved_dir, console)
+
+    from docglow.server.dev import start_server
 
     start_server(resolved_dir, host=host, port=port, open_browser=open)
