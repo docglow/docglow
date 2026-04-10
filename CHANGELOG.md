@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.4] - 2026-04-10
+
+### Added
+- **Auto-expand column lists** in lineage view when the graph has 12 or fewer models — columns are immediately visible without clicking the expand chevron
+- **Scrollable column list** in expanded lineage nodes — all columns are rendered inside a scroll container capped at 20 rows, with a thin always-visible scrollbar
+- **Layout accounts for expanded node height** — dagre now calculates proper spacing so expanded nodes don't overlap each other
+- **Manual collapse override** — users can still collapse auto-expanded nodes; the choice persists for the session
+
+### Changed
+- Max visible columns in lineage node reduced from 30 to 20 rows (with full scrolling for all columns beyond that)
+- Column list no longer shows "+N more columns" dead end — all columns are accessible via scrolling
+
 ## [0.5.3] - 2026-04-09
 
 ### Added
@@ -196,7 +208,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Suppressed hover highlights during node drag to prevent flicker
 - Shared SVG markers to reduce DOM overhead
 
-[Unreleased]: https://github.com/docglow/docglow/compare/v0.5.3...HEAD
+[Unreleased]: https://github.com/docglow/docglow/compare/v0.5.4...HEAD
+[0.5.4]: https://github.com/docglow/docglow/compare/v0.5.3...v0.5.4
 [0.5.3]: https://github.com/docglow/docglow/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/docglow/docglow/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/docglow/docglow/compare/v0.5.0...v0.5.1
