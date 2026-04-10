@@ -101,10 +101,15 @@ interface LayoutResult {
   edges: Array<{ source: string; target: string }>
 }
 
+const COLUMN_ROW_HEIGHT = 22
+const MAX_VISIBLE_COLUMNS_LAYOUT = 20
+
 function computeLayout(
   nodes: LineageNode[],
   edges: LineageEdge[],
   folderNodeIds: Set<string>,
+  expandedNodeIds?: Set<string>,
+  modelColumns?: Record<string, string[]>,
 ): LayoutResult {
   if (nodes.length === 0) return { nodes: [], edges: [] }
 
@@ -114,9 +119,17 @@ function computeLayout(
 
   for (const node of nodes) {
     const isFolder = folderNodeIds.has(node.id)
+    let nodeHeight = NODE_HEIGHT
+    if (!isFolder && expandedNodeIds?.has(node.id)) {
+      const colCount = modelColumns?.[node.id]?.length ?? 0
+      if (colCount > 0) {
+        const visibleCols = Math.min(colCount, MAX_VISIBLE_COLUMNS_LAYOUT)
+        nodeHeight = NODE_HEIGHT + visibleCols * COLUMN_ROW_HEIGHT + 4
+      }
+    }
     g.setNode(node.id, {
       width: isFolder ? FOLDER_NODE_WIDTH : NODE_WIDTH,
-      height: isFolder ? FOLDER_NODE_HEIGHT : NODE_HEIGHT,
+      height: isFolder ? FOLDER_NODE_HEIGHT : nodeHeight,
     })
   }
 
@@ -131,7 +144,7 @@ function computeLayout(
   const layoutNodes: LayoutItem[] = nodes.map((node) => {
     const isFolder = folderNodeIds.has(node.id)
     const w = isFolder ? FOLDER_NODE_WIDTH : NODE_WIDTH
-    const h = isFolder ? FOLDER_NODE_HEIGHT : NODE_HEIGHT
+    const h = isFolder ? FOLDER_NODE_HEIGHT : (g.node(node.id)?.height ?? NODE_HEIGHT)
     const pos = g.node(node.id)
     return {
       id: node.id,
@@ -370,7 +383,18 @@ function LineageFlowInner({
   // Column highlight state
   const selectedColumn = useColumnHighlightStore(s => s.selectedColumn)
   const expandedNodeIds = useColumnHighlightStore(s => s.expandedNodeIds)
+  const autoExpandedNodeIds = useColumnHighlightStore(s => s.autoExpandedNodeIds)
+  const manuallyCollapsedIds = useColumnHighlightStore(s => s.manuallyCollapsedIds)
   const clearColumnSelection = useColumnHighlightStore(s => s.clearSelection)
+
+  // Combined set of all effectively expanded nodes (manual + auto - collapsed)
+  const effectiveExpandedIds = useMemo(() => {
+    const set = new Set(expandedNodeIds)
+    for (const id of autoExpandedNodeIds) {
+      if (!manuallyCollapsedIds.has(id)) set.add(id)
+    }
+    return set
+  }, [expandedNodeIds, autoExpandedNodeIds, manuallyCollapsedIds])
 
   // Memoize reverse index for downstream column tracing
   const reverseIndex = useMemo(
@@ -406,9 +430,36 @@ function LineageFlowInner({
     [folderData],
   )
 
+  // Auto-expand column lists when the graph has few enough models.
+  // Computed from raw nodes prop (before layout) to avoid circular dependency.
+  const AUTO_EXPAND_THRESHOLD = 12
+  const autoExpandNodeIds = useMemo(() => {
+    if (!columnLineageData) return new Set<string>()
+
+    const dataNodes = nodes.filter(n => !folderNodeIds.has(n.id))
+    if (dataNodes.length > AUTO_EXPAND_THRESHOLD) return new Set<string>()
+
+    const ids = new Set<string>()
+    for (const n of dataNodes) {
+      if (columnLineageData[n.id] != null) {
+        ids.add(n.id)
+      }
+    }
+    return ids
+  }, [nodes, folderNodeIds, columnLineageData])
+
+  // Combined set of effectively expanded nodes for layout calculation
+  const layoutExpandedIds = useMemo(() => {
+    const set = new Set(expandedNodeIds)
+    for (const id of autoExpandNodeIds) {
+      if (!manuallyCollapsedIds.has(id)) set.add(id)
+    }
+    return set
+  }, [expandedNodeIds, autoExpandNodeIds, manuallyCollapsedIds])
+
   const layout = useMemo(
-    () => computeLayout(nodes, edges, folderNodeIds),
-    [nodes, edges, folderNodeIds],
+    () => computeLayout(nodes, edges, folderNodeIds, layoutExpandedIds, modelColumns),
+    [nodes, edges, folderNodeIds, layoutExpandedIds, modelColumns],
   )
 
   // Highlighting — depth-capped with memoized cache
@@ -545,8 +596,9 @@ function LineageFlowInner({
           schema: ln.data.schema,
           columns: nodeColumns,
           hasColumnLineage,
+          autoExpanded: autoExpandNodeIds.has(ln.id),
           highlightedColumns: nodeHighlightedCols,
-          inColumnTrace: inColumnTrace && !expandedNodeIds.has(ln.id),
+          inColumnTrace: inColumnTrace && !effectiveExpandedIds.has(ln.id),
           noColumnData: false, // Updated in applyHighlightPass below
         },
         style: {
@@ -557,7 +609,7 @@ function LineageFlowInner({
     })
 
     return [...bandNodes, ...dataNodes]
-  }, [layout.nodes, folderData, expandedFolders, layerBands, modelColumns, columnLineageData, columnTrace, expandedNodeIds])
+  }, [layout.nodes, folderData, expandedFolders, layerBands, modelColumns, columnLineageData, columnTrace, effectiveExpandedIds, autoExpandNodeIds])
 
   // Reset drag overrides when the layout recomputes (depth/filter changes)
   const layoutRef = useRef(layout)
@@ -679,8 +731,8 @@ function LineageFlowInner({
     }
 
     const columnEdges: Edge[] = columnTrace.edges.map((ce) => {
-      const sourceExpanded = expandedNodeIds.has(ce.sourceModel)
-      const targetExpanded = expandedNodeIds.has(ce.targetModel)
+      const sourceExpanded = effectiveExpandedIds.has(ce.sourceModel)
+      const targetExpanded = effectiveExpandedIds.has(ce.targetModel)
       const edgeColor = COLUMN_EDGE_COLORS[ce.transformation] ?? '#f59e0b'
 
       return {
@@ -717,7 +769,7 @@ function LineageFlowInner({
     })
 
     return [...modelEdges, ...columnEdges]
-  }, [layout.edges, MARKER_DEFAULT, MARKER_COLUMN, columnTrace, expandedNodeIds])
+  }, [layout.edges, MARKER_DEFAULT, MARKER_COLUMN, columnTrace, effectiveExpandedIds])
 
   // Lightweight pass: apply highlight styling to edges without recreating the base array
   const rfEdges = useMemo((): Edge[] => {

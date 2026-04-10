@@ -163,3 +163,19 @@ body {
 .react-flow__node.draggable:active {
   cursor: grabbing !important;
 }
+
+/* Thin always-visible scrollbar for column lists in lineage nodes */
+.dag-node-columns {
+  scrollbar-width: thin;
+  scrollbar-color: var(--text-muted, #94a3b8) transparent;
+}
+.dag-node-columns::-webkit-scrollbar {
+  width: 4px;
+}
+.dag-node-columns::-webkit-scrollbar-track {
+  background: transparent;
+}
+.dag-node-columns::-webkit-scrollbar-thumb {
+  background: var(--text-muted, #94a3b8);
+  border-radius: 2px;
+}

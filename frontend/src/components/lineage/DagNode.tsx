@@ -19,7 +19,7 @@ const TEST_STATUS_BORDER: Record<string, string> = {
 }
 
 const COLUMN_ROW_HEIGHT = 22
-const MAX_VISIBLE_COLUMNS = 30
+const MAX_VISIBLE_COLUMNS = 20
 const AMBER = '#f59e0b'
 
 export interface DagNodeData {
@@ -32,6 +32,7 @@ export interface DagNodeData {
   schema?: string
   columns?: string[]
   hasColumnLineage?: boolean
+  autoExpanded?: boolean
   /** Map of column names that should be highlighted in the column trace */
   highlightedColumns?: Set<string>
   /** Whether this node participates in a column trace (for amber border on collapsed nodes) */
@@ -57,7 +58,10 @@ function DagNodeComponent({ data, id }: NodeProps) {
     noColumnData,
   } = data as DagNodeData
 
-  const isExpanded = useColumnHighlightStore(s => s.expandedNodeIds.has(id))
+  const { autoExpanded } = data as DagNodeData
+  const isManuallyExpanded = useColumnHighlightStore(s => s.expandedNodeIds.has(id))
+  const isManuallyCollapsed = useColumnHighlightStore(s => s.manuallyCollapsedIds.has(id))
+  const isExpanded = isManuallyExpanded || (!!autoExpanded && !isManuallyCollapsed)
   const isThisSelected = useColumnHighlightStore(
     s => s.selectedColumn?.modelId === id
   )
@@ -98,10 +102,8 @@ function DagNodeComponent({ data, id }: NodeProps) {
   const tooltipText = [schema && `Schema: ${schema}`, folder && `Folder: ${folder}`].filter(Boolean).join('\n')
   const canExpand = hasColumnLineage && columns && columns.length > 0
 
-  const visibleColumns = columns
-    ? columns.slice(0, MAX_VISIBLE_COLUMNS)
-    : []
-  const hasMore = columns ? columns.length > MAX_VISIBLE_COLUMNS : false
+  // All columns are rendered inside a scroll container capped at MAX_VISIBLE_COLUMNS height
+  const allColumns = columns ?? []
 
   return (
     <>
@@ -183,6 +185,7 @@ function DagNodeComponent({ data, id }: NodeProps) {
         {/* Expanded column list */}
         {isExpanded && columns && (
           <div
+            className="dag-node-columns"
             style={{
               borderTop: '1px solid var(--border, #e2e8f0)',
               border: '1px solid var(--border, #e2e8f0)',
@@ -196,7 +199,7 @@ function DagNodeComponent({ data, id }: NodeProps) {
               boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
             }}
           >
-            {visibleColumns.map((col) => {
+            {allColumns.map((col) => {
               const isSelected = isThisSelected && selectedColumnName === col
               const isHighlighted = highlightedColumns?.has(col)
               const colBg = isSelected
@@ -246,21 +249,6 @@ function DagNodeComponent({ data, id }: NodeProps) {
                 </div>
               )
             })}
-            {hasMore && (
-              <div
-                style={{
-                  height: COLUMN_ROW_HEIGHT,
-                  padding: '0 8px 0 12px',
-                  fontSize: 10,
-                  color: 'var(--text-muted, #64748b)',
-                  fontStyle: 'italic',
-                  display: 'flex',
-                  alignItems: 'center',
-                }}
-              >
-                +{columns.length - MAX_VISIBLE_COLUMNS} more columns
-              </div>
-            )}
           </div>
         )}
 
