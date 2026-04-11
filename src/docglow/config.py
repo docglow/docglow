@@ -45,6 +45,7 @@ class ComplexityThresholds:
     high_sql_lines: int = 200
     high_join_count: int = 8
     high_cte_count: int = 10
+    high_subquery_count: int = 5
 
 
 @dataclass(frozen=True)

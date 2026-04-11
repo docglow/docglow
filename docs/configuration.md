@@ -39,6 +39,7 @@ health:
     high_sql_lines: 200         # Max SQL lines before flagging
     high_join_count: 8          # Max joins before flagging
     high_cte_count: 10          # Max CTEs before flagging
+    high_subquery_count: 5      # Max subqueries before flagging
 
 profiling:
   enabled: false                # Enable column profiling
