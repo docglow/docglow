@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.5] - 2026-04-10
+
+### Fixed
+- **Subquery count now included in complexity threshold** — models with many subqueries are correctly flagged as high complexity. Previously, subquery count was tracked and displayed but not used in the `is_high_complexity` determination.
+
+### Added
+- **`high_subquery_count` config option** — configurable threshold (default: 5) in `docglow.yml` under `health.complexity`
+
 ## [0.5.4] - 2026-04-10
 
 ### Added
@@ -208,7 +216,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Suppressed hover highlights during node drag to prevent flicker
 - Shared SVG markers to reduce DOM overhead
 
-[Unreleased]: https://github.com/docglow/docglow/compare/v0.5.4...HEAD
+[Unreleased]: https://github.com/docglow/docglow/compare/v0.5.5...HEAD
+[0.5.5]: https://github.com/docglow/docglow/compare/v0.5.4...v0.5.5
 [0.5.4]: https://github.com/docglow/docglow/compare/v0.5.3...v0.5.4
 [0.5.3]: https://github.com/docglow/docglow/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/docglow/docglow/compare/v0.5.1...v0.5.2
