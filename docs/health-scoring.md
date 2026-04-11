@@ -62,6 +62,7 @@ health:
     high_sql_lines: 200    # Max SQL lines before flagging (default: 200)
     high_join_count: 8      # Max joins before flagging (default: 8)
     high_cte_count: 10      # Max CTEs before flagging (default: 10)
+    high_subquery_count: 5  # Max subqueries before flagging (default: 5)
 ```
 
 ### Naming conventions

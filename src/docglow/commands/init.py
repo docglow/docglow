@@ -30,6 +30,7 @@ INIT_TEMPLATE = """\
 #     high_sql_lines: 200
 #     high_join_count: 8
 #     high_cte_count: 10
+#     high_subquery_count: 5
 
 # profiling:
 #   enabled: false

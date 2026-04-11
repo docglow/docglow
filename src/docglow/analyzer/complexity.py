@@ -83,6 +83,7 @@ def analyze_complexity(
             sql_lines > thresholds.high_sql_lines
             or join_count > thresholds.high_join_count
             or cte_count > thresholds.high_cte_count
+            or subquery_count > thresholds.high_subquery_count
         )
 
         if is_high:
@@ -103,7 +104,10 @@ def analyze_complexity(
         )
 
     # Sort by complexity indicators (most complex first)
-    results.sort(key=lambda m: m.sql_lines + m.join_count * 10 + m.cte_count * 5, reverse=True)
+    results.sort(
+        key=lambda m: m.sql_lines + m.join_count * 10 + m.cte_count * 5 + m.subquery_count * 8,
+        reverse=True,
+    )
 
     return ComplexityReport(
         models=results,
