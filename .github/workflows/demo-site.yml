@@ -42,8 +42,11 @@ jobs:
       - name: Install docglow
         run: pip install .
 
+      - name: Prepare PostHog snippet
+        run: sed "s/POSTHOG_API_KEY/${{ secrets.POSTHOG_API_KEY }}/" examples/jaffle-shop/posthog.html > /tmp/posthog.html
+
       - name: Generate demo site
-        run: docglow generate --project-dir examples/jaffle-shop --output-dir demo-output --static
+        run: docglow generate --project-dir examples/jaffle-shop --output-dir demo-output --static --head-script /tmp/posthog.html
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3

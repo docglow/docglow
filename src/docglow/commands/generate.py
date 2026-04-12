@@ -62,6 +62,12 @@ import click
     help="Omit raw and compiled SQL from output to reduce file size "
     "(does not affect computation time)",
 )
+@click.option(
+    "--head-script",
+    type=click.Path(exists=True, path_type=Path),
+    default=None,
+    help="Path to an HTML file whose contents are injected into <head> (e.g. analytics snippet)",
+)
 @click.option("--verbose", is_flag=True)
 @click.option(
     "--fail-under",
@@ -90,6 +96,7 @@ def generate(
     column_lineage_depth: int | None,
     include_packages: bool,
     slim: bool,
+    head_script: Path | None,
     verbose: bool,
     fail_under: float | None,
 ) -> None:
@@ -165,6 +172,7 @@ def generate(
             column_lineage_depth=column_lineage_depth,
             exclude_packages=not include_packages,
             slim=slim,
+            head_script=head_script.read_text(encoding="utf-8") if head_script else None,
         )
         console.print(f"\n[bold green]Site generated at {output_path}[/bold green]")
         if static:
