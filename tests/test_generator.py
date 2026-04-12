@@ -93,6 +93,45 @@ class TestBundleSite:
         assert len(data["lineage"]["edges"]) > 0
         assert len(data["search_index"]) > 0
 
+    def test_bundle_static_with_head_script(self, tmp_path: Path) -> None:
+        project = _setup_target(tmp_path)
+        artifacts = load_artifacts(project)
+        docglow_data = build_docglow_data(artifacts)
+
+        output = tmp_path / "output_head"
+        snippet = "<script>console.log('analytics');</script>"
+        bundle_site(docglow_data, output, static=True, head_script=snippet)
+
+        html = (output / "index.html").read_text()
+        assert snippet in html
+        # Snippet should appear before the final </head> (use rindex to skip
+        # any </head> occurrences inside inlined JS/CSS/data content)
+        assert html.index(snippet) < html.rindex("</head>")
+
+    def test_bundle_separate_with_head_script(self, tmp_path: Path) -> None:
+        project = _setup_target(tmp_path)
+        artifacts = load_artifacts(project)
+        docglow_data = build_docglow_data(artifacts)
+
+        output = tmp_path / "output_head_sep"
+        snippet = "<script>console.log('analytics');</script>"
+        bundle_site(docglow_data, output, static=False, head_script=snippet)
+
+        html = (output / "index.html").read_text()
+        assert snippet in html
+        assert html.index(snippet) < html.index("</head>")
+
+    def test_bundle_without_head_script_unchanged(self, tmp_path: Path) -> None:
+        project = _setup_target(tmp_path)
+        artifacts = load_artifacts(project)
+        docglow_data = build_docglow_data(artifacts)
+
+        output = tmp_path / "output_no_head"
+        bundle_site(docglow_data, output, static=True)
+
+        html = (output / "index.html").read_text()
+        assert "console.log('analytics')" not in html
+
 
 class TestGenerateSite:
     """Test the full generate_site orchestrator."""
@@ -135,6 +174,17 @@ class TestGenerateSite:
 
         data = json.loads((output / "docglow-data.json").read_text())
         assert data["metadata"]["project_name"] == "My Custom Docs"
+
+    def test_generate_static_with_head_script(self, tmp_path: Path) -> None:
+        project = _setup_target(tmp_path)
+        output = tmp_path / "head_script_out"
+        snippet = "<script>posthog.init('test');</script>"
+
+        generate_site(project, output_dir=output, static=True, head_script=snippet)
+
+        html = (output / "index.html").read_text()
+        assert snippet in html
+        assert "window.__DOCGLOW_DATA__=" in html
 
 
 class TestSlimFlag:

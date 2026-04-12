@@ -39,6 +39,7 @@ def bundle_site(
     *,
     static: bool = False,
     data_only: bool = False,
+    head_script: str | None = None,
 ) -> None:
     """Bundle the frontend with data into the output directory.
 
@@ -46,6 +47,7 @@ def bundle_site(
         docglow_data: The unified data payload.
         output_dir: Directory to write output files.
         static: If True, embed data into a single index.html.
+        head_script: Optional HTML/JS content to inject into <head>.
     """
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -59,19 +61,21 @@ def bundle_site(
     frontend_dist = _find_frontend_dist()
 
     if static:
-        _bundle_static(docglow_data, output_dir, frontend_dist)
+        _bundle_static(docglow_data, output_dir, frontend_dist, head_script=head_script)
     else:
-        _bundle_separate(docglow_data, output_dir, frontend_dist)
+        _bundle_separate(docglow_data, output_dir, frontend_dist, head_script=head_script)
 
 
 def _bundle_separate(
     docglow_data: dict[str, Any],
     output_dir: Path,
     frontend_dist: Path,
+    *,
+    head_script: str | None = None,
 ) -> None:
     """Bundle with data as a separate JSON file."""
     # Copy all frontend assets
-    _copy_frontend_assets(frontend_dist, output_dir)
+    _copy_frontend_assets(frontend_dist, output_dir, head_script=head_script)
 
     # Write data file
     data_path = output_dir / "docglow-data.json"
@@ -84,6 +88,8 @@ def _bundle_static(
     docglow_data: dict[str, Any],
     output_dir: Path,
     frontend_dist: Path,
+    *,
+    head_script: str | None = None,
 ) -> None:
     """Bundle everything into a single index.html."""
     import shutil
@@ -104,6 +110,10 @@ def _bundle_static(
         html = html[:script_pos] + security_meta + data_script + "\n" + html[script_pos:]
     else:
         html = html.replace("</head>", f"{security_meta}{data_script}\n</head>")
+
+    # Inject custom head script (analytics, etc.)
+    if head_script:
+        html = html.replace("</head>", f"{head_script}\n</head>")
 
     # Inline CSS and JS assets
     html = _inline_assets(html, frontend_dist)
@@ -131,7 +141,12 @@ def _inject_security_meta(html: str) -> str:
     return html.replace("</head>", f"{security_meta}</head>")
 
 
-def _copy_frontend_assets(frontend_dist: Path, output_dir: Path) -> None:
+def _copy_frontend_assets(
+    frontend_dist: Path,
+    output_dir: Path,
+    *,
+    head_script: str | None = None,
+) -> None:
     """Copy frontend build assets to the output directory."""
     import shutil
 
@@ -146,6 +161,8 @@ def _copy_frontend_assets(frontend_dist: Path, output_dir: Path) -> None:
                 # Inject security meta tags into the copied index.html
                 html = item.read_text(encoding="utf-8")
                 html = _inject_security_meta(html)
+                if head_script:
+                    html = html.replace("</head>", f"{head_script}\n</head>")
                 dest.write_text(html, encoding="utf-8")
             else:
                 shutil.copy2(item, dest)

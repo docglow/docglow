@@ -34,6 +34,7 @@ def generate_site(
     column_lineage_depth: int | None = None,
     exclude_packages: bool = True,
     slim: bool = False,
+    head_script: str | None = None,
 ) -> tuple[Path, float]:
     """Generate the docglow static site.
 
@@ -106,7 +107,7 @@ def generate_site(
         docglow_data["metadata"]["project_name"] = title
 
     logger.info("Bundling site...")
-    bundle_site(docglow_data, resolved_output, static=static)
+    bundle_site(docglow_data, resolved_output, static=static, head_script=head_script)
 
     file_count = len(list(resolved_output.iterdir()))
     logger.info("Site generated at %s (%d files)", resolved_output, file_count)
