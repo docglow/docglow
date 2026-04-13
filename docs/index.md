@@ -12,6 +12,11 @@ Thousands of teams use dbt Core without access to dbt Cloud's documentation feat
 
 Docglow replaces it with a **modern, interactive single-page application** — and it works with any dbt Core project out of the box.
 
+!!! tip "Docglow Cloud (coming soon)"
+    Hosted docs, AI-powered Q&A, Slack bot, and project health dashboards.
+    Unlimited models, unlimited viewers.
+    **[Join the waitlist →](https://docglow.com/#cloud)**
+
 ## Key Features
 
 - **Interactive lineage explorer** — drag, filter, and trace upstream/downstream dependencies with configurable depth and layer visualization

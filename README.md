@@ -106,6 +106,21 @@ docglow generate --project-dir /path/to/dbt --static
 
 The entire site (data, styles, JavaScript) is embedded in one file. Perfect for sharing via email, Slack, or committing to a repository.
 
+## Docglow Cloud
+
+**Hosted documentation with AI features — coming soon.**
+
+Everything in the open-source CLI, plus:
+
+- **AI-powered Q&A** — ask natural language questions about your dbt project
+- **Slack bot** — answer data questions where your team already works
+- **Hosted doc sites** — publish with `docglow publish`, share a link
+- **Project health dashboard** — track documentation quality over time
+
+Unlimited models, unlimited viewers. You only pay for AI features you use.
+
+**[Join the waitlist →](https://docglow.com/#cloud)**
+
 ## Configuration
 
 Add a `docglow.yml` to your dbt project root for optional customization (layer definitions, display settings, etc.). Docglow works out of the box without any configuration — just point it at a dbt project with compiled artifacts in `target/`.
