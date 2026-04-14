@@ -8,7 +8,7 @@ Docglow Cloud takes everything you get from the open-source CLI and adds a manag
 
 ### AI-Powered Q&A
 
-Ask natural language questions about your dbt project — column definitions, model relationships, business logic — and get instant answers grounded in your actual documentation and SQL.
+Ask natural language questions about your dbt project: column definitions, model relationships, and business logic. Get instant answers grounded in your actual documentation and SQL.
 
 ### Slack Bot
 
@@ -24,7 +24,7 @@ docglow login
 docglow publish
 ```
 
-Share a link with your team — no infrastructure to manage, no CI/CD to configure.
+Share a link with your team. No infrastructure to manage, no CI/CD to configure.
 
 ### Project Health Dashboard
 
@@ -32,15 +32,22 @@ Track documentation quality over time. See which models are undocumented, untest
 
 ## Pricing
 
-Unlimited models, unlimited viewers. You only pay for AI features you use.
+Unlimited models, unlimited viewers. 14-day free trial on all plans.
 
-| | Free | Starter | Team | Business |
-|---|---|---|---|---|
-| Projects | 1 | 1 | 3 | 10 |
-| Models | 50 | Unlimited | Unlimited | Unlimited |
-| AI queries/month | — | 100 | 500 | 2,000 |
-| Custom domain | — | — | :material-check: | :material-check: |
-| Slack bot | — | — | :material-check: | :material-check: |
+|  | Pro — $99/mo | Business — $299/mo |
+|---|---|---|
+| **Projects** | 3 | Unlimited |
+| **Models** | Unlimited | Unlimited |
+| **Viewers** | Unlimited | Unlimited |
+| **AI queries/mo** | 500 | 5,000 |
+| **Slack bot** | :material-check: | :material-check: |
+| **AI doc generation** | :material-check: | :material-check: |
+| **Health dashboard** | 90 days | 1 year |
+| **Custom domain** | :material-check: | :material-check: |
+| **SSO/SAML** | — | :material-check: |
+| **Support** | Email | Priority email + Slack |
+
+500 AI queries/mo included on the Pro plan and 5,000 AI queries/mo included on the Business plan. Need more? Additional queries at $0.10 each on Business and $0.20 each on Pro.
 
 ## Join the Waitlist
 
