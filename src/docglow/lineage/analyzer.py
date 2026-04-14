@@ -161,7 +161,6 @@ def _analyze_single_model(
         return _ModelLineageResult(
             uid=uid,
             lineage=cached_lineage or {},
-            cache_entry=cached_entry,
             cached=True,
         )
 
@@ -241,8 +240,10 @@ def analyze_column_lineage(
     Uses compiled_sql when available, falls back to raw_sql with Jinja
     stripped for models that haven't been compiled.
 
-    Models are processed in topological waves — all models at the same DAG
-    depth run in parallel using a thread pool.
+    When the model count exceeds the parallel threshold, models are processed
+    concurrently using a process pool (bypasses the GIL for CPU-bound SQLGlot
+    parsing). Below the threshold or with max_workers=1, models run sequentially
+    in topological order.
 
     Args:
         models: Transformed model data from build_docglow_data.
@@ -256,7 +257,7 @@ def analyze_column_lineage(
         subset: If provided, only analyze these model unique_ids.
             Models outside the subset still have their cached results included.
         max_workers: Max parallel workers for lineage parsing.
-            Defaults to min(8, cpu_count + 4). Set to 1 for sequential.
+            Defaults to min(8, cpu_count). Set to 1 for sequential.
 
     Returns:
         Dict of {model_unique_id: {column_name: [dependency_dicts]}}.
@@ -305,28 +306,25 @@ def analyze_column_lineage(
     )
     analyzable_count = len(uids_to_analyze)
 
-    # Compute topological waves for parallel processing
-    analyze_set = {uid: all_models[uid] for uid in uids_to_analyze}
-    waves = _compute_depth_waves(analyze_set)
-
-    workers = max_workers if max_workers is not None else min(8, (os.cpu_count() or 1) + 4)
-    use_parallel = workers > 1 and analyzable_count > 1
-
-    if use_parallel:
-        logger.info(
-            "Column lineage: %d models in %d waves, %d workers",
-            analyzable_count,
-            len(waves),
-            workers,
-        )
+    # Process pool has meaningful startup cost (fork + serialize schema/resolver),
+    # so only use it when there are enough models to amortize the overhead.
+    parallel_threshold = 20
+    workers = max_workers if max_workers is not None else min(8, os.cpu_count() or 1)
+    use_parallel = workers > 1 and analyzable_count >= parallel_threshold
 
     analyzed_count = 0
 
     if use_parallel:
-        # Submit ALL models to the pool at once. The pool's max_workers
-        # limit handles concurrency. We don't enforce wave ordering because
-        # models are currently independent (no inter-model deps during parsing).
-        # This avoids slow models in one wave blocking progress on others.
+        logger.info(
+            "Column lineage: %d models, %d workers",
+            analyzable_count,
+            workers,
+        )
+
+        # Submit all models to the pool at once. Each model's parsing is
+        # independent (uses only its own SQL + the shared schema/resolver).
+        # Note: each model's data dict is pickled per submit() call — the
+        # compiled_sql strings dominate IPC cost for large models.
         with ProcessPoolExecutor(
             max_workers=workers,
             initializer=_init_worker,
@@ -354,14 +352,15 @@ def analyze_column_lineage(
                     analyzed_count,
                     analyzable_count,
                 )
-                if result.skipped:
-                    continue
-                total_models += 1
-                if result.cached:
-                    cache_hits += 1
-                elif result.failure:
-                    parse_failures += 1
+                if not result.skipped:
+                    total_models += 1
+                    if result.cached:
+                        cache_hits += 1
+                    elif result.failure:
+                        parse_failures += 1
     else:
+        # Sequential: process in topological order (upstream before downstream)
+        waves = _compute_depth_waves({uid: all_models[uid] for uid in uids_to_analyze})
         for wave_uids in waves:
             for uid in wave_uids:
                 result = _analyze_single_model(
@@ -382,13 +381,12 @@ def analyze_column_lineage(
                     analyzed_count,
                     analyzable_count,
                 )
-                if result.skipped:
-                    continue
-                total_models += 1
-                if result.cached:
-                    cache_hits += 1
-                elif result.failure:
-                    parse_failures += 1
+                if not result.skipped:
+                    total_models += 1
+                    if result.cached:
+                        cache_hits += 1
+                    elif result.failure:
+                        parse_failures += 1
 
     if parse_failures > 0:
         logger.warning(

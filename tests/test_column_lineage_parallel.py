@@ -52,9 +52,9 @@ class TestComputeDepthWaves:
         }
         waves = _compute_depth_waves(models)
         assert len(waves) == 3
-        assert waves[0] == ["a"]
-        assert waves[1] == ["b"]
-        assert waves[2] == ["c"]
+        assert set(waves[0]) == {"a"}
+        assert set(waves[1]) == {"b"}
+        assert set(waves[2]) == {"c"}
 
     def test_diamond(self) -> None:
         """Diamond: A -> B, A -> C, B -> D, C -> D."""
@@ -66,9 +66,9 @@ class TestComputeDepthWaves:
         }
         waves = _compute_depth_waves(models)
         assert len(waves) == 3
-        assert waves[0] == ["a"]
+        assert set(waves[0]) == {"a"}
         assert set(waves[1]) == {"b", "c"}
-        assert waves[2] == ["d"]
+        assert set(waves[2]) == {"d"}
 
     def test_wide_independent(self) -> None:
         """All independent models should be in one wave."""

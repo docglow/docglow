@@ -62,6 +62,7 @@ def main() -> None:
     parser.add_argument(
         "--select", type=str, default=None, help="Subset pattern (e.g. fct_orders+)"
     )
+    parser.add_argument("--workers", type=int, default=None, help="Max parallel workers")
     parser.add_argument("--verbose", action="store_true", help="Enable debug logging")
     args = parser.parse_args()
 
@@ -120,6 +121,7 @@ def main() -> None:
         manifest_sources=dict(manifest.sources),
         cache_path=cache_path,
         subset=subset,
+        max_workers=args.workers,
     )
     t_lineage = time.perf_counter() - t1
 

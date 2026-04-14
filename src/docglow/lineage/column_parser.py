@@ -191,6 +191,8 @@ def _trace_column_in_executor(
     timeout_seconds: int = 2,
 ) -> list[ColumnDependency]:
     """Trace lineage for a single column using a shared executor for timeout."""
+    from concurrent.futures import TimeoutError as FuturesTimeout
+
     from sqlglot.lineage import lineage
 
     def _trace() -> list[ColumnDependency]:
@@ -224,8 +226,14 @@ def _trace_column_in_executor(
             return []
 
     future = executor.submit(_trace)
-    result: list[ColumnDependency] = future.result(timeout=timeout_seconds)
-    return result
+    try:
+        return future.result(timeout=timeout_seconds)
+    except FuturesTimeout:
+        # Best-effort cancel — the thread may still be running since Python
+        # threads can't be forcibly interrupted, but this prevents the result
+        # from being collected if it finishes later.
+        future.cancel()
+        raise
 
 
 def _rewrite_star_to_columns(
