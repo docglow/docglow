@@ -35,6 +35,7 @@ def generate_site(
     exclude_packages: bool = True,
     slim: bool = False,
     head_script: str | None = None,
+    column_lineage_workers: int | None = None,
 ) -> tuple[Path, float]:
     """Generate the docglow static site.
 
@@ -77,6 +78,7 @@ def generate_site(
         column_lineage_select=column_lineage_select,
         column_lineage_depth=column_lineage_depth,
         column_lineage_cache_dir=resolved_output,
+        column_lineage_workers=column_lineage_workers,
         exclude_packages=exclude_packages,
         slim=slim,
     )

@@ -68,6 +68,12 @@ import click
     default=None,
     help="Path to an HTML file whose contents are injected into <head> (e.g. analytics snippet)",
 )
+@click.option(
+    "--workers",
+    type=int,
+    default=None,
+    help="Max parallel workers for column lineage (default: auto)",
+)
 @click.option("--verbose", is_flag=True)
 @click.option(
     "--fail-under",
@@ -97,6 +103,7 @@ def generate(
     include_packages: bool,
     slim: bool,
     head_script: Path | None,
+    workers: int | None,
     verbose: bool,
     fail_under: float | None,
 ) -> None:
@@ -173,6 +180,7 @@ def generate(
             exclude_packages=not include_packages,
             slim=slim,
             head_script=head_script.read_text(encoding="utf-8") if head_script else None,
+            column_lineage_workers=workers,
         )
         console.print(f"\n[bold green]Site generated at {output_path}[/bold green]")
         if static:
