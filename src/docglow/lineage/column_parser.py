@@ -143,18 +143,34 @@ def parse_column_lineage(
     if has_star and output_columns:
         trace_sql = _rewrite_star_to_columns(compiled_sql, output_columns, dialect)
 
-    # Trace lineage for each output column with a per-column timeout
+    # Trace lineage for each output column with a per-column timeout.
+    # Reuse a single executor across all columns to avoid the overhead of
+    # creating/destroying a ThreadPoolExecutor for every column.
+    from concurrent.futures import ThreadPoolExecutor
+    from concurrent.futures import TimeoutError as FuturesTimeout
+
     result: dict[str, list[ColumnDependency]] = {}
     failures: list[str] = []
-    for col_name in output_columns:
-        try:
-            deps = _trace_column_with_timeout(col_name, trace_sql, schema or {}, dialect)
-            if deps:
-                result[col_name] = deps
-        except Exception as e:  # noqa: BLE001
-            logger.debug("Failed to trace lineage for column '%s': %s", col_name, e)
-            failures.append(col_name)
-            continue
+    resolved_schema = schema or {}
+
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        for col_name in output_columns:
+            try:
+                deps = _trace_column_in_executor(
+                    executor,
+                    col_name,
+                    trace_sql,
+                    resolved_schema,
+                    dialect,
+                )
+                if deps:
+                    result[col_name] = deps
+            except FuturesTimeout:
+                logger.debug("Timeout tracing lineage for column '%s'", col_name)
+                failures.append(col_name)
+            except Exception as e:  # noqa: BLE001
+                logger.debug("Failed to trace lineage for column '%s': %s", col_name, e)
+                failures.append(col_name)
 
     if failures:
         logger.debug(
@@ -166,20 +182,18 @@ def parse_column_lineage(
     return result
 
 
-def _trace_column_with_timeout(
+def _trace_column_in_executor(
+    executor: Any,
     col_name: str,
     sql: str,
     schema: dict[str, dict[str, str]],
     dialect: str | None,
     timeout_seconds: int = 2,
 ) -> list[ColumnDependency]:
-    """Trace lineage for a single column with a thread-safe timeout."""
-    from concurrent.futures import ThreadPoolExecutor
-    from concurrent.futures import TimeoutError as FuturesTimeout
-
+    """Trace lineage for a single column using a shared executor for timeout."""
     from sqlglot.lineage import lineage
 
-    def _trace() -> Any:
+    def _trace() -> list[ColumnDependency]:
         # Try with schema first (enables SELECT * expansion through CTEs).
         # If it fails, retry without schema (handles cases where schema
         # keys don't match SQL table references or columns are missing).
@@ -209,15 +223,9 @@ def _trace_column_with_timeout(
         except Exception:  # noqa: BLE001
             return []
 
-    with ThreadPoolExecutor(max_workers=1) as executor:
-        future = executor.submit(_trace)
-        try:
-            result: list[ColumnDependency] = future.result(timeout=timeout_seconds)
-            return result
-        except FuturesTimeout:
-            logger.debug("Timeout tracing lineage for column '%s'", col_name)
-            future.cancel()
-            return []
+    future = executor.submit(_trace)
+    result: list[ColumnDependency] = future.result(timeout=timeout_seconds)
+    return result
 
 
 def _rewrite_star_to_columns(

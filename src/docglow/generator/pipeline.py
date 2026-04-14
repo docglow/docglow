@@ -36,6 +36,7 @@ class PipelineContext:
     column_lineage_select: str | None = None
     column_lineage_depth: int | None = None
     column_lineage_cache_dir: Any | None = None
+    column_lineage_workers: int | None = None
     exclude_packages: bool = True
     slim: bool = False
 
@@ -264,6 +265,7 @@ def stage_build_column_lineage(ctx: PipelineContext) -> None:
         ctx.sources,
         ctx.seeds,
         ctx.snapshots,
+        max_workers=ctx.column_lineage_workers,
     )
 
 

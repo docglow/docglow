@@ -6,8 +6,11 @@ import fnmatch
 import hashlib
 import json
 import logging
+import os
 import re
 from collections import deque
+from concurrent.futures import ProcessPoolExecutor, as_completed
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -32,6 +35,195 @@ _JINJA_GENERIC = re.compile(r"\{\{.*?\}\}", re.DOTALL)
 _JINJA_BLOCK = re.compile(r"\{%.*?%\}", re.DOTALL)
 
 
+@dataclass
+class _ModelLineageResult:
+    """Result of analyzing column lineage for a single model."""
+
+    uid: str
+    lineage: dict[str, list[dict[str, str]]] = field(default_factory=dict)
+    cache_entry: dict[str, Any] = field(default_factory=dict)
+    failure: dict[str, str] | None = None
+    cached: bool = False
+    skipped: bool = False
+
+
+def _compute_depth_waves(
+    all_models: dict[str, dict[str, Any]],
+) -> list[list[str]]:
+    """Compute topological depth waves for parallel processing.
+
+    Returns a list of waves, where each wave contains model UIDs that can be
+    processed in parallel (all their upstream dependencies are in earlier waves).
+
+    Models with no in-set dependencies are in wave 0. Models whose dependencies
+    are all outside the set (e.g. sources) are also in wave 0.
+    """
+    model_uids = set(all_models.keys())
+
+    # Build in-degree map: only count dependencies that are within our model set
+    in_degree: dict[str, int] = {}
+    dependents: dict[str, list[str]] = {uid: [] for uid in model_uids}
+
+    for uid, data in all_models.items():
+        deps_in_set = [d for d in data.get("depends_on", []) if d in model_uids]
+        in_degree[uid] = len(deps_in_set)
+        for dep in deps_in_set:
+            dependents[dep].append(uid)
+
+    # BFS from roots (in-degree 0) to assign depth
+    waves: list[list[str]] = []
+    current_wave = [uid for uid, deg in in_degree.items() if deg == 0]
+
+    while current_wave:
+        waves.append(current_wave)
+        next_wave: list[str] = []
+        for uid in current_wave:
+            for dependent in dependents[uid]:
+                in_degree[dependent] -= 1
+                if in_degree[dependent] == 0:
+                    next_wave.append(dependent)
+        current_wave = next_wave
+
+    # Any remaining models (cycles) go in a final wave
+    processed = {uid for wave in waves for uid in wave}
+    remaining = [uid for uid in model_uids if uid not in processed]
+    if remaining:
+        waves.append(remaining)
+
+    return waves
+
+
+# Module-level state for worker processes (set by _init_worker)
+_worker_schema: dict[str, dict[str, str]] = {}
+_worker_resolver: TableResolver | None = None
+_worker_dialect: str | None = None
+
+
+def _init_worker(
+    schema: dict[str, dict[str, str]],
+    resolver: TableResolver,
+    dialect: str | None,
+) -> None:
+    """Initialize shared read-only state in each worker process."""
+    global _worker_schema, _worker_resolver, _worker_dialect  # noqa: PLW0603
+    _worker_schema = schema
+    _worker_resolver = resolver
+    _worker_dialect = dialect
+
+
+def _analyze_model_in_worker(
+    uid: str,
+    data: dict[str, Any],
+    cached_entry: dict[str, Any] | None,
+) -> _ModelLineageResult:
+    """Wrapper for _analyze_single_model that uses process-local shared state."""
+    return _analyze_single_model(
+        uid=uid,
+        data=data,
+        schema=_worker_schema,
+        resolver=_worker_resolver,  # type: ignore[arg-type]
+        dialect=_worker_dialect,
+        cached_entry=cached_entry,
+    )
+
+
+def _analyze_single_model(
+    uid: str,
+    data: dict[str, Any],
+    schema: dict[str, dict[str, str]],
+    resolver: TableResolver,
+    dialect: str | None,
+    cached_entry: dict[str, Any] | None,
+) -> _ModelLineageResult:
+    """Analyze column lineage for a single model. Pure function, no side effects.
+
+    All inputs are read-only. Returns a result struct that the caller merges
+    into shared state.
+    """
+    sql = data.get("compiled_sql", "")
+    if not sql:
+        raw = data.get("raw_sql", "")
+        if not raw:
+            return _ModelLineageResult(uid=uid, skipped=True)
+        if "{{" in raw or "{%" in raw:
+            sql = strip_jinja(raw)
+        else:
+            sql = raw
+
+    if not sql or not sql.strip():
+        return _ModelLineageResult(uid=uid, skipped=True)
+
+    sql_hash = _hash_sql(sql)
+
+    # Check cache
+    if cached_entry and cached_entry.get("sql_hash") == sql_hash:
+        cached_lineage = cached_entry.get("lineage")
+        return _ModelLineageResult(
+            uid=uid,
+            lineage=cached_lineage or {},
+            cache_entry=cached_entry,
+            cached=True,
+        )
+
+    known_columns = [col["name"] for col in data.get("columns", []) if col.get("name")]
+
+    try:
+        raw_lineage = parse_column_lineage(
+            compiled_sql=sql,
+            schema=schema,
+            dialect=dialect,
+            known_columns=known_columns or None,
+        )
+    except Exception as e:  # noqa: BLE001
+        logger.debug("Failed to parse column lineage for %s: %s", uid, e)
+        return _ModelLineageResult(
+            uid=uid,
+            cache_entry={"sql_hash": sql_hash, "lineage": {}},
+            failure={
+                "model": uid,
+                "name": data.get("name", ""),
+                "error": str(e),
+            },
+        )
+
+    if not raw_lineage:
+        failure = None
+        if known_columns:
+            failure = {
+                "model": uid,
+                "name": data.get("name", ""),
+                "error": f"No columns traced ({len(known_columns)} columns in schema)",
+            }
+        return _ModelLineageResult(
+            uid=uid,
+            cache_entry={"sql_hash": sql_hash, "lineage": {}},
+            failure=failure,
+        )
+
+    model_lineage = _resolve_dependencies(raw_lineage, resolver)
+    cache_entry_out = {"sql_hash": sql_hash, "lineage": model_lineage}
+
+    # Track partially traced models
+    failure = None
+    if known_columns and len(model_lineage) < len(known_columns):
+        traced = set(model_lineage.keys())
+        missed = [c for c in known_columns if c not in traced]
+        if missed:
+            failure = {
+                "model": uid,
+                "name": data.get("name", ""),
+                "error": f"Partial: {len(missed)}/{len(known_columns)} columns not traced",
+                "columns": ", ".join(missed[:20]),
+            }
+
+    return _ModelLineageResult(
+        uid=uid,
+        lineage=model_lineage,
+        cache_entry=cache_entry_out,
+        failure=failure,
+    )
+
+
 def analyze_column_lineage(
     models: dict[str, dict[str, Any]],
     sources: dict[str, dict[str, Any]],
@@ -42,11 +234,15 @@ def analyze_column_lineage(
     manifest_sources: dict[str, Any] | None = None,
     cache_path: Path | None = None,
     subset: set[str] | None = None,
+    max_workers: int | None = None,
 ) -> dict[str, dict[str, list[dict[str, str]]]]:
     """Analyze column-level lineage for all models.
 
     Uses compiled_sql when available, falls back to raw_sql with Jinja
     stripped for models that haven't been compiled.
+
+    Models are processed in topological waves — all models at the same DAG
+    depth run in parallel using a thread pool.
 
     Args:
         models: Transformed model data from build_docglow_data.
@@ -59,6 +255,8 @@ def analyze_column_lineage(
         cache_path: Path to the column lineage cache file.
         subset: If provided, only analyze these model unique_ids.
             Models outside the subset still have their cached results included.
+        max_workers: Max parallel workers for lineage parsing.
+            Defaults to min(8, cpu_count + 4). Set to 1 for sequential.
 
     Returns:
         Dict of {model_unique_id: {column_name: [dependency_dicts]}}.
@@ -91,107 +289,106 @@ def analyze_column_lineage(
             len(all_models),
         )
 
-    # Count models to analyze for progress reporting
-    models_to_analyze = subset if subset is not None else set(all_models.keys())
-    analyzable_count = len(models_to_analyze & set(all_models.keys()))
-    analyzed_count = 0
+    # Subset filtering: include cached results for models outside subset
+    if subset is not None:
+        for uid in all_models:
+            if uid not in subset:
+                cached_entry = cache.get(uid)
+                if cached_entry and cached_entry.get("lineage"):
+                    column_lineage[uid] = cached_entry["lineage"]
 
-    for uid, data in all_models.items():
-        # Subset filtering: skip models outside the subset but include cached results
-        if subset is not None and uid not in subset:
-            cached_entry = cache.get(uid)
-            if cached_entry and cached_entry.get("lineage"):
-                column_lineage[uid] = cached_entry["lineage"]
-            continue
+    # Determine which models to analyze
+    uids_to_analyze = (
+        [uid for uid in all_models if uid in subset]
+        if subset is not None
+        else list(all_models.keys())
+    )
+    analyzable_count = len(uids_to_analyze)
 
-        sql = data.get("compiled_sql", "")
-        if not sql:
-            raw = data.get("raw_sql", "")
-            if not raw:
-                continue
-            if "{{" in raw or "{%" in raw:
-                sql = strip_jinja(raw)
-            else:
-                sql = raw
+    # Compute topological waves for parallel processing
+    analyze_set = {uid: all_models[uid] for uid in uids_to_analyze}
+    waves = _compute_depth_waves(analyze_set)
 
-        if not sql or not sql.strip():
-            analyzed_count += 1
-            continue
+    workers = max_workers if max_workers is not None else min(8, (os.cpu_count() or 1) + 4)
+    use_parallel = workers > 1 and analyzable_count > 1
 
-        total_models += 1
-        sql_hash = _hash_sql(sql)
-
-        # Check cache
-        cached_entry = cache.get(uid)
-        if cached_entry and cached_entry.get("sql_hash") == sql_hash:
-            cached_lineage = cached_entry.get("lineage")
-            if cached_lineage:
-                column_lineage[uid] = cached_lineage
-            cache_hits += 1
-            analyzed_count += 1
-            continue
-
-        analyzed_count += 1
-        model_name = data.get("name", uid.split(".")[-1])
+    if use_parallel:
         logger.info(
-            "Column lineage: analyzing %s (%d/%d)",
-            model_name,
-            analyzed_count,
+            "Column lineage: %d models in %d waves, %d workers",
             analyzable_count,
+            len(waves),
+            workers,
         )
 
-        known_columns = [col["name"] for col in data.get("columns", []) if col.get("name")]
+    analyzed_count = 0
 
-        try:
-            raw_lineage = parse_column_lineage(
-                compiled_sql=sql,
-                schema=schema,
-                dialect=dialect,
-                known_columns=known_columns or None,
-            )
-        except Exception as e:  # noqa: BLE001
-            logger.debug("Failed to parse column lineage for %s: %s", uid, e)
-            parse_failures += 1
-            failure_details.append(
-                {
-                    "model": uid,
-                    "name": data.get("name", ""),
-                    "error": str(e),
-                }
-            )
-            cache[uid] = {"sql_hash": sql_hash, "lineage": {}}
-            continue
+    if use_parallel:
+        # Submit ALL models to the pool at once. The pool's max_workers
+        # limit handles concurrency. We don't enforce wave ordering because
+        # models are currently independent (no inter-model deps during parsing).
+        # This avoids slow models in one wave blocking progress on others.
+        with ProcessPoolExecutor(
+            max_workers=workers,
+            initializer=_init_worker,
+            initargs=(schema, resolver, dialect),
+        ) as pool:
+            futures = {
+                pool.submit(
+                    _analyze_model_in_worker,
+                    uid,
+                    all_models[uid],
+                    cache.get(uid),
+                ): uid
+                for uid in uids_to_analyze
+            }
 
-        if not raw_lineage:
-            if known_columns:
-                failure_details.append(
-                    {
-                        "model": uid,
-                        "name": data.get("name", ""),
-                        "error": f"No columns traced ({len(known_columns)} columns in schema)",
-                    }
+            for future in as_completed(futures):
+                result = future.result()
+                analyzed_count += 1
+                _merge_result(
+                    result,
+                    all_models,
+                    column_lineage,
+                    cache,
+                    failure_details,
+                    analyzed_count,
+                    analyzable_count,
                 )
-            cache[uid] = {"sql_hash": sql_hash, "lineage": {}}
-            continue
-
-        model_lineage = _resolve_dependencies(raw_lineage, resolver)
-        cache[uid] = {"sql_hash": sql_hash, "lineage": model_lineage}
-        if model_lineage:
-            column_lineage[uid] = model_lineage
-
-        # Track partially traced models
-        if known_columns and len(model_lineage) < len(known_columns):
-            traced = set(model_lineage.keys())
-            missed = [c for c in known_columns if c not in traced]
-            if missed:
-                failure_details.append(
-                    {
-                        "model": uid,
-                        "name": data.get("name", ""),
-                        "error": f"Partial: {len(missed)}/{len(known_columns)} columns not traced",
-                        "columns": ", ".join(missed[:20]),
-                    }
+                if result.skipped:
+                    continue
+                total_models += 1
+                if result.cached:
+                    cache_hits += 1
+                elif result.failure:
+                    parse_failures += 1
+    else:
+        for wave_uids in waves:
+            for uid in wave_uids:
+                result = _analyze_single_model(
+                    uid=uid,
+                    data=all_models[uid],
+                    schema=schema,
+                    resolver=resolver,
+                    dialect=dialect,
+                    cached_entry=cache.get(uid),
                 )
+                analyzed_count += 1
+                _merge_result(
+                    result,
+                    all_models,
+                    column_lineage,
+                    cache,
+                    failure_details,
+                    analyzed_count,
+                    analyzable_count,
+                )
+                if result.skipped:
+                    continue
+                total_models += 1
+                if result.cached:
+                    cache_hits += 1
+                elif result.failure:
+                    parse_failures += 1
 
     if parse_failures > 0:
         logger.warning(
@@ -215,6 +412,44 @@ def analyze_column_lineage(
         _write_failure_report(failure_details, cache_path)
 
     return column_lineage
+
+
+def _merge_result(
+    result: _ModelLineageResult,
+    all_models: dict[str, dict[str, Any]],
+    column_lineage: dict[str, dict[str, list[dict[str, str]]]],
+    cache: dict[str, Any],
+    failure_details: list[dict[str, str]],
+    analyzed_count: int,
+    analyzable_count: int,
+) -> None:
+    """Merge a single model's lineage result into shared state.
+
+    Called sequentially (after future.result() in parallel mode, or directly
+    in sequential mode) so no locking is needed.
+    """
+    if result.skipped:
+        return
+
+    if result.cached:
+        if result.lineage:
+            column_lineage[result.uid] = result.lineage
+        return
+
+    model_name = all_models[result.uid].get("name", result.uid.split(".")[-1])
+    logger.info(
+        "Column lineage: analyzed %s (%d/%d)",
+        model_name,
+        analyzed_count,
+        analyzable_count,
+    )
+
+    if result.cache_entry:
+        cache[result.uid] = result.cache_entry
+    if result.lineage:
+        column_lineage[result.uid] = result.lineage
+    if result.failure:
+        failure_details.append(result.failure)
 
 
 def strip_jinja(raw_sql: str) -> str:

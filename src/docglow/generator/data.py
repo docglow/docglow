@@ -168,6 +168,7 @@ def build_docglow_data(
     column_lineage_select: str | None = None,
     column_lineage_depth: int | None = None,
     column_lineage_cache_dir: Any | None = None,
+    column_lineage_workers: int | None = None,
     exclude_packages: bool = True,
     slim: bool = False,
 ) -> dict[str, Any]:
@@ -194,6 +195,7 @@ def build_docglow_data(
         column_lineage_select=column_lineage_select,
         column_lineage_depth=column_lineage_depth,
         column_lineage_cache_dir=column_lineage_cache_dir,
+        column_lineage_workers=column_lineage_workers,
         exclude_packages=exclude_packages,
         slim=slim,
     )
@@ -214,6 +216,7 @@ def _build_column_lineage(
     sources: dict[str, Any],
     seeds: dict[str, Any],
     snapshots: dict[str, Any],
+    max_workers: int | None = None,
 ) -> dict[str, Any] | None:
     """Build column-level lineage if enabled."""
     if not enabled:
@@ -253,6 +256,7 @@ def _build_column_lineage(
             else _Path(".docglow-column-lineage-cache.json")
         ),
         subset=subset,
+        max_workers=max_workers,
     )
 
     # Backfill columns for models that have lineage but no catalog/manifest columns.
