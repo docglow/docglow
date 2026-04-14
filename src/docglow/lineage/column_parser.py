@@ -227,7 +227,8 @@ def _trace_column_in_executor(
 
     future = executor.submit(_trace)
     try:
-        return future.result(timeout=timeout_seconds)
+        result: list[ColumnDependency] = future.result(timeout=timeout_seconds)
+        return result
     except FuturesTimeout:
         # Best-effort cancel — the thread may still be running since Python
         # threads can't be forcibly interrupted, but this prevents the result
