@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-04-14
+
+### Added
+- **Parallel column lineage parsing** — models are now analyzed concurrently using `ProcessPoolExecutor`, bypassing the GIL for true CPU parallelism on SQLGlot parsing. ~3.4x speedup on a 1,870-model Snowflake project (96 min vs ~5.4 hours). (#71)
+- **`--workers` CLI flag** — control the number of parallel workers for column lineage (default: auto-detected from CPU count, min threshold of 20 models to activate)
+- **`--head-script` CLI flag** — inject custom HTML/JS into the `<head>` of generated sites (e.g., analytics snippets like PostHog, GA, Plausible)
+- **Benchmark script** (`scripts/bench_column_lineage.py`) — standalone tool for measuring column lineage performance against real dbt projects
+- **Docglow Cloud waitlist** — added Cloud section to README, docs homepage admonition, and dedicated `docs/cloud.md` page with pricing tiers and waitlist CTA
+- **PostHog analytics on demo site** — demo.docglow.com now tracks page views, feature usage, and referral sources
+
+### Changed
+- Column lineage per-column timeout now reuses a single `ThreadPoolExecutor` per model instead of creating/destroying one per column, reducing overhead
+
 ## [0.5.5] - 2026-04-10
 
 ### Fixed
