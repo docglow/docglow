@@ -41,7 +41,7 @@ function buildIndex(
   return index
 }
 
-export const useSearchStore = create<SearchState>((set, get) => ({
+export const useSearchStore = create<SearchState>((set) => ({
   query: '',
   results: [],
   isOpen: false,
@@ -73,17 +73,17 @@ export const useSearchStore = create<SearchState>((set, get) => ({
     }
 
     // Search resources first (fast — typically ~3K entries)
-    const resourceResults = resourceIndex.search(query, { limit: MAX_RESULTS }) as unknown as SearchEntry[]
+    const resourceResults = resourceIndex.search(query).slice(0, MAX_RESULTS) as unknown as SearchEntry[]
 
     let results: SearchEntry[]
 
     // If few resource results, also search columns to fill the list
     if (resourceResults.length < RESOURCE_RESULT_THRESHOLD && columnIndex) {
       const remaining = MAX_RESULTS - resourceResults.length
-      const columnResults = columnIndex.search(query, { limit: remaining }) as unknown as SearchEntry[]
+      const columnResults = columnIndex.search(query).slice(0, remaining) as unknown as SearchEntry[]
       results = [...resourceResults, ...columnResults]
     } else {
-      results = resourceResults.slice(0, MAX_RESULTS)
+      results = resourceResults
     }
 
     set({ query, results, selectedIndex: 0 })

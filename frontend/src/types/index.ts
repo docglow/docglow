@@ -89,4 +89,13 @@ export interface ColumnEdge {
   readonly transformation: TransformationType;
 }
 
+// SearchEntry extended with fields added after @docglow/shared-types v0.1.0.
+// These augmentations will be removed once shared-types is republished.
 export type { SearchEntry } from "@docglow/shared-types";
+declare module "@docglow/shared-types" {
+  interface SearchEntry {
+    readonly id: string;
+    readonly column_name?: string;
+    readonly model_name?: string;
+  }
+}

@@ -138,9 +138,9 @@ export function SearchModal() {
           </ul>
         )}
 
-        {query && results.length === 0 && (
+        {localQuery && results.length === 0 && (
           <div className="px-4 py-8 text-center text-sm text-[var(--text-muted)]">
-            No results for "{query}"
+            No results for "{localQuery}"
           </div>
         )}
       </div>
