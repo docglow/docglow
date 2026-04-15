@@ -1,4 +1,4 @@
-"""Build the search index for the frontend Fuse.js full-text search."""
+"""Build the search index for the frontend full-text search (MiniSearch)."""
 
 from __future__ import annotations
 
@@ -11,9 +11,10 @@ def build_search_index(
     seeds: dict[str, Any],
     snapshots: dict[str, Any],
 ) -> list[dict[str, Any]]:
-    """Build the search index for Fuse.js.
+    """Build the search index for MiniSearch.
 
-    Emits two kinds of entries:
+    Each entry has a unique ``id`` field required by MiniSearch. Emits two
+    kinds of entries:
     - **resource entries** (model / source / seed / snapshot) — one per resource,
       searchable by name, description, and tags.
     - **column entries** — one per column per resource, enabling users to search
@@ -34,6 +35,7 @@ def build_search_index(
             # Resource-level entry
             entries.append(
                 {
+                    "id": uid,
                     "unique_id": uid,
                     "name": model_name,
                     "resource_type": resource_type,
@@ -49,6 +51,7 @@ def build_search_index(
                     continue
                 entries.append(
                     {
+                        "id": f"{uid}::{col_name}",
                         "unique_id": uid,
                         "name": col_name,
                         "resource_type": "column",

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Benchmark Fuse.js search performance against a generated docglow-data.json.
+ * Benchmark search performance against a generated docglow-data.json.
  *
  * Usage:
  *   node scripts/bench_search.mjs path/to/docglow-data.json
@@ -16,11 +16,10 @@ import { createRequire } from 'module'
 import { resolve } from 'path'
 import { performance } from 'perf_hooks'
 
-// Fuse.js is installed in the frontend directory
 const require = createRequire(
-  resolve(process.cwd(), 'frontend', 'node_modules', 'fuse.js', 'package.json')
+  resolve(process.cwd(), 'frontend', 'node_modules', 'minisearch', 'package.json')
 )
-const Fuse = require('fuse.js').default ?? require('fuse.js')
+const MiniSearch = require('minisearch').default ?? require('minisearch')
 
 // --- Parse args ---
 const args = process.argv.slice(2)
@@ -51,9 +50,8 @@ const queries = queriesArg
 
 // --- Load data ---
 console.log(`\nLoading ${dataPath}...`)
-const t0 = performance.now()
 const raw = readFileSync(dataPath, 'utf-8')
-const tParse = performance.now()
+const t0 = performance.now()
 const data = JSON.parse(raw)
 const tJson = performance.now()
 
@@ -69,47 +67,47 @@ const columnEntries = searchIndex.filter(e => e.resource_type === 'column')
 const indexJson = JSON.stringify(searchIndex)
 
 console.log(`  File size:        ${(raw.length / 1024 / 1024).toFixed(1)} MB`)
-console.log(`  JSON parse:       ${(tJson - tParse).toFixed(0)}ms`)
+console.log(`  JSON parse:       ${(tJson - t0).toFixed(0)}ms`)
 console.log(`  Total entries:    ${searchIndex.length.toLocaleString()}`)
 console.log(`  Resource entries: ${resourceEntries.length.toLocaleString()}`)
 console.log(`  Column entries:   ${columnEntries.length.toLocaleString()}`)
 console.log(`  Index JSON size:  ${(indexJson.length / 1024 / 1024).toFixed(1)} MB`)
 
-// Check which fields are present
-const sampleResource = resourceEntries[0] || {}
-const sampleColumn = columnEntries[0] || {}
-console.log(`  Resource fields:  ${Object.keys(sampleResource).join(', ')}`)
-console.log(`  Column fields:    ${Object.keys(sampleColumn).join(', ')}`)
+const hasId = 'id' in (searchIndex[0] || {})
+console.log(`  Has id field:     ${hasId}`)
 
-// --- Detect Fuse options based on fields present ---
-const hasColumns = 'columns' in sampleResource
-const hasSqlSnippet = 'sql_snippet' in sampleResource
+if (!hasId) {
+  console.error('\nError: search index entries need an "id" field for MiniSearch.')
+  console.error('Regenerate with the latest docglow version.')
+  process.exit(1)
+}
 
-const keys = [
-  { name: 'name', weight: 0.4 },
-  { name: 'column_name', weight: 0.35 },
-  { name: 'description', weight: 0.25 },
-  ...(hasColumns ? [{ name: 'columns', weight: 0.15 }] : []),
-  { name: 'model_name', weight: 0.1 },
-  { name: 'tags', weight: 0.1 },
-  ...(hasSqlSnippet ? [{ name: 'sql_snippet', weight: 0.1 }] : []),
-]
+// --- Benchmark: Two-tier MiniSearch (matching production implementation) ---
+console.log(`\n--- MiniSearch: Two-Tier (resource + column) ---`)
 
-// --- Benchmark: Index construction ---
-console.log(`\n--- Index Construction ---`)
-console.log(`  Fuse keys:        ${keys.map(k => k.name).join(', ')}`)
+const RESOURCE_THRESHOLD = 5
+const MAX_RESULTS = 20
 
-// Run 3 times and take median
+// Build resource index
 const initTimes = []
-let fuse
+let resIdx, colIdx
 for (let i = 0; i < 3; i++) {
   const t1 = performance.now()
-  fuse = new Fuse(searchIndex, {
-    keys,
-    threshold: 0.4,
-    includeMatches: hasColumns, // old behavior had includeMatches
-    minMatchCharLength: 2,
+  resIdx = new MiniSearch({
+    fields: ['name', 'description', 'tags'],
+    storeFields: ['id', 'unique_id', 'name', 'resource_type', 'description', 'tags'],
+    idField: 'id',
+    searchOptions: { prefix: true, fuzzy: 0.2, boost: { name: 2 } },
   })
+  resIdx.addAll(resourceEntries)
+
+  colIdx = new MiniSearch({
+    fields: ['name', 'description', 'model_name'],
+    storeFields: ['id', 'unique_id', 'name', 'resource_type', 'column_name', 'model_name', 'description'],
+    idField: 'id',
+    searchOptions: { prefix: true, fuzzy: 0.2, boost: { name: 2 } },
+  })
+  colIdx.addAll(columnEntries)
   const t2 = performance.now()
   initTimes.push(t2 - t1)
 }
@@ -117,9 +115,8 @@ initTimes.sort((a, b) => a - b)
 console.log(`  Init times:       ${initTimes.map(t => t.toFixed(0) + 'ms').join(', ')}`)
 console.log(`  Median init:      ${initTimes[1].toFixed(0)}ms`)
 
-// --- Benchmark: Search queries ---
-console.log(`\n--- Search Queries ---`)
-console.log(`  ${'Query'.padEnd(20)} ${'Results'.padStart(8)} ${'Time'.padStart(10)} ${'Avg (3 runs)'.padStart(14)}`)
+// Search queries
+console.log(`\n  ${'Query'.padEnd(20)} ${'Results'.padStart(8)} ${'Time'.padStart(10)} ${'Avg (3 runs)'.padStart(14)}`)
 console.log(`  ${'─'.repeat(20)} ${'─'.repeat(8)} ${'─'.repeat(10)} ${'─'.repeat(14)}`)
 
 for (const query of queries) {
@@ -127,7 +124,18 @@ for (const query of queries) {
   let resultCount = 0
   for (let i = 0; i < 3; i++) {
     const t1 = performance.now()
-    const results = fuse.search(query, { limit: 20 })
+
+    // Two-tier search (matches production logic)
+    const resourceResults = resIdx.search(query, { limit: MAX_RESULTS })
+    let results
+    if (resourceResults.length < RESOURCE_THRESHOLD) {
+      const remaining = MAX_RESULTS - resourceResults.length
+      const columnResults = colIdx.search(query, { limit: remaining })
+      results = [...resourceResults, ...columnResults]
+    } else {
+      results = resourceResults.slice(0, MAX_RESULTS)
+    }
+
     const t2 = performance.now()
     times.push(t2 - t1)
     resultCount = results.length
@@ -135,7 +143,7 @@ for (const query of queries) {
   times.sort((a, b) => a - b)
   const median = times[1]
   console.log(
-    `  ${query.padEnd(20)} ${String(resultCount).padStart(8)} ${(median.toFixed(1) + 'ms').padStart(10)} ${(times.map(t => t.toFixed(0)).join('/') + 'ms').padStart(14)}`
+    `  ${query.padEnd(20)} ${String(resultCount).padStart(8)} ${(median.toFixed(1) + 'ms').padStart(10)} ${(times.map(t => t.toFixed(1)).join('/') + 'ms').padStart(14)}`
   )
 }
 
@@ -143,11 +151,9 @@ for (const query of queries) {
 console.log(`\n${'='.repeat(50)}`)
 console.log(`  SUMMARY`)
 console.log(`${'='.repeat(50)}`)
-console.log(`  Index entries:    ${searchIndex.length.toLocaleString()}`)
+console.log(`  Engine:           MiniSearch (two-tier)`)
+console.log(`  Resource entries: ${resourceEntries.length.toLocaleString()}`)
+console.log(`  Column entries:   ${columnEntries.length.toLocaleString()}`)
 console.log(`  Index JSON:       ${(indexJson.length / 1024 / 1024).toFixed(1)} MB`)
 console.log(`  Init time:        ${initTimes[1].toFixed(0)}ms`)
-console.log(`  Fuse keys:        ${keys.length}`)
-console.log(`  includeMatches:   ${hasColumns}`)
-console.log(`  Has sql_snippet:  ${hasSqlSnippet}`)
-console.log(`  Has columns:      ${hasColumns}`)
 console.log()

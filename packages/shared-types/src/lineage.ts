@@ -44,13 +44,12 @@ export interface LineageEdge {
 }
 
 export interface SearchEntry {
+  readonly id: string;
   readonly unique_id: string;
   readonly name: string;
   readonly resource_type: string;
   readonly description: string;
-  readonly columns: string;
-  readonly tags: string;
-  readonly sql_snippet: string;
+  readonly tags?: string;
   /** Present only on column entries — the column name itself. */
   readonly column_name?: string;
   /** Present only on column entries — the parent model/source name. */

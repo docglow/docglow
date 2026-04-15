@@ -287,6 +287,7 @@ class TestBuildDocglowData:
         assert len(search_index) > 0
 
         entry = search_index[0]
+        assert "id" in entry
         assert "unique_id" in entry
         assert "name" in entry
         assert "resource_type" in entry

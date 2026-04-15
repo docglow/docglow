@@ -24,6 +24,7 @@ class TestBuildSearchIndex:
         resource_entries = [e for e in index if e["resource_type"] != "column"]
         assert len(resource_entries) == 1
         entry = resource_entries[0]
+        assert entry["id"] == "model.proj.users"
         assert entry["unique_id"] == "model.proj.users"
         assert entry["name"] == "users"
         assert entry["resource_type"] == "model"
@@ -59,6 +60,7 @@ class TestBuildSearchIndex:
         index = build_search_index(models, {}, {}, {})
 
         col = next(e for e in index if e["resource_type"] == "column")
+        assert col["id"] == "model.proj.orders::order_id"
         assert col["unique_id"] == "model.proj.orders"
         assert col["name"] == "order_id"
         assert col["column_name"] == "order_id"
