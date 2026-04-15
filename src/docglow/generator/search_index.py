@@ -15,7 +15,7 @@ def build_search_index(
 
     Emits two kinds of entries:
     - **resource entries** (model / source / seed / snapshot) — one per resource,
-      with a comma-separated ``columns`` field for broad matching.
+      searchable by name, description, and tags.
     - **column entries** — one per column per resource, enabling users to search
       for a column name and jump directly to the model + column.
     """
@@ -29,20 +29,16 @@ def build_search_index(
     ]:
         for uid, data in collection.items():
             columns = data.get("columns", [])
-            column_names = [c["name"] for c in columns]
-            sql = data.get("compiled_sql", "") or data.get("raw_sql", "")
             model_name = data.get("name", "")
 
-            # Resource-level entry (existing behaviour)
+            # Resource-level entry
             entries.append(
                 {
                     "unique_id": uid,
                     "name": model_name,
                     "resource_type": resource_type,
                     "description": data.get("description", ""),
-                    "columns": ", ".join(column_names),
                     "tags": ", ".join(data.get("tags", [])),
-                    "sql_snippet": sql[:500],
                 }
             )
 
@@ -59,9 +55,6 @@ def build_search_index(
                         "column_name": col_name,
                         "model_name": model_name,
                         "description": col.get("description", ""),
-                        "columns": "",
-                        "tags": "",
-                        "sql_snippet": "",
                     }
                 )
 

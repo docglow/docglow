@@ -21,13 +21,10 @@ const FUSE_OPTIONS: IFuseOptions<SearchEntry> = {
     { name: 'name', weight: 0.4 },
     { name: 'column_name', weight: 0.35 },
     { name: 'description', weight: 0.25 },
-    { name: 'columns', weight: 0.15 },
     { name: 'model_name', weight: 0.1 },
     { name: 'tags', weight: 0.1 },
-    { name: 'sql_snippet', weight: 0.1 },
   ],
   threshold: 0.4,
-  includeMatches: true,
   minMatchCharLength: 2,
 }
 

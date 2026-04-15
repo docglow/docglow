@@ -1,10 +1,12 @@
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSearchStore } from '../../stores/searchStore'
 
 export function SearchModal() {
-  const { query, results, isOpen, selectedIndex, search, setOpen, setSelectedIndex, reset } = useSearchStore()
+  const { results, isOpen, selectedIndex, search, setOpen, setSelectedIndex, reset } = useSearchStore()
+  const [localQuery, setLocalQuery] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const navigate = useNavigate()
 
   // Cmd+K to open
@@ -22,12 +24,29 @@ export function SearchModal() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isOpen, setOpen, reset])
 
-  // Focus input when opening
+  // Focus input when opening; reset local query when closing
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 50)
+    } else {
+      setLocalQuery('')
     }
   }, [isOpen])
+
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+  }, [])
+
+  const handleInputChange = useCallback((value: string) => {
+    setLocalQuery(value)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    if (!value.trim()) {
+      search('')
+      return
+    }
+    debounceRef.current = setTimeout(() => search(value), 200)
+  }, [search])
 
   const handleSelect = useCallback((entry: { unique_id: string; resource_type: string; column_name?: string }) => {
     const isSource = entry.unique_id.startsWith('source.')
@@ -68,8 +87,8 @@ export function SearchModal() {
           <input
             ref={inputRef}
             type="text"
-            value={query}
-            onChange={e => search(e.target.value)}
+            value={localQuery}
+            onChange={e => handleInputChange(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Search models, columns, sources..."
             className="w-full px-3 py-3 text-sm bg-transparent outline-none"

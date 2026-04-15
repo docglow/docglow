@@ -291,7 +291,8 @@ class TestBuildDocglowData:
         assert "name" in entry
         assert "resource_type" in entry
         assert "description" in entry
-        assert "columns" in entry
+        assert "columns" not in entry
+        assert "sql_snippet" not in entry
 
     def test_search_index_covers_models_and_sources(self, tmp_path: Path) -> None:
         data = _load_fixtures(tmp_path)

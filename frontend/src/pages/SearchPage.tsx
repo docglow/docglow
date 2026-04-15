@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useSearchStore } from '../stores/searchStore'
 
@@ -7,6 +7,7 @@ export function SearchPage() {
   const navigate = useNavigate()
   const { results, search } = useSearchStore()
   const [localQuery, setLocalQuery] = useState(searchParams.get('q') ?? '')
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     const q = searchParams.get('q')
@@ -16,10 +17,19 @@ export function SearchPage() {
     }
   }, [searchParams, search])
 
-  const handleSearch = (q: string) => {
+  useEffect(() => {
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+  }, [])
+
+  const handleSearch = useCallback((q: string) => {
     setLocalQuery(q)
-    search(q)
-  }
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    if (!q.trim()) {
+      search('')
+      return
+    }
+    debounceRef.current = setTimeout(() => search(q), 200)
+  }, [search])
 
   return (
     <div className="max-w-3xl">
@@ -58,11 +68,6 @@ export function SearchPage() {
                 {result.description && (
                   <p className="text-sm text-[var(--text-muted)] line-clamp-2">
                     {result.description}
-                  </p>
-                )}
-                {result.columns && (
-                  <p className="text-xs text-[var(--text-muted)] mt-1 truncate">
-                    Columns: {result.columns}
                   </p>
                 )}
               </button>

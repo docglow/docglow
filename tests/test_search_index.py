@@ -28,6 +28,8 @@ class TestBuildSearchIndex:
         assert entry["name"] == "users"
         assert entry["resource_type"] == "model"
         assert "column_name" not in entry
+        assert "columns" not in entry
+        assert "sql_snippet" not in entry
 
     def test_column_entries_emitted_per_column(self) -> None:
         models = {
@@ -62,6 +64,8 @@ class TestBuildSearchIndex:
         assert col["column_name"] == "order_id"
         assert col["model_name"] == "orders"
         assert col["description"] == "PK"
+        assert "columns" not in col
+        assert "sql_snippet" not in col
 
     def test_column_entries_across_multiple_resource_types(self) -> None:
         models = {"model.proj.a": _make_model("a", [{"name": "col_a", "description": ""}])}
