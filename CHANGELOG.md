@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-04-15
+
+### Changed
+- **Search engine replaced: Fuse.js → MiniSearch** — inverted index (O(log n)) replaces linear scan (O(n)). Search queries are 100-780x faster on large projects. (#65)
+- **Two-tier search** — resource index (~3K entries) is searched immediately; column index (~225K entries) is searched only when resource results are sparse (<5 hits)
+- **Search index trimmed** — removed `sql_snippet` and `columns` fields, ~30% smaller payload
+- **200ms debounce** on search inputs prevents rapid-fire queries during typing
+- **Smaller bundle** — MiniSearch is ~8KB gzipped vs Fuse.js ~13KB
+
 ## [0.6.0] - 2026-04-14
 
 ### Added
