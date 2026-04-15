@@ -17,7 +17,7 @@ import '@xyflow/react/dist/style.css'
 import dagre from 'dagre'
 import { useNavigate } from 'react-router-dom'
 import type { LineageNode, LineageEdge, LayerDefinition, ColumnLineageData } from '../../types'
-import { getFullChain } from '../../utils/graphTraversal'
+import { getUnionChain } from '../../utils/graphTraversal'
 import { useColumnHighlightStore } from '../../stores/columnHighlightStore'
 import { buildReverseIndex, getColumnTraceResult } from '../../utils/columnLineageGraph'
 import { DagNode } from './DagNode'
@@ -341,7 +341,8 @@ function computeLayout(
 export interface LineageFlowProps {
   nodes: LineageNode[]
   edges: LineageEdge[]
-  highlightId?: string
+  pinnedIds?: Set<string>
+  onTogglePin?: (id: string) => void
   onNodeClick?: (id: string) => void
   /** Map of folder node id → { modelCount, sourceCount } for folder rendering */
   folderData?: Record<string, { modelCount: number; sourceCount: number }>
@@ -362,7 +363,8 @@ export interface LineageFlowProps {
 function LineageFlowInner({
   nodes,
   edges,
-  highlightId,
+  pinnedIds,
+  onTogglePin: _onTogglePin,
   onNodeClick,
   folderData,
   expandedFolders,
@@ -374,10 +376,6 @@ function LineageFlowInner({
 }: LineageFlowProps) {
   const navigate = useNavigate()
   const { fitView, getNodes } = useReactFlow()
-  // Hover highlighting disabled — it caused flicker when moving rapidly
-  // across nodes. Click-based highlighting (highlightId from sidebar/click)
-  // and the side panel are the proper interaction patterns.
-  const hoveredId: string | null = null
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
 
   // Column highlight state
@@ -418,12 +416,12 @@ function LineageFlowInner({
 
   // Hover highlighting disabled — caused flicker when rapidly moving across nodes.
 
-  const centerOnHighlight = useCallback(() => {
-    if (!highlightId) return
-    const target = getNodes().find(n => n.id === highlightId)
-    if (!target) return
-    fitView({ nodes: [target], duration: 300, padding: 0.5 })
-  }, [highlightId, fitView, getNodes])
+  const centerOnPinned = useCallback(() => {
+    if (!pinnedIds || pinnedIds.size === 0) return
+    const targets = getNodes().filter(n => pinnedIds.has(n.id))
+    if (targets.length === 0) return
+    fitView({ nodes: targets, duration: 300, padding: 0.3 })
+  }, [pinnedIds, fitView, getNodes])
 
   const folderNodeIds = useMemo(
     () => new Set(Object.keys(folderData ?? {})),
@@ -462,25 +460,13 @@ function LineageFlowInner({
     [nodes, edges, folderNodeIds, layoutExpandedIds, modelColumns],
   )
 
-  // Highlighting — depth-capped with memoized cache
-  const activeId = hoveredId ?? highlightId ?? null
-  const highlightCacheRef = useRef(new Map<string, Set<string>>())
-  const highlightCacheEdgesRef = useRef(edges)
-
-  // Clear cache when edges change
-  if (highlightCacheEdgesRef.current !== edges) {
-    highlightCacheEdgesRef.current = edges
-    highlightCacheRef.current = new Map()
-  }
+  // Highlighting — depth-capped chain for all pinned nodes
+  const pinnedArray = useMemo(() => Array.from(pinnedIds ?? []), [pinnedIds])
 
   const highlightedSet = useMemo(() => {
-    if (!activeId) return null
-    const cached = highlightCacheRef.current.get(activeId)
-    if (cached) return cached
-    const result = getFullChain(activeId, edges, HIGHLIGHT_DEPTH_CAP)
-    highlightCacheRef.current.set(activeId, result)
-    return result
-  }, [activeId, edges])
+    if (pinnedArray.length === 0) return null
+    return getUnionChain(pinnedArray, edges, HIGHLIGHT_DEPTH_CAP)
+  }, [pinnedArray, edges])
 
   // Compute layer bands from layout positions
   const layerBands = useMemo(() => {
@@ -637,7 +623,7 @@ function LineageFlowInner({
 
       const isFolder = node.type === 'folder'
       const highlighted = !highlightedSet || highlightedSet.has(node.id)
-      const isActiveNode = node.id === activeId
+      const isPinnedNode = pinnedIds?.has(node.id) ?? false
 
       // Only create new objects if something actually changed
       const currentOpacity = (node.style as Record<string, unknown>)?.opacity
@@ -649,7 +635,7 @@ function LineageFlowInner({
         && highlightedSet?.has(node.id)
 
       const styleChanged = currentOpacity !== targetOpacity
-      const dataChanged = currentIsActive !== isActiveNode || currentNoColumnData !== targetNoColumnData
+      const dataChanged = currentIsActive !== isPinnedNode || currentNoColumnData !== targetNoColumnData
 
       if (!styleChanged && !dataChanged && !override) return node
 
@@ -657,14 +643,14 @@ function LineageFlowInner({
         ...node,
         ...(override ? { position: { x: override.x, y: override.y } } : {}),
         ...(dataChanged ? {
-          data: { ...node.data, isActive: isActiveNode, noColumnData: targetNoColumnData },
+          data: { ...node.data, isActive: isPinnedNode, noColumnData: targetNoColumnData },
         } : {}),
         ...(styleChanged ? {
           style: { ...node.style, opacity: targetOpacity },
         } : {}),
       }
     })
-  }, [rfNodes, dragOverrides, highlightedSet, activeId, columnTrace, columnLineageData])
+  }, [rfNodes, dragOverrides, highlightedSet, pinnedIds, columnTrace, columnLineageData])
 
   // Handle node drag changes
   const handleNodesChange = useCallback((changes: NodeChange[]) => {
@@ -880,10 +866,10 @@ function LineageFlowInner({
       maxZoom={3}
     >
       <Controls showInteractive={false}>
-        {highlightId && (
+        {pinnedIds && pinnedIds.size > 0 && (
           <button
-            onClick={centerOnHighlight}
-            title="Center on selected model"
+            onClick={centerOnPinned}
+            title={pinnedIds.size === 1 ? 'Center on pinned model' : `Fit all ${pinnedIds.size} pinned models`}
             className="react-flow__controls-button"
             style={{ color: '#f59e0b' }}
           >

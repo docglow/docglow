@@ -2,8 +2,9 @@ import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { useProjectStore } from '../stores/projectStore'
 import { useTagFilterStore } from '../stores/tagFilterStore'
 import { LineageFlow } from '../components/lineage/LineageFlow'
+import { PinBar } from '../components/lineage/PinBar'
 import { FilterDropdown } from '../components/ui/FilterDropdown'
-import { getSubgraph } from '../utils/graph'
+import { getUnionSubgraph } from '../utils/graph'
 import { applyFilters, useFilterState, computeSubgraphOptions, RESOURCE_TYPES } from '../utils/lineageFilters'
 import type { FilterState } from '../components/ui/FilterDropdown'
 import type { LineageDirection } from '../utils/graph'
@@ -40,7 +41,7 @@ function computeSuggestions(nodes: LineageNode[], edges: LineageEdge[]): ModelSu
 
 export function LineagePage() {
   const { data } = useProjectStore()
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
+  const [pinnedIds, setPinnedIds] = useState<Set<string>>(new Set())
   const [depth, setDepth] = useState(2)
   const [direction, setDirection] = useState<LineageDirection>('both')
   const [search, setSearch] = useState('')
@@ -66,11 +67,33 @@ export function LineagePage() {
       .slice(0, 20)
   }, [data, search])
 
-  // Compute raw subgraph once, then derive filtered view and filter options from it
+  const handlePin = useCallback((id: string) => {
+    setPinnedIds(prev => new Set([...prev, id]))
+    setSearch('')
+  }, [])
+
+  const handleUnpin = useCallback((id: string) => {
+    setPinnedIds(prev => {
+      const next = new Set(prev)
+      next.delete(id)
+      return next
+    })
+  }, [])
+
+  const handleClearAll = useCallback(() => {
+    setPinnedIds(new Set())
+    setSearch('')
+    clearTypes()
+    clearFolders()
+  }, [clearTypes, clearFolders])
+
+  // Compute union subgraph for all pinned models
+  const pinnedArray = useMemo(() => Array.from(pinnedIds), [pinnedIds])
+
   const rawSubgraph = useMemo(() => {
-    if (!data || !selectedNodeId) return null
-    return getSubgraph(selectedNodeId, data.lineage.nodes, data.lineage.edges, depth, direction)
-  }, [data, selectedNodeId, depth, direction])
+    if (!data || pinnedIds.size === 0) return null
+    return getUnionSubgraph(pinnedArray, data.lineage.nodes, data.lineage.edges, depth, direction)
+  }, [data, pinnedArray, depth, direction])
 
   const subgraph = useMemo(() => {
     if (!rawSubgraph) return null
@@ -82,27 +105,10 @@ export function LineagePage() {
     return computeSubgraphOptions(rawSubgraph.nodes)
   }, [rawSubgraph])
 
-  const selectedNode = useMemo(() => {
-    if (!data || !selectedNodeId) return null
-    return data.lineage.nodes.find(n => n.id === selectedNodeId) ?? null
-  }, [data, selectedNodeId])
-
   const modelColumnsMap = useMemo(() => {
     if (!data) return {}
     return buildModelColumnsMap(data)
   }, [data])
-
-  const handleSelectModel = useCallback((id: string) => {
-    setSelectedNodeId(id)
-    setSearch('')
-  }, [])
-
-  const handleClearSelection = useCallback(() => {
-    setSelectedNodeId(null)
-    setSearch('')
-    clearTypes()
-    clearFolders()
-  }, [clearTypes, clearFolders])
 
   // Column search state
   const [colSearch, setColSearch] = useState('')
@@ -124,7 +130,6 @@ export function LineagePage() {
         }
       }
     }
-    // Also check columns that are referenced as sources (not just targets)
     for (const [, columns] of Object.entries(data.column_lineage)) {
       for (const deps of Object.values(columns)) {
         for (const dep of deps) {
@@ -153,7 +158,6 @@ export function LineagePage() {
     setColSearchOpen(false)
   }, [clearSelection])
 
-  // Close dropdown on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (colSearchRef.current && !colSearchRef.current.contains(e.target as Node)) {
@@ -174,165 +178,177 @@ export function LineagePage() {
 
   if (!data) return null
 
-  // Exploring a model's lineage
-  if (selectedNodeId && subgraph) {
+  // Exploring pinned models' lineage
+  if (pinnedIds.size > 0 && subgraph) {
     return (
       <div className="h-full flex flex-col">
-        <div className="flex items-center gap-3 mb-2 shrink-0 flex-wrap">
-          <button
-            onClick={handleClearSelection}
-            className="p-1 rounded hover:bg-[var(--bg-surface)] cursor-pointer transition-colors text-[var(--text-muted)]"
-            title="Back to overview"
-          >
-            <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 12H5M12 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <div className="mr-2">
-            <h1 className="text-lg font-bold leading-tight">{selectedNode?.name ?? selectedNodeId}</h1>
-            <span className="text-xs text-[var(--text-muted)]">{selectedNode?.folder}</span>
-          </div>
-
+        <div className="flex flex-col gap-2 mb-2 shrink-0">
+          {/* Pin bar */}
           <div className="flex items-center gap-2">
-            <label className="text-xs text-[var(--text-muted)]">Depth</label>
-            <input
-              type="range"
-              min={1}
-              max={6}
-              value={depth}
-              onChange={e => setDepth(Number(e.target.value))}
-              className="w-20 accent-[var(--primary)]"
-            />
-            <span className="text-xs font-medium w-4 text-center">{depth}</span>
-          </div>
-
-          <div className="h-4 w-px bg-[var(--border)]" />
-
-          {/* Direction toggle */}
-          <div className="flex items-center rounded overflow-hidden border border-[var(--border)]">
-            {(['upstream', 'both', 'downstream'] as const).map(dir => (
-              <button
-                key={dir}
-                onClick={() => setDirection(dir)}
-                className={`px-2 py-0.5 text-xs cursor-pointer transition-colors flex items-center gap-1
-                  ${direction === dir
-                    ? 'bg-primary text-white'
-                    : 'bg-[var(--bg)] text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-surface)]'
-                  }`}
-                title={dir === 'both' ? 'Show upstream & downstream' : `Show ${dir} only`}
-              >
-                {dir === 'upstream' && (
-                  <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
-                    <path d="M19 12H5M12 5l-7 7" />
-                  </svg>
-                )}
-                {dir === 'both' && (
-                  <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
-                    <path d="M5 12h14M8 8l-4 4 4 4M16 8l4 4-4 4" />
-                  </svg>
-                )}
-                {dir === 'downstream' && (
-                  <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
-                    <path d="M5 12h14M12 5l7 7" />
-                  </svg>
-                )}
-                {dir === 'upstream' ? 'Up' : dir === 'downstream' ? 'Down' : 'Both'}
-              </button>
-            ))}
-          </div>
-
-          <div className="h-4 w-px bg-[var(--border)]" />
-
-          <FilterDropdown
-            label="Types"
-            options={subgraphOptions.types}
-            filter={typeFilter}
-            onToggle={toggleType}
-            onSetMode={setTypeMode}
-            onClear={clearTypes}
-          />
-          {subgraphOptions.tags.length > 0 && (
-            <FilterDropdown
-              label="Tags"
-              options={subgraphOptions.tags}
-              filter={tagFilter}
-              onToggle={toggleTag}
-              onSetMode={setTagMode}
-              onClear={clearTags}
-            />
-          )}
-          {subgraphOptions.folders.length > 0 && (
-            <FilterDropdown
-              label="Folders"
-              options={subgraphOptions.folders}
-              filter={folderFilter}
-              onToggle={toggleFolder}
-              onSetMode={setFolderMode}
-              onClear={clearFolders}
-              displayLabel={(v) => v.split('/').pop() ?? v}
-            />
-          )}
-
-          {hasActiveFilters && (
             <button
-              onClick={clearAllFilters}
-              className="px-2 py-1 text-xs rounded bg-danger/10 text-danger hover:bg-danger/20 cursor-pointer transition-colors"
+              onClick={handleClearAll}
+              className="p-1 rounded hover:bg-[var(--bg-surface)] cursor-pointer transition-colors text-[var(--text-muted)] shrink-0"
+              title="Back to overview"
             >
-              Clear filters
+              <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+              </svg>
             </button>
-          )}
+            <div className="flex-1">
+              <PinBar
+                pinnedIds={pinnedIds}
+                onPin={handlePin}
+                onUnpin={handleUnpin}
+                onClearAll={handleClearAll}
+                nodes={data.lineage.nodes}
+              />
+            </div>
+          </div>
 
-          {/* Column search */}
-          {data.column_lineage && (
-            <>
-              <div className="h-4 w-px bg-[var(--border)]" />
-              <div className="relative" ref={colSearchRef}>
-                <input
-                  type="text"
-                  value={colSearch}
-                  onChange={e => { setColSearch(e.target.value); setColSearchOpen(true) }}
-                  onFocus={() => setColSearchOpen(true)}
-                  placeholder="Search column..."
-                  className="w-36 px-2 py-0.5 text-xs border border-[var(--border)] rounded bg-[var(--bg)] outline-none focus:border-primary transition-colors"
-                />
-                {colSearch && (
-                  <button
-                    onClick={handleColSearchClear}
-                    className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer"
-                  >
+          {/* Controls row */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-[var(--text-muted)]">Depth</label>
+              <input
+                type="range"
+                min={1}
+                max={6}
+                value={depth}
+                onChange={e => setDepth(Number(e.target.value))}
+                className="w-20 accent-[var(--primary)]"
+              />
+              <span className="text-xs font-medium w-4 text-center">{depth}</span>
+            </div>
+
+            <div className="h-4 w-px bg-[var(--border)]" />
+
+            {/* Direction toggle */}
+            <div className="flex items-center rounded overflow-hidden border border-[var(--border)]">
+              {(['upstream', 'both', 'downstream'] as const).map(dir => (
+                <button
+                  key={dir}
+                  onClick={() => setDirection(dir)}
+                  className={`px-2 py-0.5 text-xs cursor-pointer transition-colors flex items-center gap-1
+                    ${direction === dir
+                      ? 'bg-primary text-white'
+                      : 'bg-[var(--bg)] text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-surface)]'
+                    }`}
+                  title={dir === 'both' ? 'Show upstream & downstream' : `Show ${dir} only`}
+                >
+                  {dir === 'upstream' && (
                     <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
-                      <path d="M18 6 6 18M6 6l12 12" />
+                      <path d="M19 12H5M12 5l-7 7" />
                     </svg>
-                  </button>
-                )}
-                {colSearchOpen && colSearchResults.length > 0 && (
-                  <div className="absolute top-full left-0 mt-1 z-50 bg-[var(--bg)] border border-[var(--border)] rounded-lg shadow-lg max-h-48 overflow-y-auto min-w-[240px]">
-                    {colSearchResults.map((r, i) => (
-                      <button
-                        key={`${r.modelId}-${r.columnName}-${i}`}
-                        onClick={() => handleColSearchSelect(r.modelId, r.columnName)}
-                        className="w-full text-left px-3 py-1.5 text-xs hover:bg-[var(--bg-surface)] cursor-pointer transition-colors"
-                      >
-                        <span className="font-medium text-[var(--text)]">{r.columnName}</span>
-                        <span className="text-[var(--text-muted)] ml-1.5">in {r.modelName}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </>
-          )}
+                  )}
+                  {dir === 'both' && (
+                    <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                      <path d="M5 12h14M8 8l-4 4 4 4M16 8l4 4-4 4" />
+                    </svg>
+                  )}
+                  {dir === 'downstream' && (
+                    <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                      <path d="M5 12h14M12 5l7 7" />
+                    </svg>
+                  )}
+                  {dir === 'upstream' ? 'Up' : dir === 'downstream' ? 'Down' : 'Both'}
+                </button>
+              ))}
+            </div>
 
-          <span className="text-xs text-[var(--text-muted)] ml-auto">
-            {subgraph.nodes.length} nodes · {subgraph.edges.length} edges
-          </span>
+            <div className="h-4 w-px bg-[var(--border)]" />
+
+            <FilterDropdown
+              label="Types"
+              options={subgraphOptions.types}
+              filter={typeFilter}
+              onToggle={toggleType}
+              onSetMode={setTypeMode}
+              onClear={clearTypes}
+            />
+            {subgraphOptions.tags.length > 0 && (
+              <FilterDropdown
+                label="Tags"
+                options={subgraphOptions.tags}
+                filter={tagFilter}
+                onToggle={toggleTag}
+                onSetMode={setTagMode}
+                onClear={clearTags}
+              />
+            )}
+            {subgraphOptions.folders.length > 0 && (
+              <FilterDropdown
+                label="Folders"
+                options={subgraphOptions.folders}
+                filter={folderFilter}
+                onToggle={toggleFolder}
+                onSetMode={setFolderMode}
+                onClear={clearFolders}
+                displayLabel={(v) => v.split('/').pop() ?? v}
+              />
+            )}
+
+            {hasActiveFilters && (
+              <button
+                onClick={clearAllFilters}
+                className="px-2 py-1 text-xs rounded bg-danger/10 text-danger hover:bg-danger/20 cursor-pointer transition-colors"
+              >
+                Clear filters
+              </button>
+            )}
+
+            {/* Column search */}
+            {data.column_lineage && (
+              <>
+                <div className="h-4 w-px bg-[var(--border)]" />
+                <div className="relative" ref={colSearchRef}>
+                  <input
+                    type="text"
+                    value={colSearch}
+                    onChange={e => { setColSearch(e.target.value); setColSearchOpen(true) }}
+                    onFocus={() => setColSearchOpen(true)}
+                    placeholder="Search column..."
+                    className="w-36 px-2 py-0.5 text-xs border border-[var(--border)] rounded bg-[var(--bg)] outline-none focus:border-primary transition-colors"
+                  />
+                  {colSearch && (
+                    <button
+                      onClick={handleColSearchClear}
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer"
+                    >
+                      <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                        <path d="M18 6 6 18M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                  {colSearchOpen && colSearchResults.length > 0 && (
+                    <div className="absolute top-full left-0 mt-1 z-50 bg-[var(--bg)] border border-[var(--border)] rounded-lg shadow-lg max-h-48 overflow-y-auto min-w-[240px]">
+                      {colSearchResults.map((r, i) => (
+                        <button
+                          key={`${r.modelId}-${r.columnName}-${i}`}
+                          onClick={() => handleColSearchSelect(r.modelId, r.columnName)}
+                          className="w-full text-left px-3 py-1.5 text-xs hover:bg-[var(--bg-surface)] cursor-pointer transition-colors"
+                        >
+                          <span className="font-medium text-[var(--text)]">{r.columnName}</span>
+                          <span className="text-[var(--text-muted)] ml-1.5">in {r.modelName}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            <span className="text-xs text-[var(--text-muted)] ml-auto">
+              {subgraph.nodes.length} nodes · {subgraph.edges.length} edges
+            </span>
+          </div>
         </div>
 
         <div className="flex-1 relative min-h-0">
           <LineageFlow
             nodes={subgraph.nodes}
             edges={subgraph.edges}
-            highlightId={selectedNodeId}
+            pinnedIds={pinnedIds}
+            onTogglePin={handlePin}
             layerConfig={data.lineage.layer_config}
             columnLineageData={data.column_lineage}
             modelColumns={modelColumnsMap}
@@ -351,7 +367,7 @@ export function LineagePage() {
         <div className="max-w-3xl mx-auto py-8 px-4">
           <h1 className="text-2xl font-bold mb-1">Lineage Explorer</h1>
           <p className="text-sm text-[var(--text-muted)] mb-6">
-            Select a model to explore its upstream and downstream dependencies.
+            Search for models to pin them to the lineage view. Pin multiple models to see their combined lineage.
           </p>
 
           {/* Search */}
@@ -388,7 +404,7 @@ export function LineagePage() {
                   searchResults.map(node => (
                     <button
                       key={node.id}
-                      onClick={() => handleSelectModel(node.id)}
+                      onClick={() => handlePin(node.id)}
                       className="w-full text-left px-4 py-2 text-sm hover:bg-[var(--bg-surface)]
                                  cursor-pointer transition-colors flex items-center justify-between"
                     >
@@ -419,7 +435,7 @@ export function LineagePage() {
                 {suggestions.map(s => (
                   <button
                     key={s.node.id}
-                    onClick={() => handleSelectModel(s.node.id)}
+                    onClick={() => handlePin(s.node.id)}
                     className="text-left p-3 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)]
                                hover:border-primary/50 cursor-pointer transition-colors group"
                   >

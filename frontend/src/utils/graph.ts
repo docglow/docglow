@@ -64,3 +64,29 @@ export function getSubgraph(
     edges: edges.filter((e) => relevantIds.has(e.source) && relevantIds.has(e.target)),
   }
 }
+
+/** Compute the union of subgraphs for multiple pinned nodes. */
+export function getUnionSubgraph(
+  nodeIds: string[],
+  nodes: LineageNode[],
+  edges: LineageEdge[],
+  depth: number = 2,
+  direction: LineageDirection = 'both',
+): { nodes: LineageNode[]; edges: LineageEdge[] } {
+  if (nodeIds.length === 0) return { nodes: [], edges: [] }
+  if (nodeIds.length === 1) return getSubgraph(nodeIds[0], nodes, edges, depth, direction)
+
+  const relevantIds = new Set<string>()
+  for (const nodeId of nodeIds) {
+    relevantIds.add(nodeId)
+    const upstream = direction !== 'downstream' ? getUpstream(nodeId, edges, depth) : new Set<string>()
+    const downstream = direction !== 'upstream' ? getDownstream(nodeId, edges, depth) : new Set<string>()
+    for (const id of upstream) relevantIds.add(id)
+    for (const id of downstream) relevantIds.add(id)
+  }
+
+  return {
+    nodes: nodes.filter((n) => relevantIds.has(n.id)),
+    edges: edges.filter((e) => relevantIds.has(e.source) && relevantIds.has(e.target)),
+  }
+}
