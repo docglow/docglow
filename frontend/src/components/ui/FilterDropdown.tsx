@@ -15,6 +15,8 @@ interface FilterDropdownProps {
   onSetMode: (mode: FilterMode) => void
   onClear: () => void
   displayLabel?: (value: string) => string
+  /** Optional per-option accent color (e.g. layer swatch) rendered as a 6px dot. */
+  optionAccent?: (value: string) => string | undefined
 }
 
 export function FilterDropdown({
@@ -25,6 +27,7 @@ export function FilterDropdown({
   onSetMode,
   onClear,
   displayLabel,
+  optionAccent,
 }: FilterDropdownProps) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -131,30 +134,40 @@ export function FilterDropdown({
             {filtered.length === 0 ? (
               <div className="px-2 py-3 text-xs text-[var(--text-muted)] text-center">No matches</div>
             ) : (
-              filtered.map(option => (
-                <button
-                  key={option}
-                  onClick={() => onToggle(option)}
-                  className="w-full text-left px-2 py-1 text-xs rounded flex items-center gap-2
-                             hover:bg-[var(--bg-surface)] cursor-pointer transition-colors"
-                >
-                  <span className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0
-                    ${filter.selected.has(option)
-                      ? filter.mode === 'include'
-                        ? 'bg-primary border-primary'
-                        : 'bg-warning/80 border-warning'
-                      : 'border-[var(--border)]'
-                    }`}
+              filtered.map(option => {
+                const accent = optionAccent?.(option)
+                return (
+                  <button
+                    key={option}
+                    onClick={() => onToggle(option)}
+                    className="w-full text-left px-2 py-1 text-xs rounded flex items-center gap-2
+                               hover:bg-[var(--bg-surface)] cursor-pointer transition-colors"
                   >
-                    {filter.selected.has(option) && (
-                      <svg width={8} height={8} viewBox="0 0 20 20" fill="white">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
+                    <span className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0
+                      ${filter.selected.has(option)
+                        ? filter.mode === 'include'
+                          ? 'bg-primary border-primary'
+                          : 'bg-warning/80 border-warning'
+                        : 'border-[var(--border)]'
+                      }`}
+                    >
+                      {filter.selected.has(option) && (
+                        <svg width={8} height={8} viewBox="0 0 20 20" fill="white">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </span>
+                    {accent && (
+                      <span
+                        className="w-1.5 h-1.5 rounded-full shrink-0"
+                        style={{ backgroundColor: accent }}
+                        aria-hidden
+                      />
                     )}
-                  </span>
-                  <span className="truncate text-[var(--text)]">{getLabel(option)}</span>
-                </button>
-              ))
+                    <span className="truncate text-[var(--text)]">{getLabel(option)}</span>
+                  </button>
+                )
+              })
             )}
           </div>
 

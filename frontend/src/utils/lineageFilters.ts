@@ -12,6 +12,7 @@ export function applyFilters(
   typeFilter: FilterState,
   tagFilter: FilterState,
   folderFilter: FilterState,
+  layerFilter: FilterState = EMPTY_FILTER,
 ): { nodes: LineageNode[]; edges: LineageEdge[] } {
   let filtered = nodes
 
@@ -36,6 +37,16 @@ export function applyFilters(
       filtered = filtered.filter(n => folderFilter.selected.has(n.folder))
     } else {
       filtered = filtered.filter(n => !folderFilter.selected.has(n.folder))
+    }
+  }
+
+  if (layerFilter.selected.size > 0) {
+    if (layerFilter.mode === 'include') {
+      // Include: only nodes whose layer is in the set. Nodes with no layer are excluded.
+      filtered = filtered.filter(n => n.layer != null && layerFilter.selected.has(String(n.layer)))
+    } else {
+      // Exclude: drop nodes whose layer is in the set. Nodes with no layer survive.
+      filtered = filtered.filter(n => n.layer == null || !layerFilter.selected.has(String(n.layer)))
     }
   }
 
@@ -72,14 +83,17 @@ export function computeSubgraphOptions(nodes: LineageNode[]) {
   const tags = new Set<string>()
   const folders = new Set<string>()
   const types = new Set<string>()
+  const layers = new Set<string>()
   for (const n of nodes) {
     for (const t of n.tags) tags.add(t)
     if (n.folder) folders.add(n.folder)
     types.add(n.resource_type)
+    if (n.layer != null) layers.add(String(n.layer))
   }
   return {
     tags: [...tags].sort(),
     folders: [...folders].sort(),
     types: [...types].sort(),
+    layers: [...layers].sort((a, b) => Number(a) - Number(b)),
   }
 }

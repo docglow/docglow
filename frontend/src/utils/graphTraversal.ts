@@ -73,6 +73,24 @@ export function getFullChain(nodeId: string, edges: LineageEdge[], maxDepth?: nu
   return new Set([nodeId, ...upstream, ...downstream])
 }
 
+/** Get union of dependency chains for multiple nodes. */
+export function getUnionChain(
+  nodeIds: string[],
+  edges: LineageEdge[],
+  maxDepth?: number,
+): Set<string> {
+  if (nodeIds.length === 0) return new Set()
+  if (nodeIds.length === 1) return getFullChain(nodeIds[0], edges, maxDepth)
+
+  const result = new Set<string>()
+  for (const nodeId of nodeIds) {
+    for (const id of getFullChain(nodeId, edges, maxDepth)) {
+      result.add(id)
+    }
+  }
+  return result
+}
+
 /** Check if an edge connects two nodes in the highlighted set. */
 export function isEdgeHighlighted(
   edge: LineageEdge,

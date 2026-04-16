@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:sync": "npm run build && npm run sync-static",
+    "sync-static": "rm -rf ../src/docglow/static/assets/* && cp dist/assets/* ../src/docglow/static/assets/ && cp dist/index.html ../src/docglow/static/ && echo 'Synced frontend dist/ → src/docglow/static/'",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",

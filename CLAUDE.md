@@ -42,6 +42,8 @@ mypy src/docglow                # type check
 cd frontend
 npm ci
 npm run build                   # tsc -b && vite build
+npm run sync-static             # copy dist/ → ../src/docglow/static/ (needed before local docglow generate)
+npm run build:sync              # build + sync-static in one step
 npm run test                    # vitest
 npm run test:e2e                # playwright
 

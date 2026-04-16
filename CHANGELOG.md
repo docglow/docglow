@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-04-16
+
+### Added
+- **Multi-model lineage selection ("Pin to view")** — pin multiple models to view their combined lineage in one graph. Replaces the single-focus highlightId model with a `pinnedIds` set. (#72)
+- **Pin bar with autocomplete** — search and pin models as color-coded chips above the lineage graph. `×` on a chip unpins it.
+- **dbt selection syntax mode** — `⚡ dbt` toggle accepts dbt-style expressions (`+fct_orders`, `tag:finance`, `stg_*`) and resolves them to pins.
+- **Cmd/Ctrl+Click on graph nodes** — toggle a node's pinned state directly from the lineage graph.
+- **URL-shareable lineage views** — `?pins=id1,id2&depth=3&dir=both` encodes the current selection so views can be shared via link.
+- **Layers filter** — new `Layers` filter dropdown alongside Types/Tags/Folders, with include/exclude modes. Options show colored dots matching the layer bands on the graph. Perfect for isolating a specific dbt layer (e.g. show only "Transform", exclude "Prep"/"Staging").
+- **Empty-state message** on the lineage graph when filters exclude all nodes, with a one-click "Clear all filters" shortcut.
+- **Frontend build scripts** — `npm run sync-static` copies `frontend/dist/` to `src/docglow/static/`, and `npm run build:sync` runs both in one step.
+
+### Changed
+- **Center button** on the lineage graph now fits all pinned models in the viewport (bounding box) rather than a single node.
+- **Union subgraph computation** — lineage is the union of each pinned model's upstream/downstream chain at the current depth.
+
 ## [0.6.1] - 2026-04-15
 
 ### Changed

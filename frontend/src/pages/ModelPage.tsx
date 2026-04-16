@@ -426,7 +426,7 @@ export function ModelPage() {
             <LineageFlow
               nodes={filteredSubgraph.nodes}
               edges={filteredSubgraph.edges}
-              highlightId={decodedId}
+              pinnedIds={new Set([decodedId])}
               layerConfig={data?.lineage.layer_config}
               onNavigateAway={() => setLineageFullscreen(false)}
               columnLineageData={data?.column_lineage}

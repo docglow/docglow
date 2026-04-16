@@ -135,3 +135,85 @@ describe('computeSubgraphOptions — tag collection', () => {
     expect(options.tags).toEqual(['alpha', 'middle', 'zebra'])
   })
 })
+
+describe('applyFilters — layer filtering', () => {
+  const nodes: LineageNode[] = [
+    makeNode({ id: 'a', layer: 0 }),
+    makeNode({ id: 'b', layer: 1 }),
+    makeNode({ id: 'c', layer: 2 }),
+    makeNode({ id: 'd', layer: 1 }),
+  ]
+  const edges: LineageEdge[] = [
+    makeEdge('a', 'b'),
+    makeEdge('b', 'c'),
+    makeEdge('d', 'c'),
+  ]
+
+  it('returns all nodes when layer filter is empty', () => {
+    const result = applyFilters(nodes, edges, EMPTY_FILTER, EMPTY_FILTER, EMPTY_FILTER, EMPTY_FILTER)
+    expect(result.nodes).toHaveLength(4)
+  })
+
+  it('includes only nodes in selected layers (include mode)', () => {
+    const layerFilter: FilterState = { mode: 'include', selected: new Set(['1']) }
+    const result = applyFilters(nodes, edges, EMPTY_FILTER, EMPTY_FILTER, EMPTY_FILTER, layerFilter)
+    const ids = result.nodes.map(n => n.id).sort()
+    expect(ids).toEqual(['b', 'd'])
+  })
+
+  it('excludes nodes in selected layers (exclude mode)', () => {
+    const layerFilter: FilterState = { mode: 'exclude', selected: new Set(['1']) }
+    const result = applyFilters(nodes, edges, EMPTY_FILTER, EMPTY_FILTER, EMPTY_FILTER, layerFilter)
+    const ids = result.nodes.map(n => n.id).sort()
+    expect(ids).toEqual(['a', 'c'])
+  })
+
+  it('excludes nodes without a layer in include mode', () => {
+    const nodesWithUnassigned = [...nodes, makeNode({ id: 'e' })]
+    const layerFilter: FilterState = { mode: 'include', selected: new Set(['1']) }
+    const result = applyFilters(nodesWithUnassigned, [], EMPTY_FILTER, EMPTY_FILTER, EMPTY_FILTER, layerFilter)
+    expect(result.nodes.map(n => n.id)).not.toContain('e')
+  })
+
+  it('keeps nodes without a layer in exclude mode', () => {
+    const nodesWithUnassigned = [...nodes, makeNode({ id: 'e' })]
+    const layerFilter: FilterState = { mode: 'exclude', selected: new Set(['1']) }
+    const result = applyFilters(nodesWithUnassigned, [], EMPTY_FILTER, EMPTY_FILTER, EMPTY_FILTER, layerFilter)
+    expect(result.nodes.map(n => n.id)).toContain('e')
+  })
+
+  it('also filters edges when layer filter hides endpoints', () => {
+    const layerFilter: FilterState = { mode: 'include', selected: new Set(['1']) }
+    const result = applyFilters(nodes, edges, EMPTY_FILTER, EMPTY_FILTER, EMPTY_FILTER, layerFilter)
+    // Only b and d survive; no edges connect both of them
+    expect(result.edges).toHaveLength(0)
+  })
+})
+
+describe('computeSubgraphOptions — layer collection', () => {
+  it('collects unique layers from nodes', () => {
+    const nodes: LineageNode[] = [
+      makeNode({ id: 'a', layer: 0 }),
+      makeNode({ id: 'b', layer: 1 }),
+      makeNode({ id: 'c', layer: 1 }),
+    ]
+    const options = computeSubgraphOptions(nodes)
+    expect(options.layers).toEqual(['0', '1'])
+  })
+
+  it('returns empty layers when no nodes are assigned', () => {
+    const nodes: LineageNode[] = [makeNode({ id: 'a' }), makeNode({ id: 'b' })]
+    const options = computeSubgraphOptions(nodes)
+    expect(options.layers).toEqual([])
+  })
+
+  it('sorts layers numerically (not lexicographically)', () => {
+    const nodes: LineageNode[] = [
+      makeNode({ id: 'a', layer: 10 }),
+      makeNode({ id: 'b', layer: 2 }),
+      makeNode({ id: 'c', layer: 1 }),
+    ]
+    const options = computeSubgraphOptions(nodes)
+    expect(options.layers).toEqual(['1', '2', '10'])
+  })
+})
