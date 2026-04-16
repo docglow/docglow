@@ -250,7 +250,6 @@ export function LineagePage() {
                 onUnpin={handleUnpin}
                 onClearAll={handleClearAll}
                 nodes={data.lineage.nodes}
-                edges={data.lineage.edges}
               />
             </div>
           </div>

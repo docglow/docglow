@@ -1,21 +1,26 @@
 /**
- * Parse dbt model selection syntax and resolve to a set of model unique_ids.
+ * Parse dbt model selection syntax and resolve to a set of model unique_ids
+ * that should be pinned.
  *
  * Supported syntax:
  *   model_name          — pin that model
- *   +model_name         — pin model + all upstream
- *   model_name+         — pin model + all downstream
- *   +model_name+        — pin model + upstream + downstream
+ *   +model_name         — pin that model (upstream shown via graph lineage)
+ *   model_name+         — pin that model (downstream shown via graph lineage)
+ *   +model_name+        — pin that model (both shown via graph lineage)
  *   tag:finance         — pin all models with that tag
- *   stg_*               — glob pattern on model name
- *   fct_*+              — glob with downstream expansion
+ *   stg_*               — glob pattern, pins all matching models
  *
  * Space-separated expressions are unioned:
- *   "+fct_orders +dim_customers tag:finance"
+ *   "+fct_orders dim_customers tag:finance"
+ *
+ * Note: the +/+ markers are accepted for dbt familiarity but do NOT
+ * expand upstream/downstream into separate pins. The pin system's
+ * depth/direction controls already handle lineage expansion on the graph.
+ * This avoids polluting the pin bar with hundreds of chips for a single
+ * `+fct_orders` expression.
  */
 
-import type { LineageNode, LineageEdge } from '../types'
-import { getUpstream, getDownstream } from './graphTraversal'
+import type { LineageNode } from '../types'
 
 export interface DbtSelectResult {
   matched: Set<string>
@@ -67,7 +72,6 @@ function matchToken(
 export function resolveDbtSelection(
   expression: string,
   nodes: LineageNode[],
-  edges: LineageEdge[],
 ): DbtSelectResult {
   const matched = new Set<string>()
   const errors: string[] = []
@@ -76,11 +80,10 @@ export function resolveDbtSelection(
   const tokens = expression.trim().split(/\s+/).filter(Boolean)
 
   for (const rawToken of tokens) {
+    // Strip +/+ markers — accepted for dbt familiarity but don't expand pins
     let token = rawToken
-    const upstream = token.startsWith('+')
-    if (upstream) token = token.slice(1)
-    const downstream = token.endsWith('+')
-    if (downstream) token = token.slice(0, -1)
+    if (token.startsWith('+')) token = token.slice(1)
+    if (token.endsWith('+')) token = token.slice(0, -1)
 
     if (!token) {
       errors.push(`Empty selector in "${rawToken}"`)
@@ -93,15 +96,7 @@ export function resolveDbtSelection(
       continue
     }
 
-    for (const id of hits) {
-      matched.add(id)
-      if (upstream) {
-        for (const u of getUpstream(id, edges)) matched.add(u)
-      }
-      if (downstream) {
-        for (const d of getDownstream(id, edges)) matched.add(d)
-      }
-    }
+    for (const id of hits) matched.add(id)
   }
 
   return { matched, errors }

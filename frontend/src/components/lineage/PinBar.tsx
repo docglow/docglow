@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import type { LineageNode, LineageEdge } from '../../types'
+import type { LineageNode } from '../../types'
 import { resolveDbtSelection } from '../../utils/dbtSelect'
 
 const RESOURCE_COLORS: Record<string, string> = {
@@ -18,10 +18,9 @@ interface PinBarProps {
   onUnpin: (id: string) => void
   onClearAll: () => void
   nodes: LineageNode[]
-  edges: LineageEdge[]
 }
 
-export function PinBar({ pinnedIds, onPin, onPinMany, onUnpin, onClearAll, nodes, edges }: PinBarProps) {
+export function PinBar({ pinnedIds, onPin, onPinMany, onUnpin, onClearAll, nodes }: PinBarProps) {
   const [search, setSearch] = useState('')
   const [isOpen, setIsOpen] = useState(false)
   const [dbtMode, setDbtMode] = useState(false)
@@ -50,7 +49,7 @@ export function PinBar({ pinnedIds, onPin, onPinMany, onUnpin, onClearAll, nodes
 
   const handleDbtSubmit = useCallback(() => {
     if (!search.trim()) return
-    const { matched, errors } = resolveDbtSelection(search, nodes, edges)
+    const { matched, errors } = resolveDbtSelection(search, nodes)
     if (matched.size === 0) {
       setDbtError(errors[0] ?? 'No models matched')
       return
@@ -64,7 +63,7 @@ export function PinBar({ pinnedIds, onPin, onPinMany, onUnpin, onClearAll, nodes
     setSearch('')
     setDbtError(null)
     inputRef.current?.focus()
-  }, [search, nodes, edges, onPin, onPinMany])
+  }, [search, nodes, onPin, onPinMany])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && dbtMode) {
