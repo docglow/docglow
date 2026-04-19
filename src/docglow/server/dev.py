@@ -20,9 +20,23 @@ class _DocglowHandler(SimpleHTTPRequestHandler):
         logger.info(format, *args)
 
     def end_headers(self) -> None:
-        """Add CORS and cache headers for local dev."""
+        """Add CORS and cache headers for local dev.
+
+        index.html and docglow-data.json get ``no-store`` so the browser
+        always fetches the latest version after a regenerate.  Hashed
+        assets (JS/CSS with content hashes in the filename) are immutable
+        and can be cached indefinitely.
+        """
         self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Cache-Control", "no-cache")
+
+        path = self.path.split("?")[0].split("#")[0]
+        if path in ("/", "/index.html", "/docglow-data.json"):
+            self.send_header("Cache-Control", "no-store")
+        elif "/assets/" in path:
+            self.send_header("Cache-Control", "public, max-age=31536000, immutable")
+        else:
+            self.send_header("Cache-Control", "no-cache")
+
         super().end_headers()
 
 
