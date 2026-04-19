@@ -31,16 +31,16 @@ class NamingReport:
         return self.compliant_count / self.total_checked
 
 
-def _detect_layer(folder: str, path: str) -> str | None:
-    """Detect the dbt layer from folder structure."""
-    combined = (folder + "/" + path).lower()
-    if "staging" in combined or "/stg" in combined:
-        return "staging"
-    if "intermediate" in combined or "/int" in combined:
-        return "intermediate"
-    if "marts" in combined:
-        # Check for fact vs dimension based on name prefix later
-        return "marts"
+def _detect_layer(folder: str, path: str, rules: NamingRules) -> str | None:
+    """Detect the dbt layer from folder structure using configured rule names.
+
+    Matches layer names against individual path segments to avoid false
+    positives (e.g. layer "int" won't match a folder named "internal").
+    """
+    segments = set((folder + "/" + path).lower().replace("\\", "/").split("/"))
+    for layer_name in rules.layers():
+        if layer_name in segments:
+            return layer_name
     return None
 
 
@@ -60,48 +60,26 @@ def check_naming(
         folder = model.get("folder", "")
         path = model.get("path", "")
 
-        layer = _detect_layer(folder, path)
+        layer = _detect_layer(folder, path, rules)
         if layer is None:
+            continue
+
+        patterns = rules.patterns_for(layer)
+        if not patterns:
             continue
 
         total_checked += 1
 
-        if layer == "staging":
-            if not re.match(rules.staging, name):
-                violations.append(
-                    NamingViolation(
-                        unique_id=uid,
-                        name=name,
-                        folder=folder,
-                        expected_pattern=rules.staging,
-                        layer=layer,
-                    )
+        if not any(re.match(p, name) for p in patterns):
+            violations.append(
+                NamingViolation(
+                    unique_id=uid,
+                    name=name,
+                    folder=folder,
+                    expected_pattern=" or ".join(patterns),
+                    layer=layer,
                 )
-        elif layer == "intermediate":
-            if not re.match(rules.intermediate, name):
-                violations.append(
-                    NamingViolation(
-                        unique_id=uid,
-                        name=name,
-                        folder=folder,
-                        expected_pattern=rules.intermediate,
-                        layer=layer,
-                    )
-                )
-        elif layer == "marts":
-            # Marts models should start with fct_ or dim_
-            matches_fact = re.match(rules.marts_fact, name)
-            matches_dim = re.match(rules.marts_dimension, name)
-            if not matches_fact and not matches_dim:
-                violations.append(
-                    NamingViolation(
-                        unique_id=uid,
-                        name=name,
-                        folder=folder,
-                        expected_pattern=f"{rules.marts_fact} or {rules.marts_dimension}",
-                        layer=layer,
-                    )
-                )
+            )
 
     compliant = total_checked - len(violations)
     return NamingReport(

@@ -72,9 +72,16 @@ health:
   naming_rules:
     staging: "^stg_"           # Regex for staging models (default: ^stg_)
     intermediate: "^int_"      # Regex for intermediate models (default: ^int_)
-    marts_fact: "^fct_"        # Regex for fact tables (default: ^fct_)
-    marts_dimension: "^dim_"   # Regex for dimension tables (default: ^dim_)
+    marts: "^fct_|^dim_"       # Regex for mart models (default: ^fct_ or ^dim_)
+    # Custom layers — keys are matched against folder names in your dbt project:
+    # base: "^base_"           # Models in a "base" folder must match ^base_
 ```
+
+!!! note
+    Layer names are matched against folder segments in your dbt project path.
+    You can define any layer name — it will be matched when a model's folder
+    path contains a segment with that exact name. For backwards compatibility,
+    `marts_fact` and `marts_dimension` keys are merged into a single `marts` layer.
 
 ## CLI usage
 

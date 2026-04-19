@@ -29,11 +29,12 @@ health:
     naming: 0.10                # Weight for naming conventions
     orphans: 0.10               # Weight for orphan detection
 
-  naming_rules:
+  naming_rules:                  # Keys are layer names (matched against folder names)
     staging: "^stg_"            # Regex for staging models
     intermediate: "^int_"       # Regex for intermediate models
-    marts_fact: "^fct_"         # Regex for fact tables
-    marts_dimension: "^dim_"    # Regex for dimension tables
+    marts: "^fct_|^dim_"        # Regex for mart models (fact or dimension)
+    # Add any custom layers:
+    # base: "^base_"            # Regex for base models
 
   complexity:
     high_sql_lines: 200         # Max SQL lines before flagging

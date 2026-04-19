@@ -72,7 +72,8 @@ def run_publish(
             # Upload
             logger.info("Uploading artifacts to docglow Cloud...")
             result = client.publish(tarball_path)
-            publish_id = result.get("publish_id", "")
+            data = result.get("data", result)
+            publish_id = data.get("publish_id", "")
 
             if no_wait:
                 logger.info("Upload complete. Publish ID: %s", publish_id)
@@ -125,7 +126,9 @@ def _poll_status(
     start = time.monotonic()
 
     while time.monotonic() - start < timeout:
-        status = client.get_publish_status(publish_id)
+        response = client.get_publish_status(publish_id)
+        data = response.get("data", response)
+        status: dict[str, Any] = data if isinstance(data, dict) else response
         state = status.get("status", "")
 
         if state == "complete":
