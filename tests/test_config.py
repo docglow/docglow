@@ -3,7 +3,6 @@
 from docglow.config import (
     DocglowConfig,
     HealthWeights,
-    NamingRules,
     _build_config_from_dict,
     load_config,
 )
@@ -63,8 +62,28 @@ class TestBuildConfigFromDict:
                 },
             }
         )
-        assert config.health.naming_rules.staging == "^staging_"
-        assert config.health.naming_rules.marts_fact == "^fct_"
+        assert config.health.naming_rules.patterns_for("staging") == ("^staging_",)
+
+    def test_naming_rules_backwards_compat_marts(self):
+        config = _build_config_from_dict(
+            {
+                "health": {
+                    "naming_rules": {"marts_fact": "^fct_", "marts_dimension": "^dim_"},
+                },
+            }
+        )
+        assert config.health.naming_rules.patterns_for("marts") == ("^fct_", "^dim_")
+
+    def test_naming_rules_arbitrary_layer(self):
+        config = _build_config_from_dict(
+            {
+                "health": {
+                    "naming_rules": {"base": "^base_", "staging": "^stg_"},
+                },
+            }
+        )
+        assert config.health.naming_rules.patterns_for("base") == ("^base_",)
+        assert config.health.naming_rules.patterns_for("staging") == ("^stg_",)
 
     def test_custom_complexity_thresholds(self):
         config = _build_config_from_dict(
@@ -140,14 +159,14 @@ class TestBuildConfigFromDict:
         assert config.title == "Acme Analytics"
         assert config.theme == "dark"
         assert config.health.weights.documentation == 0.30
-        assert config.health.naming_rules.staging == "^stg_"
+        assert config.health.naming_rules.patterns_for("staging") == ("^stg_",)
         assert config.health.complexity.high_sql_lines == 150
         assert config.profiling.enabled is True
         assert config.profiling.sample_size == 1000
         assert config.ai.enabled is True
 
-    def test_invalid_regex_in_naming_rules_falls_back_to_default(self):
-        """Invalid regex patterns should log a warning and use the default."""
+    def test_invalid_regex_in_naming_rules_is_skipped(self):
+        """Invalid regex patterns should log a warning and be skipped."""
         config = _build_config_from_dict(
             {
                 "health": {
@@ -158,8 +177,7 @@ class TestBuildConfigFromDict:
                 },
             }
         )
-        defaults = NamingRules()
-        # Invalid regex falls back to default
-        assert config.health.naming_rules.staging == defaults.staging
+        # Invalid regex is skipped entirely
+        assert config.health.naming_rules.patterns_for("staging") is None
         # Valid regex is kept
-        assert config.health.naming_rules.intermediate == "^int_"
+        assert config.health.naming_rules.patterns_for("intermediate") == ("^int_",)

@@ -24,8 +24,9 @@ INIT_TEMPLATE = """\
 #   naming_rules:
 #     staging: "^stg_"
 #     intermediate: "^int_"
-#     marts_fact: "^fct_"
-#     marts_dimension: "^dim_"
+#     marts: "^fct_|^dim_"
+#     # Add any custom layers — keys match folder names:
+#     # base: "^base_"
 #   complexity:
 #     high_sql_lines: 200
 #     high_join_count: 8

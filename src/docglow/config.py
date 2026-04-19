@@ -34,10 +34,28 @@ class HealthWeights:
 
 @dataclass(frozen=True)
 class NamingRules:
-    staging: str = r"^stg_"
-    intermediate: str = r"^int_"
-    marts_fact: str = r"^fct_"
-    marts_dimension: str = r"^dim_"
+    """Layer-name → regex-pattern mapping for naming compliance.
+
+    Each entry is (layer_name, (pattern1, pattern2, ...)).
+    A model in a folder matching the layer name must match at least one pattern.
+    """
+
+    rules: tuple[tuple[str, tuple[str, ...]], ...] = (
+        ("staging", (r"^stg_",)),
+        ("intermediate", (r"^int_",)),
+        ("marts", (r"^fct_", r"^dim_")),
+    )
+
+    def layers(self) -> tuple[str, ...]:
+        """Return all layer names in rule order."""
+        return tuple(name for name, _ in self.rules)
+
+    def patterns_for(self, layer: str) -> tuple[str, ...] | None:
+        """Return the patterns for a layer, or None if not defined."""
+        for name, patterns in self.rules:
+            if name == layer:
+                return patterns
+        return None
 
 
 @dataclass(frozen=True)
@@ -114,25 +132,54 @@ def _parse_config_file(path: Path) -> DocglowConfig:
 
 
 def _build_naming_rules(raw: dict[str, str]) -> NamingRules:
-    """Build NamingRules, validating each regex and falling back to defaults."""
-    defaults = NamingRules()
-    validated: dict[str, str] = {}
+    """Build NamingRules from a YAML dict, accepting arbitrary layer names.
+
+    Backwards compatibility: ``marts_fact`` and ``marts_dimension`` keys are
+    merged into a single ``marts`` layer with multiple patterns.
+    """
+    # Collect per-layer patterns, preserving insertion order
+    layers: dict[str, list[str]] = {}
+
+    # Handle backwards-compat: marts_fact / marts_dimension → marts
+    marts_patterns: list[str] = []
+    for compat_key in ("marts_fact", "marts_dimension"):
+        if compat_key in raw:
+            pattern = raw[compat_key]
+            try:
+                re.compile(pattern)
+                marts_patterns.append(pattern)
+            except re.error:
+                logger.warning(
+                    "Invalid regex %r for naming_rules.%s — skipping",
+                    pattern,
+                    compat_key,
+                )
+    if marts_patterns:
+        layers["marts"] = marts_patterns
+
+    # Process all other keys (skip the compat keys already handled)
+    compat_keys = {"marts_fact", "marts_dimension"}
     for k, v in raw.items():
-        if k not in NamingRules.__dataclass_fields__:
+        if k in compat_keys:
             continue
         try:
             re.compile(v)
-            validated[k] = v
         except re.error:
-            default_val = getattr(defaults, k)
             logger.warning(
-                "Invalid regex %r for naming_rules.%s — falling back to default %r",
+                "Invalid regex %r for naming_rules.%s — skipping",
                 v,
                 k,
-                default_val,
             )
-            validated[k] = default_val
-    return NamingRules(**validated)
+            continue
+        if k in layers:
+            layers[k].append(v)
+        else:
+            layers[k] = [v]
+
+    if not layers:
+        return NamingRules()
+
+    return NamingRules(rules=tuple((name, tuple(patterns)) for name, patterns in layers.items()))
 
 
 def _build_config_from_dict(raw: dict[str, Any]) -> DocglowConfig:

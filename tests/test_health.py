@@ -192,10 +192,60 @@ class TestNaming:
         assert result.total_checked == 0
 
     def test_custom_rules(self) -> None:
-        rules = NamingRules(staging=r"^raw_")
+        rules = NamingRules(rules=(("staging", (r"^raw_",)),))
         models = {"m1": _make_model(name="raw_orders", folder="models/staging")}
         result = check_naming(models, rules)
         assert result.compliance_rate == 1.0
+
+    def test_custom_layer_base_compliant(self) -> None:
+        rules = NamingRules(
+            rules=(
+                ("base", (r"^base_",)),
+                ("staging", (r"^stg_",)),
+            )
+        )
+        models = {"m1": _make_model(name="base_orders", folder="models/base")}
+        result = check_naming(models, rules)
+        assert result.compliance_rate == 1.0
+        assert len(result.violations) == 0
+
+    def test_custom_layer_base_violation(self) -> None:
+        rules = NamingRules(
+            rules=(
+                ("base", (r"^base_",)),
+                ("staging", (r"^stg_",)),
+            )
+        )
+        models = {"m1": _make_model(name="orders", folder="models/base")}
+        result = check_naming(models, rules)
+        assert len(result.violations) == 1
+        assert result.violations[0].layer == "base"
+
+    def test_base_model_in_staging_subfolder(self) -> None:
+        """The bug scenario from issue #80: base_invoice in staging/base/ folder
+        should detect as 'base' layer (first match in rule order), not 'staging'."""
+        rules = NamingRules(
+            rules=(
+                ("base", (r"^base_",)),
+                ("staging", (r"^stg_",)),
+            )
+        )
+        models = {
+            "m1": _make_model(
+                name="base_invoice",
+                folder="models/staging/base",
+                path="models/staging/base/base_invoice.sql",
+            )
+        }
+        result = check_naming(models, rules)
+        assert result.compliance_rate == 1.0
+
+    def test_layer_not_matched_when_no_folder_segment(self) -> None:
+        """A layer named 'int' should NOT match a folder named 'internal'."""
+        rules = NamingRules(rules=(("int", (r"^int_",)),))
+        models = {"m1": _make_model(name="something", folder="models/internal")}
+        result = check_naming(models, rules)
+        assert result.total_checked == 0
 
 
 class TestHealthScore:
