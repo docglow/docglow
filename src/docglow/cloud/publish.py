@@ -127,7 +127,8 @@ def _poll_status(
 
     while time.monotonic() - start < timeout:
         response = client.get_publish_status(publish_id)
-        status = response.get("data", response)
+        data = response.get("data", response)
+        status: dict[str, Any] = data if isinstance(data, dict) else response
         state = status.get("status", "")
 
         if state == "complete":
