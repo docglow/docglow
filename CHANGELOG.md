@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-04-19
+
+### Fixed
+- **Dynamic naming rules** — `naming_rules` in `docglow.yml` now accepts arbitrary layer names (e.g. `base: "^base_"`). Previously only `staging`, `intermediate`, `marts_fact`, and `marts_dimension` were recognized; all other keys were silently dropped. Layer detection now matches against folder path segments instead of hardcoded substring checks. `marts_fact`/`marts_dimension` keys are still supported for backwards compatibility. (#80)
+- **Cloud publish API envelope** — `docglow publish` now correctly unwraps the `{data: {...}}` envelope from Cloud API responses when extracting `publish_id` and polling status.
+- **Dev server cache headers** — `index.html` and `docglow-data.json` now use `Cache-Control: no-store` so the browser always fetches fresh content after regenerating a site. Hashed assets use `immutable` for optimal caching. (#72)
+- **Docs emoji rendering** — enabled `pymdownx.emoji` extension so `:material-check:` icons render correctly on docs.docglow.com. (#79)
+
 ## [0.7.0] - 2026-04-16
 
 ### Added
