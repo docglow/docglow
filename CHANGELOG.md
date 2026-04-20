@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.7.2] - 2026-04-19
+
+### Fixed
+- **Windows path normalization** — dbt on Windows writes backslash paths in the manifest (e.g. `models\billing\base\model.sql`). The folder extraction only split on forward slashes, so the folder was always empty and layer detection could never match by folder. Now normalizes `\` → `/` before parsing. (#80)
+
 ## [0.7.1] - 2026-04-19
 
 ### Fixed
