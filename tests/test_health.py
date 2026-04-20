@@ -247,6 +247,25 @@ class TestNaming:
         result = check_naming(models, rules)
         assert result.total_checked == 0
 
+    def test_windows_backslash_paths(self) -> None:
+        """Paths normalized from Windows manifests should still detect layers."""
+        rules = NamingRules(
+            rules=(
+                ("base", (r"^base_",)),
+                ("staging", (r"^stg_",)),
+            )
+        )
+        # After _get_folder normalizes backslashes, folder will be "models/billing/base"
+        models = {
+            "m1": _make_model(
+                name="base_invoice",
+                folder="models/billing/base",
+                path="models/billing/base/base_invoice.sql",
+            )
+        }
+        result = check_naming(models, rules)
+        assert result.compliance_rate == 1.0
+
 
 class TestHealthScore:
     def test_perfect_health(self) -> None:
