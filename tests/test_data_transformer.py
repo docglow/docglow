@@ -6,6 +6,7 @@ from pathlib import Path
 from docglow import __version__
 from docglow.artifacts.loader import load_artifacts
 from docglow.generator.data import build_docglow_data
+from docglow.generator.transforms.models import _get_folder
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
@@ -236,6 +237,16 @@ class TestBuildDocglowData:
 
         assert orders["path"] != ""
         assert orders["folder"] != ""
+
+    def test_get_folder_forward_slashes(self) -> None:
+        assert _get_folder("models/staging/stg_orders.sql") == "models/staging"
+
+    def test_get_folder_backslashes(self) -> None:
+        """Windows dbt manifests use backslashes in paths."""
+        assert _get_folder("models\\billing\\base\\base_invoice.sql") == "models/billing/base"
+
+    def test_get_folder_no_directory(self) -> None:
+        assert _get_folder("model.sql") == ""
 
     def test_sources_populated(self, tmp_path: Path) -> None:
         data = _load_fixtures(tmp_path)

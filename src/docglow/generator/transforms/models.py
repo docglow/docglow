@@ -79,7 +79,7 @@ def transform_model(
         "materialization": (node.config.materialized or ""),
         "tags": list(node.tags),
         "meta": dict(node.meta),
-        "path": node.original_file_path,
+        "path": node.original_file_path.replace("\\", "/"),
         "folder": _get_folder(node.original_file_path),
         "raw_sql": node.raw_code,
         "compiled_sql": node.compiled_code or "",
@@ -94,8 +94,13 @@ def transform_model(
 
 
 def _get_folder(path: str) -> str:
-    """Extract the folder from a model path."""
-    parts = path.rsplit("/", 1)
+    """Extract the folder from a model path.
+
+    Normalizes backslashes to forward slashes first, since dbt on Windows
+    writes paths with backslashes in the manifest (e.g. ``models\\billing\\base\\model.sql``).
+    """
+    normalized = path.replace("\\", "/")
+    parts = normalized.rsplit("/", 1)
     return parts[0] if len(parts) > 1 else ""
 
 
