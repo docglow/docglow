@@ -78,6 +78,7 @@ nav:
   - Guides:
     - CI/CD Deployment: ci-cd-guide.md
     - Configuration: configuration.md
+    - Customizing Lineage Layers: lineage-layers.md
   - Reference:
     - CLI Commands: reference/cli.md
     - Compatibility: compatibility.md
