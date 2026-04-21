@@ -92,6 +92,10 @@ theme: dark
 
 See [Health Scoring](health-scoring.md) for detailed documentation of each dimension, weight rationale, and customization.
 
+## Lineage Layers
+
+See [Customizing Lineage Layers](lineage-layers.md) for a complete guide on defining custom layers and rules, including a real-world example.
+
 ## Column Lineage
 
 See [Column-Level Lineage](column-lineage.md) for setup, incremental analysis, and troubleshooting.

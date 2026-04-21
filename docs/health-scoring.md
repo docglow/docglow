@@ -83,6 +83,9 @@ health:
     path contains a segment with that exact name. For backwards compatibility,
     `marts_fact` and `marts_dimension` keys are merged into a single `marts` layer.
 
+    For a complete guide including lineage layer bands, rule ordering, and
+    real-world examples, see [Customizing Lineage Layers](lineage-layers.md).
+
 ## CLI usage
 
 ```bash
