@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- **Missing database field in manifest** — dbt adapters that don't populate `database` (e.g. `dbt-glue`, `dbt-spark`, `dbt-athena`) caused the model and source headers to render with a leading period (`.my_schema`). Added a `formatFqn` helper that skips empty segments so the header now renders `my_schema` alone, or `database.schema` when both are present. (#87)
+
 ## [0.7.2] - 2026-04-19
 
 ### Fixed

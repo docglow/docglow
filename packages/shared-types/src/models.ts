@@ -93,6 +93,12 @@ export interface DocglowModel {
   readonly name: string;
   readonly description: string;
   readonly schema: string;
+  /**
+   * Database/catalog name. Empty string (`''`) when the dbt adapter does not
+   * populate it (e.g. dbt-glue, dbt-spark, dbt-athena). Consumers must handle
+   * the empty case — do not concatenate `database.schema` unconditionally.
+   * Use `formatFqn` from `frontend/src/utils/formatting.ts` for display.
+   */
   readonly database: string;
   readonly materialization: string;
   readonly tags: string[];
@@ -118,6 +124,12 @@ export interface DocglowSource {
   readonly source_name: string;
   readonly description: string;
   readonly schema: string;
+  /**
+   * Database/catalog name. Empty string (`''`) when the dbt adapter does not
+   * populate it (e.g. dbt-glue, dbt-spark, dbt-athena). Consumers must handle
+   * the empty case — do not concatenate `database.schema` unconditionally.
+   * Use `formatFqn` from `frontend/src/utils/formatting.ts` for display.
+   */
   readonly database: string;
   readonly columns: DocglowColumn[];
   readonly tags: string[];
