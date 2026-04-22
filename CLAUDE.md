@@ -133,6 +133,14 @@ frontend/src/
 - **`--head-script`** flag injects arbitrary HTML into `<head>` (analytics, etc.)
 - **Cache files** — column lineage cache (`.docglow-column-lineage-cache.json`) keyed by SQL hash + docglow version
 
+## Agent Knowledge Store
+
+- **Location**: `.claude/solutions/` — gitignored, kept local to contributors
+- **Not** `docs/solutions/`. This is an OSS repo; the knowledge store should not ship with published docs
+- Solution docs use YAML frontmatter (`module`, `tags`, `problem_type`, `component`) and are organized by category (e.g. `design-patterns/`, `ui-bugs/`, `performance-issues/`)
+- Relevant when implementing or debugging in documented areas — search existing learnings before starting new work
+- **When invoking `/ce-compound` (or any similar skill that writes learnings), write to `.claude/solutions/`, never to `docs/solutions/`**
+
 ## Testing
 
 - Python: pytest with fixtures in `tests/fixtures/` (jaffle-shop dbt artifacts)

@@ -42,5 +42,8 @@ frontend/test-results/
 
 # Private config (contains internal IDs)
 .claude/commands/linear.md
+
+# Local agent knowledge store (not committed — public docs live elsewhere)
+.claude/solutions/
 agent-orchestrator.yaml
 test-results/
