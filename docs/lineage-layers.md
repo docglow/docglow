@@ -190,5 +190,5 @@ This was a bug fixed in v0.7.2 — upgrade with `pip install --upgrade docglow`.
 
 ## See also
 
-- [Configuration reference](configuration.md) — full `docglow.yml` schema
+- [Configuration reference](configuration.md) — full `docglow.yml` schema, including the `ui.lineage_badge` display options for shortening long model/column names
 - [Health Scoring](health-scoring.md) — how the Naming dimension feeds the health score

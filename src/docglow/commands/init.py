@@ -63,6 +63,12 @@ INIT_TEMPLATE = """\
 #     - name: exposure
 #       rank: 4
 #       color: "#f3e8ff"
+
+# ui:
+#   lineage_badge:
+#     abbreviation: smart   # smart | truncate | middle | none
+#     max_model_chars: 30
+#     max_column_chars: 22
 """
 
 
