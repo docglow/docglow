@@ -108,14 +108,14 @@ See [Column-Level Lineage](column-lineage.md) for setup, incremental analysis, a
 
 ## Lineage badge display
 
-The column-level lineage column on a model page renders a small pill for each upstream/downstream reference. When your project has long snake_case names (e.g. `fct_billing_rejection_aged_trial_balance_snapshot`), those pills can grow wide enough to overlap adjacent UI. `ui.lineage_badge.abbreviation` controls how the name is shortened in the compact form. The full name always remains available in the tooltip and on row hover.
+The column-level lineage column on a model page renders a small pill for each upstream/downstream reference. When your project has long snake_case names (e.g. `fact_orders_by_supplier_over_time_by_state_and_segment`), those pills can grow wide enough to overlap adjacent UI. `ui.lineage_badge.abbreviation` controls how the name is shortened in the compact form. The full name always remains available in the tooltip and on row hover.
 
-| Strategy   | What it does | Example (`fct_billing_rejection_aged_trial_balance_snapshot`) |
+| Strategy   | What it does | Example (`fact_orders_by_supplier_over_time_by_state_and_segment`) |
 |---|---|---|
-| `smart` *(default)* | Collapses leading snake_case segments to single-letter initials joined by `·`, keeping the distinguishing tail intact | `f·b·r·a·t·b·snapshot` |
-| `truncate` | Keeps the first N characters and appends `…` — simplest and closest to `dbt docs` behavior | `fct_billing_rejection_aged…` |
-| `middle` | Keeps both the prefix (`fct_` / `stg_`) and the suffix, inserting `…` in the middle | `fct_billing_rejec…snapshot` |
-| `none` | Renders the full name; relies on the badge's CSS max-width plus the tooltip for overflow | `fct_billing_rejection_aged_trial_balance_snapshot` |
+| `smart` *(default)* | Collapses leading snake_case segments to single-letter initials joined by `·`, keeping the distinguishing tail intact | `f·o·b·s·o·t·b·s·a·segment` |
+| `truncate` | Keeps the first N characters and appends `…` — simplest and closest to `dbt docs` behavior | `fact_orders_by_supplier_over_t...` |
+| `middle` | Keeps both the prefix (`fct_` / `stg_`) and the suffix, inserting `…` in the middle | `fact_orders_by_supplie…segment` |
+| `none` | Renders the full name; relies on the badge's CSS max-width plus the tooltip for overflow | `fact_orders_by_supplier_over_time_by_state_and_segment` |
 
 `max_model_chars` and `max_column_chars` set the character threshold at which abbreviation kicks in (they have no effect on `none`). Defaults are 30 and 22 respectively; raise them if you want longer names to render in full, lower them if you want more aggressive shortening.
 
