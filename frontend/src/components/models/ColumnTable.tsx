@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, type MouseEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { DocglowColumn, ColumnProfile, TopValue, HistogramBin, ColumnLineageDependency, ColumnDownstreamDependency, ColumnLineageData } from '../../types'
 import { TestBadge } from '../tests/TestBadge'
@@ -52,6 +52,27 @@ function RoleBadge({ role, confidence }: { role: string; confidence: number }) {
 }
 
 const MAX_BADGES_PER_DIRECTION = 3
+
+function middleEllipsis(s: string, max: number): string {
+  if (s.length <= max) return s
+  const keep = max - 1
+  const head = Math.ceil(keep * 0.55)
+  const tail = Math.floor(keep * 0.45)
+  return s.slice(0, head) + '…' + s.slice(-tail)
+}
+
+function smartAbbr(s: string, max: number): string {
+  if (s.length <= max) return s
+  const parts = s.split('_')
+  if (parts.length < 3) return middleEllipsis(s, max)
+  for (let n = 1; n < parts.length; n++) {
+    const head = parts.slice(0, n).map(p => p[0]).join('·')
+    const tail = parts.slice(n).join('_')
+    const candidate = head + '·' + tail
+    if (candidate.length <= max) return candidate
+  }
+  return middleEllipsis(s, max)
+}
 
 function NullBar({ rate }: { rate: number }) {
   const color = rate > 0.5 ? 'bg-danger' : rate > 0.1 ? 'bg-warning' : 'bg-success'
@@ -130,30 +151,137 @@ function LineageBadge({
   const navType = resourceType === 'source' ? 'source' : 'model'
   const style = TRANSFORMATION_STYLES[transformation] ?? TRANSFORMATION_STYLES.passthrough
   const colLabel = columns.length === 1 ? columns[0] : `{${columns.join(', ')}}`
+  const modelDisplay = smartAbbr(modelName, 30)
+  const colDisplay = smartAbbr(colLabel, 22)
+  // Only expand on hover when the compact form had to abbreviate or could not
+  // show the full text. Short names that render fully stay as static badges —
+  // expanding them just adds vertical noise with no new information.
+  const isAbbreviated = modelDisplay !== modelName || colDisplay !== colLabel
+
+  const commonButtonProps = {
+    onClick: (e: MouseEvent) => {
+      e.stopPropagation()
+      const colAnchor = columns.length === 1 ? `#col-${columns[0].toLowerCase()}` : ''
+      navigate(`/${navType}/${encodeURIComponent(modelId)}${colAnchor}`)
+    },
+    title: `${direction === 'upstream' ? 'From' : 'To'}: ${modelId}\nColumns: ${columns.join(', ')}\nType: ${transformation}`,
+    style: {
+      background: style.bg,
+      color: style.color,
+      borderColor: `${style.color}30`,
+    },
+  }
+
+  if (!isAbbreviated) {
+    return (
+      <button
+        {...commonButtonProps}
+        className="box-border max-w-[260px] inline-flex flex-row flex-nowrap items-center gap-1
+                   rounded border px-1.5 py-0.5 text-[11px] cursor-pointer text-left
+                   transition-all hover:brightness-95"
+      >
+        {direction === 'upstream' && (
+          <span className="shrink-0" style={{ opacity: 0.6, fontSize: 11, lineHeight: 1 }}>
+            &#x2190;
+          </span>
+        )}
+        <span className="font-medium">{modelName}</span>
+        <span style={{ opacity: 0.7 }}>.{colLabel}</span>
+        {direction === 'downstream' && (
+          <span className="shrink-0" style={{ opacity: 0.6, fontSize: 11, lineHeight: 1 }}>
+            &#x2192;
+          </span>
+        )}
+      </button>
+    )
+  }
 
   return (
     <button
-      onClick={(e) => {
-        e.stopPropagation()
-        const colAnchor = columns.length === 1 ? `#col-${columns[0].toLowerCase()}` : ''
-        navigate(`/${navType}/${encodeURIComponent(modelId)}${colAnchor}`)
-      }}
-      title={`${direction === 'upstream' ? 'From' : 'To'}: ${modelId}\nColumns: ${columns.join(', ')}\nType: ${transformation}`}
-      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px]
-                 hover:brightness-90 transition-all cursor-pointer border"
-      style={{
-        background: style.bg,
-        color: style.color,
-        borderColor: `${style.color}30`,
-      }}
+      {...commonButtonProps}
+      className="relative box-border max-w-[260px] inline-flex flex-row flex-nowrap items-center gap-1.5
+                 rounded border px-[7px] py-[3px] text-[11px] overflow-hidden cursor-pointer text-left
+                 transition-[padding,background-color,border-color,filter] duration-200 ease-out
+                 hover:brightness-95
+                 group-hover:flex group-hover:w-[260px] group-hover:flex-col group-hover:items-start
+                 group-hover:gap-0.5 group-hover:px-2 group-hover:pt-[5px] group-hover:pb-[6px]"
     >
       {direction === 'upstream' && (
-        <span style={{ opacity: 0.6, fontSize: 11, lineHeight: 1 }}>&#x2190;</span>
+        <span
+          className="shrink-0 group-hover:hidden"
+          style={{ opacity: 0.6, fontSize: 11, lineHeight: 1 }}
+        >
+          &#x2190;
+        </span>
       )}
-      <span className="font-medium">{modelName}</span>
-      <span style={{ opacity: 0.7 }}>.{colLabel}</span>
+
+      {/* Model name: compact abbr crossfades into full name on row hover.
+          flex-1 gives the model line priority to absorb shrink pressure so a
+          short column label (e.g. "order_id") can render without truncation. */}
+      <span className="relative min-w-0 flex-1 overflow-hidden group-hover:w-full group-hover:flex-none">
+        <span
+          className="block font-medium whitespace-nowrap overflow-hidden text-ellipsis
+                     transition-opacity duration-200 group-hover:opacity-0"
+        >
+          {modelDisplay}
+        </span>
+        <span
+          className="absolute inset-x-0 top-0 block font-medium opacity-0 pointer-events-none
+                     whitespace-normal [overflow-wrap:anywhere] [word-break:normal]
+                     transition-opacity duration-200
+                     group-hover:static group-hover:opacity-100 group-hover:pointer-events-auto"
+        >
+          {modelName}
+        </span>
+      </span>
+
+      {/* Separator swap: compact shows a subtle "." prefix on the column;
+          expanded shows a returning ↳ glyph on a new line. */}
+      <span
+        className="shrink-0 group-hover:hidden"
+        style={{ opacity: 0.7 }}
+      >
+        .
+      </span>
+      <span
+        className="hidden shrink-0 group-hover:inline"
+        style={{ opacity: 0.6, fontSize: 11, lineHeight: 1, marginRight: 2 }}
+      >
+        &#x21b3;
+      </span>
+
+      {/* Column label: compact shows abbr and truncates; expanded swaps to the
+          full name and wraps on word boundaries */}
+      <span
+        className="relative min-w-0 flex-initial max-w-[60%] overflow-hidden whitespace-nowrap text-ellipsis
+                   group-hover:whitespace-normal group-hover:[overflow-wrap:anywhere]
+                   group-hover:[word-break:normal] group-hover:flex-none
+                   group-hover:max-w-none group-hover:w-full group-hover:overflow-visible"
+        style={{ opacity: 0.7 }}
+      >
+        <span
+          className="block whitespace-nowrap overflow-hidden text-ellipsis
+                     transition-opacity duration-200 group-hover:opacity-0"
+        >
+          {colDisplay}
+        </span>
+        <span
+          className="absolute inset-x-0 top-0 block opacity-0 pointer-events-none
+                     whitespace-normal [overflow-wrap:anywhere] [word-break:normal]
+                     transition-opacity duration-200
+                     group-hover:static group-hover:opacity-100 group-hover:pointer-events-auto"
+        >
+          {colLabel}
+        </span>
+      </span>
+
       {direction === 'downstream' && (
-        <span style={{ opacity: 0.6, fontSize: 11, lineHeight: 1 }}>&#x2192;</span>
+        <span
+          className="shrink-0 group-hover:hidden"
+          style={{ opacity: 0.6, fontSize: 11, lineHeight: 1 }}
+        >
+          &#x2192;
+        </span>
       )}
     </button>
   )
