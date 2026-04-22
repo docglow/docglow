@@ -34,6 +34,18 @@ export interface DocglowMetadata {
   readonly features: HostedFeatures | null;
 }
 
+export type LineageBadgeAbbreviation = "smart" | "truncate" | "middle" | "none";
+
+export interface LineageBadgeConfig {
+  readonly abbreviation: LineageBadgeAbbreviation;
+  readonly max_model_chars: number;
+  readonly max_column_chars: number;
+}
+
+export interface UiConfig {
+  readonly lineage_badge: LineageBadgeConfig;
+}
+
 export interface DocglowData {
   readonly metadata: DocglowMetadata;
   readonly models: Record<string, DocglowModel>;
@@ -48,6 +60,7 @@ export interface DocglowData {
   readonly search_index: SearchEntry[];
   readonly ai_context: AiContext | null;
   readonly ai_key: string | null;
+  readonly ui?: UiConfig;
 }
 
 // -- AI context (embedded in site data for local AI chat) --------------------

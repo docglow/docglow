@@ -142,6 +142,7 @@ class TestDataTransformation:
             "ai_context",
             "ai_key",
             "column_lineage",
+            "ui",
         }
         assert set(versioned_data.keys()) == expected
 

@@ -59,6 +59,9 @@ export type {
   DocglowData,
   DocglowMetadata,
   HostedFeatures,
+  LineageBadgeAbbreviation,
+  LineageBadgeConfig,
+  UiConfig,
 } from "./site.js";
 
 // Cloud / billing types and constants

@@ -72,6 +72,12 @@ lineage_layers:
     - name: exposure
       rank: 4
       color: "#f3e8ff"
+
+ui:
+  lineage_badge:
+    abbreviation: smart           # smart | truncate | middle | none
+    max_model_chars: 30           # Max chars before the model name is shortened
+    max_column_chars: 22          # Max chars before the column name is shortened
 ```
 
 ## Theme
@@ -99,3 +105,19 @@ See [Customizing Lineage Layers](lineage-layers.md) for a complete guide on defi
 ## Column Lineage
 
 See [Column-Level Lineage](column-lineage.md) for setup, incremental analysis, and troubleshooting.
+
+## Lineage badge display
+
+The column-level lineage column on a model page renders a small pill for each upstream/downstream reference. When your project has long snake_case names (e.g. `fact_orders_by_supplier_over_time_by_state_and_segment`), those pills can grow wide enough to overlap adjacent UI. `ui.lineage_badge.abbreviation` controls how the name is shortened in the compact form. The full name always remains available in the tooltip and on row hover.
+
+| Strategy   | What it does | Example (`fact_orders_by_supplier_over_time_by_state_and_segment`) |
+|---|---|---|
+| `smart` *(default)* | Collapses leading snake_case segments to single-letter initials joined by `·`, keeping the distinguishing tail intact | `f·o·b·s·o·t·b·s·a·segment` |
+| `truncate` | Keeps the first N characters and appends `…` — simplest and closest to `dbt docs` behavior | `fact_orders_by_supplier_over_t...` |
+| `middle` | Keeps both the prefix (`fct_` / `stg_`) and the suffix, inserting `…` in the middle | `fact_orders_by_supplie…segment` |
+| `none` | Renders the full name; relies on the badge's CSS max-width plus the tooltip for overflow | `fact_orders_by_supplier_over_time_by_state_and_segment` |
+
+`max_model_chars` and `max_column_chars` set the character threshold at which abbreviation kicks in (they have no effect on `none`). Defaults are 30 and 22 respectively; raise them if you want longer names to render in full, lower them if you want more aggressive shortening.
+
+!!! tip
+    Not sure which to pick? Start with `smart` (the default) — it preserves the most unique part of the name. If your team expects names to match `dbt docs` output exactly, switch to `truncate`.

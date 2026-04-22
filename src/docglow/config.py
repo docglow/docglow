@@ -86,6 +86,21 @@ class InsightsConfig:
     descriptions: str = "append"  # append | replace | skip
 
 
+LINEAGE_BADGE_ABBREVIATIONS = ("smart", "truncate", "middle", "none")
+
+
+@dataclass(frozen=True)
+class LineageBadgeConfig:
+    abbreviation: str = "smart"  # smart | truncate | middle | none
+    max_model_chars: int = 30
+    max_column_chars: int = 22
+
+
+@dataclass(frozen=True)
+class UiConfig:
+    lineage_badge: LineageBadgeConfig = field(default_factory=LineageBadgeConfig)
+
+
 @dataclass(frozen=True)
 class DocglowConfig:
     version: int = 1
@@ -95,6 +110,7 @@ class DocglowConfig:
     health: HealthConfig = field(default_factory=HealthConfig)
     ai: AiConfig = field(default_factory=AiConfig)
     insights: InsightsConfig = field(default_factory=InsightsConfig)
+    ui: UiConfig = field(default_factory=UiConfig)
     slim: bool = False
     column_lineage: bool = True
     lineage_layers: LineageLayerConfig = field(default_factory=LineageLayerConfig)
@@ -253,6 +269,8 @@ def _build_config_from_dict(raw: dict[str, Any]) -> DocglowConfig:
         else InsightsConfig()
     )
 
+    ui = _build_ui_config(raw.get("ui", {}))
+
     return DocglowConfig(
         version=raw.get("version", 1),
         title=raw.get("title", "docglow"),
@@ -263,5 +281,57 @@ def _build_config_from_dict(raw: dict[str, Any]) -> DocglowConfig:
         health=HealthConfig(weights=weights, naming_rules=naming_rules, complexity=complexity),
         ai=ai,
         insights=insights,
+        ui=ui,
         lineage_layers=lineage_layers,
     )
+
+
+def _build_ui_config(raw: dict[str, Any]) -> UiConfig:
+    """Parse the ``ui`` section of docglow.yml into a UiConfig."""
+    if not isinstance(raw, dict) or not raw:
+        return UiConfig()
+
+    badge_raw = raw.get("lineage_badge", {})
+    if not isinstance(badge_raw, dict) or not badge_raw:
+        return UiConfig()
+
+    abbreviation = badge_raw.get("abbreviation", "smart")
+    if abbreviation not in LINEAGE_BADGE_ABBREVIATIONS:
+        logger.warning(
+            "Invalid ui.lineage_badge.abbreviation %r — expected one of %s; using 'smart'",
+            abbreviation,
+            LINEAGE_BADGE_ABBREVIATIONS,
+        )
+        abbreviation = "smart"
+
+    max_model_chars = _coerce_positive_int(
+        badge_raw.get("max_model_chars"), default=30, name="ui.lineage_badge.max_model_chars"
+    )
+    max_column_chars = _coerce_positive_int(
+        badge_raw.get("max_column_chars"), default=22, name="ui.lineage_badge.max_column_chars"
+    )
+
+    return UiConfig(
+        lineage_badge=LineageBadgeConfig(
+            abbreviation=abbreviation,
+            max_model_chars=max_model_chars,
+            max_column_chars=max_column_chars,
+        )
+    )
+
+
+def _coerce_positive_int(value: Any, *, default: int, name: str) -> int:
+    """Return a positive int from raw yaml value, warning and defaulting otherwise."""
+    if value is None:
+        return default
+    try:
+        coerced = int(value)
+    except (TypeError, ValueError):
+        logger.warning(
+            "Invalid %s %r — expected a positive integer; using %d", name, value, default
+        )
+        return default
+    if coerced <= 0:
+        logger.warning("Invalid %s %r — must be positive; using %d", name, value, default)
+        return default
+    return coerced
