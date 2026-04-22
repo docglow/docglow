@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from docglow.artifacts.loader import LoadedArtifacts
+from docglow.config import UiConfig
 from docglow.generator.layers import LineageLayerConfig
 
 
@@ -164,6 +165,7 @@ def build_docglow_data(
     select: str | None = None,
     exclude: str | None = None,
     layer_config: LineageLayerConfig | None = None,
+    ui_config: UiConfig | None = None,
     column_lineage_enabled: bool = False,
     column_lineage_select: str | None = None,
     column_lineage_depth: int | None = None,
@@ -191,6 +193,7 @@ def build_docglow_data(
         select=select,
         exclude=exclude,
         layer_config=layer_config or LineageLayerConfig(),
+        ui_config=ui_config or UiConfig(),
         column_lineage_enabled=column_lineage_enabled,
         column_lineage_select=column_lineage_select,
         column_lineage_depth=column_lineage_depth,

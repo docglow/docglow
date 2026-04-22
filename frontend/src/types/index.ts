@@ -54,6 +54,9 @@ export type {
   DocglowData,
   DocglowMetadata,
   HostedFeatures,
+  LineageBadgeAbbreviation,
+  LineageBadgeConfig,
+  UiConfig,
 
   // Cloud
   HealthGrade,

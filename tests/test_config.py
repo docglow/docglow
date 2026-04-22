@@ -3,6 +3,8 @@
 from docglow.config import (
     DocglowConfig,
     HealthWeights,
+    LineageBadgeConfig,
+    UiConfig,
     _build_config_from_dict,
     load_config,
 )
@@ -181,3 +183,49 @@ class TestBuildConfigFromDict:
         assert config.health.naming_rules.patterns_for("staging") is None
         # Valid regex is kept
         assert config.health.naming_rules.patterns_for("intermediate") == ("^int_",)
+
+
+class TestUiConfig:
+    def test_defaults_when_ui_section_absent(self):
+        config = _build_config_from_dict({})
+        assert config.ui == UiConfig()
+        assert config.ui.lineage_badge == LineageBadgeConfig()
+        assert config.ui.lineage_badge.abbreviation == "smart"
+        assert config.ui.lineage_badge.max_model_chars == 30
+        assert config.ui.lineage_badge.max_column_chars == 22
+
+    def test_custom_abbreviation_and_limits(self):
+        config = _build_config_from_dict(
+            {
+                "ui": {
+                    "lineage_badge": {
+                        "abbreviation": "truncate",
+                        "max_model_chars": 18,
+                        "max_column_chars": 14,
+                    }
+                }
+            }
+        )
+        assert config.ui.lineage_badge.abbreviation == "truncate"
+        assert config.ui.lineage_badge.max_model_chars == 18
+        assert config.ui.lineage_badge.max_column_chars == 14
+
+    def test_invalid_abbreviation_falls_back_to_smart(self):
+        config = _build_config_from_dict({"ui": {"lineage_badge": {"abbreviation": "chonky"}}})
+        assert config.ui.lineage_badge.abbreviation == "smart"
+
+    def test_non_positive_max_chars_uses_default(self):
+        config = _build_config_from_dict(
+            {"ui": {"lineage_badge": {"max_model_chars": 0, "max_column_chars": -5}}}
+        )
+        assert config.ui.lineage_badge.max_model_chars == 30
+        assert config.ui.lineage_badge.max_column_chars == 22
+
+    def test_non_integer_max_chars_uses_default(self):
+        config = _build_config_from_dict({"ui": {"lineage_badge": {"max_model_chars": "wide"}}})
+        assert config.ui.lineage_badge.max_model_chars == 30
+
+    def test_accepts_all_four_strategies(self):
+        for strategy in ("smart", "truncate", "middle", "none"):
+            config = _build_config_from_dict({"ui": {"lineage_badge": {"abbreviation": strategy}}})
+            assert config.ui.lineage_badge.abbreviation == strategy

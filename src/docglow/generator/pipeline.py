@@ -11,6 +11,7 @@ from rich.console import Console
 
 from docglow import __version__
 from docglow.artifacts.loader import LoadedArtifacts
+from docglow.config import UiConfig
 from docglow.generator.layers import LineageLayerConfig
 
 logger = logging.getLogger(__name__)
@@ -32,6 +33,7 @@ class PipelineContext:
     select: str | None = None
     exclude: str | None = None
     layer_config: LineageLayerConfig = field(default_factory=LineageLayerConfig)
+    ui_config: UiConfig = field(default_factory=UiConfig)
     column_lineage_enabled: bool = False
     column_lineage_select: str | None = None
     column_lineage_depth: int | None = None
@@ -392,4 +394,11 @@ def context_to_dict(ctx: PipelineContext) -> dict[str, Any]:
         "ai_context": ctx.ai_context,
         "ai_key": None,
         "column_lineage": ctx.column_lineage,
+        "ui": {
+            "lineage_badge": {
+                "abbreviation": ctx.ui_config.lineage_badge.abbreviation,
+                "max_model_chars": ctx.ui_config.lineage_badge.max_model_chars,
+                "max_column_chars": ctx.ui_config.lineage_badge.max_column_chars,
+            },
+        },
     }

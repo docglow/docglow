@@ -1,6 +1,7 @@
 import { useState, useMemo, type MouseEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { DocglowColumn, ColumnProfile, TopValue, HistogramBin, ColumnLineageDependency, ColumnDownstreamDependency, ColumnLineageData } from '../../types'
+import type { DocglowColumn, ColumnProfile, TopValue, HistogramBin, ColumnLineageDependency, ColumnDownstreamDependency, ColumnLineageData, LineageBadgeConfig } from '../../types'
+import { useProjectStore } from '../../stores/projectStore'
 import { TestBadge } from '../tests/TestBadge'
 import { formatNumber, formatPercent } from '../../utils/formatting'
 import { ColumnTraceDrawer } from './ColumnTraceDrawer'
@@ -53,6 +54,12 @@ function RoleBadge({ role, confidence }: { role: string; confidence: number }) {
 
 const MAX_BADGES_PER_DIRECTION = 3
 
+const DEFAULT_BADGE_CONFIG: LineageBadgeConfig = {
+  abbreviation: 'smart',
+  max_model_chars: 30,
+  max_column_chars: 22,
+}
+
 function middleEllipsis(s: string, max: number): string {
   if (s.length <= max) return s
   const keep = max - 1
@@ -72,6 +79,23 @@ function smartAbbr(s: string, max: number): string {
     if (candidate.length <= max) return candidate
   }
   return middleEllipsis(s, max)
+}
+
+function truncateStart(s: string, max: number): string {
+  if (s.length <= max) return s
+  if (max <= 1) return '…'
+  return s.slice(0, max - 1) + '…'
+}
+
+/** Apply the configured abbreviation strategy. Returns the raw string for 'none'. */
+export function applyBadgeAbbreviation(s: string, max: number, strategy: LineageBadgeConfig['abbreviation']): string {
+  switch (strategy) {
+    case 'none':     return s
+    case 'truncate': return truncateStart(s, max)
+    case 'middle':   return middleEllipsis(s, max)
+    case 'smart':
+    default:         return smartAbbr(s, max)
+  }
 }
 
 function NullBar({ rate }: { rate: number }) {
@@ -146,13 +170,14 @@ function LineageBadge({
   direction: 'upstream' | 'downstream'
 }) {
   const navigate = useNavigate()
+  const badgeConfig = useProjectStore(s => s.data?.ui?.lineage_badge) ?? DEFAULT_BADGE_CONFIG
   const modelName = modelId.split('.').pop() ?? modelId
   const resourceType = modelId.split('.')[0] ?? 'model'
   const navType = resourceType === 'source' ? 'source' : 'model'
   const style = TRANSFORMATION_STYLES[transformation] ?? TRANSFORMATION_STYLES.passthrough
   const colLabel = columns.length === 1 ? columns[0] : `{${columns.join(', ')}}`
-  const modelDisplay = smartAbbr(modelName, 30)
-  const colDisplay = smartAbbr(colLabel, 22)
+  const modelDisplay = applyBadgeAbbreviation(modelName, badgeConfig.max_model_chars, badgeConfig.abbreviation)
+  const colDisplay = applyBadgeAbbreviation(colLabel, badgeConfig.max_column_chars, badgeConfig.abbreviation)
   // Only expand on hover when the compact form had to abbreviate or could not
   // show the full text. Short names that render fully stay as static badges —
   // expanding them just adds vertical noise with no new information.
