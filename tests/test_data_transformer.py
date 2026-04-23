@@ -4,9 +4,12 @@ import json
 from pathlib import Path
 
 from docglow import __version__
+from docglow.artifacts.catalog import Catalog
 from docglow.artifacts.loader import load_artifacts
+from docglow.artifacts.manifest import ManifestNode, ManifestSource
 from docglow.generator.data import build_docglow_data
-from docglow.generator.transforms.models import _get_folder
+from docglow.generator.transforms.models import _get_folder, transform_model
+from docglow.generator.transforms.sources import transform_source
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
@@ -439,3 +442,31 @@ class TestPackageFiltering:
 
         source_ids = {n["id"] for n in lineage["nodes"] if n["resource_type"] == "source"}
         assert len(source_ids) > 0
+
+
+class TestMissingDatabase:
+    """Regression tests for dbt adapters that omit the database field (dbt-glue, dbt-spark)."""
+
+    def test_model_transform_coerces_null_database_to_empty_string(self) -> None:
+        node = ManifestNode(
+            unique_id="model.project.orders",
+            name="orders",
+            resource_type="model",
+            database=None,
+            schema="my_schema",
+        )
+        result = transform_model(node, Catalog(), {}, {}, {})
+        assert result["database"] == ""
+        assert result["schema"] == "my_schema"
+
+    def test_source_transform_coerces_null_database_to_empty_string(self) -> None:
+        source = ManifestSource(
+            unique_id="source.project.raw.events",
+            name="events",
+            source_name="raw",
+            database=None,
+            schema="my_schema",
+        )
+        result = transform_source(source, Catalog(), None)
+        assert result["database"] == ""
+        assert result["schema"] == "my_schema"

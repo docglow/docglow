@@ -25,6 +25,14 @@ export function formatDuration(seconds: number | null | undefined): string {
   return `${Math.floor(seconds / 60)}m ${Math.round(seconds % 60)}s`
 }
 
+export function formatFqn(parts: {
+  database?: string | null
+  schema?: string | null
+  name?: string | null
+}): string {
+  return [parts.database, parts.schema, parts.name].filter(Boolean).join('.')
+}
+
 export function timeAgo(isoString: string | null | undefined): string {
   if (!isoString) return '—'
   const date = new Date(isoString)

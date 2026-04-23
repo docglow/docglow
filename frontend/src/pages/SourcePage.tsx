@@ -2,6 +2,7 @@ import { useParams } from 'react-router-dom'
 import { useProjectStore } from '../stores/projectStore'
 import { ColumnTable } from '../components/models/ColumnTable'
 import { Markdown } from '../components/Markdown'
+import { formatFqn } from '../utils/formatting'
 
 export function SourcePage() {
   const { id } = useParams<{ id: string }>()
@@ -27,7 +28,7 @@ export function SourcePage() {
           </span>
         </div>
         <div className="text-sm text-[var(--text-muted)] flex gap-4">
-          <span>{source.database}.{source.schema}</span>
+          <span>{formatFqn({ database: source.database, schema: source.schema })}</span>
           {source.loader && <span>Loader: {source.loader}</span>}
         </div>
         {source.description && (

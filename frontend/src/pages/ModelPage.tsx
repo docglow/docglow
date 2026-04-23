@@ -10,6 +10,7 @@ import { FilterDropdown } from '../components/ui/FilterDropdown'
 import type { FilterState } from '../components/ui/FilterDropdown'
 import { Markdown } from '../components/Markdown'
 import { materializationLabel } from '../utils/colors'
+import { formatFqn } from '../utils/formatting'
 import { getSubgraph, type LineageDirection } from '../utils/graph'
 import { applyFilters, useFilterState, computeSubgraphOptions } from '../utils/lineageFilters'
 import { buildModelColumnsMap } from '../utils/modelColumns'
@@ -212,7 +213,7 @@ export function ModelPage() {
           <TestBadge status={overallTestStatus} />
         </div>
         <div className="text-sm text-[var(--text-muted)] flex gap-4">
-          <span>{model.database}.{model.schema}</span>
+          <span>{formatFqn({ database: model.database, schema: model.schema })}</span>
           <span>{model.path}</span>
         </div>
         {model.description && (
