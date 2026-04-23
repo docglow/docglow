@@ -54,9 +54,6 @@ export type {
   DocglowData,
   DocglowMetadata,
   HostedFeatures,
-  LineageBadgeAbbreviation,
-  LineageBadgeConfig,
-  UiConfig,
 
   // Cloud
   HealthGrade,
@@ -101,4 +98,21 @@ declare module "@docglow/shared-types" {
     readonly column_name?: string;
     readonly model_name?: string;
   }
+
+  // UI config added in 0.7.3; will be removed from here once shared-types is republished.
+  interface DocglowData {
+    readonly ui?: UiConfig;
+  }
+}
+
+export type LineageBadgeAbbreviation = 'smart' | 'truncate' | 'middle' | 'none';
+
+export interface LineageBadgeConfig {
+  readonly abbreviation: LineageBadgeAbbreviation;
+  readonly max_model_chars: number;
+  readonly max_column_chars: number;
+}
+
+export interface UiConfig {
+  readonly lineage_badge: LineageBadgeConfig;
 }
