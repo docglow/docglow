@@ -7,8 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.7.3] - 2026-04-22
+
 ### Fixed
+- **Lineage badge overflow on long model/column names** — the column-level lineage pill used a fixed `width: 320px` that overflowed its cell and overlapped the expand/trace button on dbt projects with long snake_case names. The badge is now bounded at `max-w-[260px]` and applies a smart abbreviation (collapsing leading snake_case segments to dotted initials) that preserves the distinguishing tail. Abbreviated badges expand to a two-line model/column stack with full names on row hover; names that already fit render as a static pill. (#86)
 - **Missing database field in manifest** — dbt adapters that don't populate `database` (e.g. `dbt-glue`, `dbt-spark`, `dbt-athena`) caused the model and source headers to render with a leading period (`.my_schema`). Added a `formatFqn` helper that skips empty segments so the header now renders `my_schema` alone, or `database.schema` when both are present. (#87)
+
+### Added
+- **Configurable lineage badge abbreviation** — new `ui.lineage_badge` section in `docglow.yml` lets projects pick how long identifiers are shortened: `smart` (default, dotted initials), `truncate` (first N chars + `…`), `middle` (head…tail), or `none` (full name, rely on CSS max-width + tooltip). Thresholds are tunable via `max_model_chars` (default 30) and `max_column_chars` (default 22). `docglow init` template now includes a commented `ui.lineage_badge` block. (#86)
 
 ## [0.7.2] - 2026-04-19
 
