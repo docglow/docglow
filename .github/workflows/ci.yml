@@ -40,3 +40,40 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - run: pip install -e ".[dev,profiling,ai,cloud,column-lineage]"
       - run: pytest --cov=docglow --cov-report=term-missing
+
+  frontend-bundle-drift:
+    name: Frontend bundle drift check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build frontend from source
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Sync built assets into src/docglow/static
+        run: |
+          rm -rf src/docglow/static/assets
+          mkdir -p src/docglow/static/assets
+          cp -R frontend/dist/. src/docglow/static/
+
+      - name: Fail if bundled assets drift from frontend source
+        run: |
+          if ! git diff --quiet -- src/docglow/static; then
+            echo "::error::src/docglow/static is out of sync with frontend/src."
+            echo "Run 'npm run build:sync' from frontend/ and commit the result."
+            echo ""
+            echo "Drift detected in:"
+            git diff --name-only -- src/docglow/static
+            exit 1
+          fi
+          echo "Bundled assets match a fresh build from frontend/src."
