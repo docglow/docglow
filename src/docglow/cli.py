@@ -7,7 +7,7 @@ from rich.console import Console
 from rich.logging import RichHandler
 
 from docglow import __version__
-from docglow.commands.cloud import login, logout, setup, status
+from docglow.commands.cloud import cloud_group, login, logout, setup, status
 from docglow.commands.generate import generate
 from docglow.commands.health import health
 from docglow.commands.init import init
@@ -54,5 +54,6 @@ cli.add_command(login)
 cli.add_command(logout)
 cli.add_command(status)
 cli.add_command(setup)
+cli.add_command(cloud_group)
 cli.add_command(mcp_server)
 cli.add_command(init)

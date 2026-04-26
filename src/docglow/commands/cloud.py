@@ -111,3 +111,31 @@ def setup() -> None:
     save_cloud_config(workspace_slug=workspace, project_slug=project)
     console.print("\n[bold green]Setup complete![/bold green]")
     console.print("  Config saved to ~/.docglow/config.json")
+
+
+@click.group(name="cloud")
+def cloud_group() -> None:
+    """Manage Docglow Cloud preferences."""
+
+
+@cloud_group.command(name="hide-hint")
+def hide_hint() -> None:
+    """Permanently dismiss the post-generate Docglow Cloud hint on this machine."""
+    from docglow.cli import console
+    from docglow.cloud_hint import set_dismissed
+
+    set_dismissed()
+    console.print(
+        "[bold green]✓[/bold green] Cloud hint dismissed. "
+        "Run [bold]docglow cloud show-hint[/bold] to re-enable."
+    )
+
+
+@cloud_group.command(name="show-hint")
+def show_hint() -> None:
+    """Re-enable the post-generate Docglow Cloud hint on this machine."""
+    from docglow.cli import console
+    from docglow.cloud_hint import clear_dismissed
+
+    clear_dismissed()
+    console.print("[bold green]✓[/bold green] Cloud hint re-enabled.")

@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **Docglow Cloud hint after `docglow generate`** — prints a single non-intrusive line pointing to docglow.com/cloud after a successful generate. Suppress with `DOCGLOW_NO_CLOUD_HINT=1`; auto-suppressed when `CI=true`; rate-limited to once per 24h per machine. Permanently dismiss on this machine with `docglow cloud hide-hint` (and re-enable with `docglow cloud show-hint`).
+
 ## [0.7.3] - 2026-04-22
 
 ### Fixed

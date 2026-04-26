@@ -4,6 +4,9 @@ from pathlib import Path
 
 import click
 
+from docglow import __version__
+from docglow.cloud_hint import maybe_show_hint
+
 
 @click.command()
 @click.option("--project-dir", type=click.Path(exists=True, path_type=Path), default=".")
@@ -200,6 +203,8 @@ def generate(
                     f"\n[bold green]Health score: {health_score:.0f} "
                     f"(threshold: {fail_under:.0f})[/bold green]"
                 )
+
+        maybe_show_hint(console, __version__)
     except ArtifactLoadError as e:
         console.print(f"[bold red]Error:[/bold red] {e}")
         raise SystemExit(1) from e
