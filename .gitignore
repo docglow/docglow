@@ -44,3 +44,4 @@ frontend/test-results/
 .claude/commands/linear.md
 agent-orchestrator.yaml
 test-results/
+.worktrees

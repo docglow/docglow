@@ -7,8 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.7.4] - 2026-04-26
+
+### Fixed
+- **Stale frontend bundle in published wheels** — v0.7.0, v0.7.1, and v0.7.2 shipped the v0.5.4-era frontend bundle on PyPI, so the multi-model lineage feature (merged for #72) was missing from the wheel even though the source code was in the repo. Users who upgraded to those versions could not see the feature regardless of cache-clearing. The PyPI publish workflow now rebuilds the frontend from source (`npm ci && npm run build`) and syncs `frontend/dist/` into `src/docglow/static/` before invoking `python -m build`, so `src/docglow/static/` is treated as a build artifact rather than a release input. (#72, #95)
+- **Cloud client follows redirects and supports Vercel protection bypass** — the Cloud `httpx.Client` now sets `follow_redirects=True` and, when `DOCGLOW_VERCEL_BYPASS` is set, attaches `x-vercel-protection-bypass` and `x-vercel-set-bypass-cookie` headers so `docglow publish` works against Vercel-protected preview deployments.
+
 ### Added
-- **Docglow Cloud hint after `docglow generate`** — prints a single non-intrusive line pointing to docglow.com/cloud after a successful generate. Suppress with `DOCGLOW_NO_CLOUD_HINT=1`; auto-suppressed when `CI=true`; rate-limited to once per 24h per machine. Permanently dismiss on this machine with `docglow cloud hide-hint` (and re-enable with `docglow cloud show-hint`).
+- **CI guard against bundled-asset drift** — new `frontend-bundle-drift` CI job rebuilds the frontend on every PR and fails if `src/docglow/static/` differs from a fresh build of `frontend/src/`. Prevents the v0.7.0-v0.7.2 stale-bundle failure mode from silently recurring between releases. (#96)
+- **Docglow Cloud hint after `docglow generate`** — prints a single non-intrusive line pointing to docglow.com/cloud after a successful generate. Suppress with `DOCGLOW_NO_CLOUD_HINT=1`; auto-suppressed when `CI=true`; rate-limited to once per 24h per machine. Permanently dismiss on this machine with `docglow cloud hide-hint` (and re-enable with `docglow cloud show-hint`). (#94)
 
 ## [0.7.3] - 2026-04-22
 
