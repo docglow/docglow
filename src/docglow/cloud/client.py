@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from pathlib import Path
 from typing import Any
 
@@ -31,13 +32,19 @@ class CloudClient:
             ) from e
 
         self._config = config
+        headers: dict[str, str] = {
+            "Authorization": f"Bearer {config.token}",
+            "User-Agent": "docglow-cli",
+        }
+        bypass = os.environ.get("DOCGLOW_VERCEL_BYPASS")
+        if bypass:
+            headers["x-vercel-protection-bypass"] = bypass
+            headers["x-vercel-set-bypass-cookie"] = "true"
         self._client = httpx.Client(
             base_url=config.api_base_url,
-            headers={
-                "Authorization": f"Bearer {config.token}",
-                "User-Agent": "docglow-cli",
-            },
+            headers=headers,
             timeout=60.0,
+            follow_redirects=True,
         )
 
     def publish(self, artifacts_path: Path) -> dict[str, Any]:
