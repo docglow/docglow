@@ -164,8 +164,13 @@ def generate(
         profiling_connection = _parse_connection(profile_adapter, profile_connection)
 
     # Telemetry setup -- dispatched in the finally block so success/error and
-    # duration are recorded regardless of how the command exits.
+    # duration are recorded regardless of how the command exits. The first-run
+    # consent prompt fires here (before the long generate work) when the
+    # context is interactive and consent has not yet been recorded.
+    from docglow.commands.telemetry import maybe_prompt_for_consent
     from docglow.telemetry import dispatcher as telemetry
+
+    maybe_prompt_for_consent(console)
 
     telemetry_started = time.monotonic()
     telemetry_features: list[str] = []
