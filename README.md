@@ -243,6 +243,10 @@ repos:
 - A dbt project with `target/manifest.json` (run `dbt compile` or `dbt run` first)
 - See [Compatibility](docs/compatibility.md) for supported dbt versions and adapters
 
+## Telemetry
+
+Docglow has fully opt-in, anonymous telemetry that helps us understand which dbt adapters and project sizes are used in the wild. It is **off by default**, easy to disable with `DOCGLOW_NO_TELEMETRY=1` or `docglow telemetry disable`, and the exact payload is documented at [docs/telemetry.md](docs/telemetry.md).
+
 ## License
 
 MIT
