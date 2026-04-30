@@ -20,8 +20,9 @@ from __future__ import annotations
 import logging
 import os
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from docglow.telemetry import client, state
@@ -46,7 +47,7 @@ logger = logging.getLogger(__name__)
 def is_active(
     config: TelemetryConfig,
     consent: state.ConsentValue,
-    env: dict[str, str] | None = None,
+    env: Mapping[str, str] | None = None,
 ) -> bool:
     """Return True iff telemetry should fire for this run."""
     environ = env if env is not None else os.environ
@@ -90,7 +91,7 @@ def project_shape_from_manifest(manifest: Manifest | None) -> ProjectShape:
         return ProjectShape()
 
 
-def project_shape_from_manifest_path(target_dir):
+def project_shape_from_manifest_path(target_dir: str | Path) -> ProjectShape:
     """Lightweight manifest.json reader for telemetry use.
 
     Reads only the fields we need (node resource_types, source/macro counts,
@@ -102,7 +103,6 @@ def project_shape_from_manifest_path(target_dir):
     calling command.
     """
     import json
-    from pathlib import Path
 
     try:
         path = Path(target_dir) / "manifest.json"
@@ -147,7 +147,7 @@ def record_command(
     project_shape: ProjectShape | None = None,
     features_used: tuple[str, ...] = (),
     consent: state.ConsentValue | None = None,
-    state_path=None,
+    state_path: Path | None = None,
     send: bool = True,
 ) -> dict[str, object] | None:
     """Build and dispatch a telemetry event if telemetry is active.
@@ -192,7 +192,7 @@ def record(
     config: TelemetryConfig,
     *,
     command: CommandName,
-    manifest_provider=None,
+    manifest_provider: Callable[[], Manifest | None] | None = None,
     features_used: tuple[str, ...] = (),
 ) -> Iterator[None]:
     """Context manager that times a command and records success/error on exit.

@@ -14,6 +14,7 @@ This precedence is part of the user-facing privacy contract documented in
 from __future__ import annotations
 
 import os
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
@@ -54,7 +55,7 @@ def _parse_tristate(value: str | None) -> bool | None:
 
 def resolve_telemetry_config(
     raw: dict[str, Any] | None,
-    env: dict[str, str] | None = None,
+    env: Mapping[str, str] | None = None,
 ) -> TelemetryConfig:
     """Resolve final telemetry config from yml + env vars.
 
@@ -74,7 +75,7 @@ def resolve_telemetry_config(
     return TelemetryConfig(enabled=yml_enabled, endpoint=_resolve_endpoint(raw, environ))
 
 
-def _resolve_endpoint(raw: dict[str, Any] | None, env: dict[str, str]) -> str:
+def _resolve_endpoint(raw: dict[str, Any] | None, env: Mapping[str, str]) -> str:
     """Resolve the endpoint: env override > yml > default."""
     override = env.get(ENV_ENDPOINT_OVERRIDE)
     if override:

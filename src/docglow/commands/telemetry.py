@@ -92,7 +92,7 @@ PROMPT_MESSAGE = (
 )
 
 
-def maybe_prompt_for_consent(console=None) -> state.ConsentValue:
+def maybe_prompt_for_consent(console: object | None = None) -> state.ConsentValue:
     """Prompt the user for telemetry consent if appropriate, return resolved value.
 
     Returns the recorded consent ("yes", "no", or "unset"). Records "no"
@@ -113,7 +113,7 @@ def maybe_prompt_for_consent(console=None) -> state.ConsentValue:
             return "no"
 
         try:
-            if console is not None:
+            if console is not None and hasattr(console, "print"):
                 console.print(PROMPT_MESSAGE)
             else:
                 click.echo(PROMPT_MESSAGE)

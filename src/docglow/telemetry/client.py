@@ -57,7 +57,7 @@ def send_sync(
     try:
         request = _build_request(payload, endpoint)
         with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310
-            return 200 <= response.status < 300
+            return bool(200 <= response.status < 300)
     except urllib.error.HTTPError as exc:
         logger.debug("telemetry: HTTP %s from %s", exc.code, endpoint)
         return False
