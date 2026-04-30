@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from docglow.generator.layers import LineageLayerConfig, parse_layer_config
+from docglow.telemetry.config import TelemetryConfig, resolve_telemetry_config
 
 logger = logging.getLogger(__name__)
 
@@ -114,6 +115,7 @@ class DocglowConfig:
     slim: bool = False
     column_lineage: bool = True
     lineage_layers: LineageLayerConfig = field(default_factory=LineageLayerConfig)
+    telemetry: TelemetryConfig = field(default_factory=TelemetryConfig)
 
     # Runtime paths (not from config file)
     project_dir: Path = field(default_factory=lambda: Path("."))
@@ -132,7 +134,8 @@ def load_config(project_dir: Path) -> DocglowConfig:
             logger.info("Loading config from %s", config_path)
             return _parse_config_file(config_path)
 
-    return DocglowConfig()
+    # No yml file: env vars can still toggle telemetry, so resolve from env.
+    return DocglowConfig(telemetry=resolve_telemetry_config(None))
 
 
 def _parse_config_file(path: Path) -> DocglowConfig:
@@ -271,6 +274,8 @@ def _build_config_from_dict(raw: dict[str, Any]) -> DocglowConfig:
 
     ui = _build_ui_config(raw.get("ui", {}))
 
+    telemetry = resolve_telemetry_config(raw.get("telemetry"))
+
     return DocglowConfig(
         version=raw.get("version", 1),
         title=raw.get("title", "docglow"),
@@ -283,6 +288,7 @@ def _build_config_from_dict(raw: dict[str, Any]) -> DocglowConfig:
         insights=insights,
         ui=ui,
         lineage_layers=lineage_layers,
+        telemetry=telemetry,
     )
 
 
