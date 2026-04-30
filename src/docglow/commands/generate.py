@@ -1,5 +1,6 @@
 """Generate command for docglow CLI."""
 
+import time
 from pathlib import Path
 
 import click
@@ -162,6 +163,25 @@ def generate(
     if profile and profile_adapter and profile_connection:
         profiling_connection = _parse_connection(profile_adapter, profile_connection)
 
+    # Telemetry setup -- dispatched in the finally block so success/error and
+    # duration are recorded regardless of how the command exits.
+    from docglow.telemetry import dispatcher as telemetry
+
+    telemetry_started = time.monotonic()
+    telemetry_features: list[str] = []
+    if column_lineage:
+        telemetry_features.append("column_lineage")
+    if profile:
+        telemetry_features.append("profiling")
+    if ai:
+        telemetry_features.append("ai_chat")
+    if static:
+        telemetry_features.append("static")
+    if slim:
+        telemetry_features.append("slim")
+    telemetry_resolved_target = target_dir or (project_dir / "target")
+    telemetry_result_name = "error"
+
     try:
         output_path, health_score = generate_site(
             project_dir=project_dir,
@@ -205,9 +225,19 @@ def generate(
                 )
 
         maybe_show_hint(console, __version__)
+        telemetry_result_name = "success"
     except ArtifactLoadError as e:
         console.print(f"[bold red]Error:[/bold red] {e}")
         raise SystemExit(1) from e
     except FileNotFoundError as e:
         console.print(f"[bold red]Error:[/bold red] {e}")
         raise SystemExit(1) from e
+    finally:
+        telemetry.record_command(
+            config.telemetry,
+            command="generate",
+            result=telemetry_result_name,  # type: ignore[arg-type]
+            duration_ms=int((time.monotonic() - telemetry_started) * 1000),
+            project_shape=telemetry.project_shape_from_manifest_path(telemetry_resolved_target),
+            features_used=tuple(telemetry_features),
+        )
