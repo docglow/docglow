@@ -123,6 +123,6 @@ That command prints whether telemetry is currently active, your machine-level in
 
 ## Where the data goes
 
-Events are sent over HTTPS to the Docglow Cloud API at `api.docglow.dev`. Rows land in a Postgres table managed via Supabase, accessible only to Docglow maintainers. We retain raw events for 365 days; aggregates may be kept longer.
+Events are sent over HTTPS to the Docglow Cloud API at `api.docglow.com`. Rows land in a Postgres table managed via Supabase, accessible only to Docglow maintainers. We retain raw events for 365 days; aggregates may be kept longer.
 
 If you want a particular `instance_id`'s data deleted, open an issue on [docglow/docglow](https://github.com/docglow/docglow/issues) with the ID and we'll purge it.

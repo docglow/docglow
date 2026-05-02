@@ -18,7 +18,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
-DEFAULT_ENDPOINT = "https://api.docglow.dev/v1/telemetry/events"
+DEFAULT_ENDPOINT = "https://api.docglow.com/v1/telemetry/events"
 
 ENV_OPT_IN = "DOCGLOW_TELEMETRY"
 ENV_OPT_OUT = "DOCGLOW_NO_TELEMETRY"

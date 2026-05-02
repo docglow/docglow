@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.7.5] - 2026-05-02
+
+### Added
+- **Opt-in anonymous telemetry** — new `docglow telemetry` subcommand group (`status`, `enable`, `disable`) and a first-run consent prompt on interactive `docglow generate`. Off by default; honors `DOCGLOW_TELEMETRY=1` / `DOCGLOW_NO_TELEMETRY=1` and a `telemetry.enabled` flag in `docglow.yml`. The full payload and privacy contract are documented in [docs/telemetry.md](docs/telemetry.md). (#24)
+- **Telemetry default endpoint** — `https://api.docglow.com/v1/telemetry/events`. Override with `DOCGLOW_TELEMETRY_ENDPOINT` (e.g. for staging at `https://api-staging.docglow.com/v1/telemetry/events`).
+
 ## [0.7.4] - 2026-04-26
 
 ### Fixed
