@@ -172,3 +172,104 @@ def test_send_sync_non_2xx_returns_false(status: int) -> None:
     with _StubServer(on_request=lambda _p: (status, b"")) as stub:
         ok = client.send_sync({"x": 1}, stub.url)
     assert ok is False
+
+
+def _capture_headers() -> tuple[str, dict[str, str], Callable[[], None]]:
+    captured: dict[str, str] = {}
+
+    class CapturingHandler(BaseHTTPRequestHandler):
+        def log_message(self, *_args: Any) -> None:
+            return
+
+        def do_POST(self) -> None:  # noqa: N802
+            for name in (
+                "x-vercel-protection-bypass",
+                "x-vercel-set-bypass-cookie",
+                "User-Agent",
+                "Content-Type",
+            ):
+                value = self.headers.get(name)
+                if value is not None:
+                    captured[name] = value
+            length = int(self.headers.get("Content-Length", "0"))
+            self.rfile.read(length)
+            self.send_response(204)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+
+    server = HTTPServer(("127.0.0.1", 0), CapturingHandler)
+    url = f"http://127.0.0.1:{server.server_address[1]}/"
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+
+    def shutdown() -> None:
+        server.shutdown()
+        server.server_close()
+
+    return url, captured, shutdown
+
+
+def test_send_sync_attaches_vercel_bypass_headers_when_env_set() -> None:
+    url, captured, shutdown = _capture_headers()
+    try:
+        client.send_sync(
+            {"x": 1},
+            url,
+            env={"DOCGLOW_VERCEL_BYPASS": "secret-token"},
+        )
+    finally:
+        shutdown()
+
+    assert captured.get("x-vercel-protection-bypass") == "secret-token"
+    assert captured.get("x-vercel-set-bypass-cookie") == "true"
+
+
+def test_send_sync_omits_vercel_bypass_headers_when_env_unset() -> None:
+    url, captured, shutdown = _capture_headers()
+    try:
+        client.send_sync({"x": 1}, url, env={})
+    finally:
+        shutdown()
+
+    assert "x-vercel-protection-bypass" not in captured
+    assert "x-vercel-set-bypass-cookie" not in captured
+
+
+def test_send_sync_emits_info_log_when_debug_enabled(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    with _StubServer() as stub:
+        with caplog.at_level("INFO", logger="docglow.telemetry.client"):
+            client.send_sync(
+                {"x": 1},
+                stub.url,
+                env={"DOCGLOW_TELEMETRY_DEBUG": "1"},
+            )
+
+    info_messages = [r.getMessage() for r in caplog.records if r.levelname == "INFO"]
+    assert any("telemetry: POST" in m and "204" in m for m in info_messages)
+
+
+def test_send_sync_silent_when_debug_disabled(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    with _StubServer() as stub:
+        with caplog.at_level("INFO", logger="docglow.telemetry.client"):
+            client.send_sync({"x": 1}, stub.url, env={})
+
+    info_messages = [r.getMessage() for r in caplog.records if r.levelname == "INFO"]
+    assert info_messages == []
+
+
+def test_send_sync_debug_log_on_failure(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    with caplog.at_level("INFO", logger="docglow.telemetry.client"):
+        client.send_sync(
+            {"x": 1},
+            "http://127.0.0.1:1/",
+            env={"DOCGLOW_TELEMETRY_DEBUG": "1"},
+        )
+
+    info_messages = [r.getMessage() for r in caplog.records if r.levelname == "INFO"]
+    assert any("failed" in m for m in info_messages)

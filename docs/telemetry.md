@@ -126,3 +126,20 @@ That command prints whether telemetry is currently active, your machine-level in
 Events are sent over HTTPS to the Docglow Cloud API at `api.docglow.com`. Rows land in a Postgres table managed via Supabase, accessible only to Docglow maintainers. We retain raw events for 365 days; aggregates may be kept longer.
 
 If you want a particular `instance_id`'s data deleted, open an issue on [docglow/docglow](https://github.com/docglow/docglow/issues) with the ID and we'll purge it.
+
+## Troubleshooting
+
+Telemetry is intentionally fire-and-forget — failures are silent so a flaky network never breaks `docglow generate`. If you've opted in but suspect events aren't landing, set `DOCGLOW_TELEMETRY_DEBUG=1` for one run:
+
+```bash
+DOCGLOW_TELEMETRY_DEBUG=1 docglow generate --project-dir my-project --static
+```
+
+This emits one INFO line per send, e.g.:
+
+```
+telemetry: POST https://api.docglow.com/v1/telemetry/events -> 204
+telemetry: POST https://api.docglow.com/v1/telemetry/events -> failed (Connection refused)
+```
+
+The CLI's exit code is unaffected either way.
