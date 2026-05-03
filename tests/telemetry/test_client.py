@@ -235,44 +235,97 @@ def test_send_sync_omits_vercel_bypass_headers_when_env_unset() -> None:
     assert "x-vercel-set-bypass-cookie" not in captured
 
 
-def test_send_sync_emits_info_log_when_debug_enabled(
-    caplog: pytest.LogCaptureFixture,
+def test_send_sync_emits_stderr_diag_when_debug_enabled(
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     with _StubServer() as stub:
-        with caplog.at_level("INFO", logger="docglow.telemetry.client"):
-            client.send_sync(
-                {"x": 1},
-                stub.url,
-                env={"DOCGLOW_TELEMETRY_DEBUG": "1"},
-            )
-
-    info_messages = [r.getMessage() for r in caplog.records if r.levelname == "INFO"]
-    assert any("telemetry: POST" in m and "204" in m for m in info_messages)
-
-
-def test_send_sync_silent_when_debug_disabled(
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    with _StubServer() as stub:
-        with caplog.at_level("INFO", logger="docglow.telemetry.client"):
-            client.send_sync({"x": 1}, stub.url, env={})
-
-    info_messages = [r.getMessage() for r in caplog.records if r.levelname == "INFO"]
-    assert info_messages == []
-
-
-def test_send_sync_debug_log_on_failure(
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    with caplog.at_level("INFO", logger="docglow.telemetry.client"):
         client.send_sync(
             {"x": 1},
-            "http://127.0.0.1:1/",
+            stub.url,
             env={"DOCGLOW_TELEMETRY_DEBUG": "1"},
         )
 
-    info_messages = [r.getMessage() for r in caplog.records if r.levelname == "INFO"]
-    assert any("failed" in m for m in info_messages)
+    err = capsys.readouterr().err
+    assert "telemetry: POST" in err
+    assert "204" in err
+
+
+def test_send_sync_silent_when_debug_disabled(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    with _StubServer() as stub:
+        client.send_sync({"x": 1}, stub.url, env={})
+
+    err = capsys.readouterr().err
+    assert "telemetry:" not in err
+
+
+def test_send_sync_debug_diag_on_failure(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    client.send_sync(
+        {"x": 1},
+        "http://127.0.0.1:1/",
+        env={"DOCGLOW_TELEMETRY_DEBUG": "1"},
+    )
+
+    err = capsys.readouterr().err
+    assert "failed" in err
+
+
+def test_send_sync_follows_307_redirect_preserving_post_and_body() -> None:
+    """Vercel issues 307s for host/path canonicalization; stdlib urllib raises
+    on POST + 307 by default. The custom redirect handler must follow with
+    the original method and body.
+    """
+    received: list[tuple[str, dict[str, Any]]] = []
+
+    class RedirectingHandler(BaseHTTPRequestHandler):
+        target_url: str = ""
+
+        def log_message(self, *_args: Any) -> None:
+            return
+
+        def do_POST(self) -> None:  # noqa: N802
+            length = int(self.headers.get("Content-Length", "0"))
+            body = self.rfile.read(length)
+            try:
+                payload = json.loads(body.decode("utf-8"))
+            except Exception:
+                payload = {}
+            if self.path == "/v1/telemetry/events":
+                received.append(("first", payload))
+                self.send_response(307)
+                self.send_header("Location", self.target_url + "/final")
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+            elif self.path == "/final":
+                received.append(("final", payload))
+                self.send_response(204)
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+            else:
+                self.send_response(404)
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+
+    server = HTTPServer(("127.0.0.1", 0), RedirectingHandler)
+    base = f"http://127.0.0.1:{server.server_address[1]}"
+    RedirectingHandler.target_url = base
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        ok = client.send_sync({"hello": "world"}, base + "/v1/telemetry/events")
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert ok is True
+    # Both legs of the redirect should have received the body.
+    assert received == [
+        ("first", {"hello": "world"}),
+        ("final", {"hello": "world"}),
+    ]
 
 
 def test_drain_pending_completes_in_flight_sends() -> None:

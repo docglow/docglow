@@ -22,14 +22,55 @@ import atexit
 import json
 import logging
 import os
+import sys
 import threading
 import urllib.error
 import urllib.request
 from collections.abc import Mapping
+from typing import Any
 
 import docglow as _docglow
 
 logger = logging.getLogger(__name__)
+
+
+class _PostPreservingRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Follow 301/302/303/307/308 redirects while preserving POST body and headers.
+
+    The stdlib default raises ``HTTPError`` on POST + 307/308 -- which is
+    technically more conservative than RFC 7231 requires and breaks against
+    Vercel routes that issue 307s for host/path canonicalization. Mirrors
+    httpx's ``follow_redirects=True`` behaviour used by the cloud client.
+    """
+
+    def redirect_request(
+        self,
+        req: urllib.request.Request,
+        fp: Any,
+        code: int,
+        msg: str,
+        headers: Any,
+        newurl: str,
+    ) -> urllib.request.Request | None:
+        if code not in (301, 302, 303, 307, 308):
+            return None
+        # 303 always degrades to GET per RFC. 301/302/307/308 keep the method
+        # (some clients downgrade 301/302 POST -> GET, but Vercel and modern
+        # tooling preserve method; we follow that convention).
+        new_method = "GET" if code == 303 else req.get_method()
+        new_data = None if new_method == "GET" else req.data
+        new_headers = {k: v for k, v in req.header_items() if k.lower() != "host"}
+        return urllib.request.Request(
+            newurl,
+            data=new_data,
+            headers=new_headers,
+            origin_req_host=req.origin_req_host,
+            unverifiable=True,
+            method=new_method,
+        )
+
+
+_opener = urllib.request.build_opener(_PostPreservingRedirectHandler())
 
 DEFAULT_TIMEOUT_SECONDS = 2.0
 USER_AGENT = f"docglow-cli-telemetry/{_docglow.__version__}"
@@ -110,6 +151,22 @@ def _build_request(
     )
 
 
+def _diag(message: str) -> None:
+    """Write a debug-mode diagnostic to stderr, bypassing any logging config.
+
+    The ``logger.info()`` path is unreliable across CLI commands because
+    different commands configure docglow's loggers at different levels.
+    Users who set ``DOCGLOW_TELEMETRY_DEBUG=1`` have explicitly asked to see
+    these lines; print them directly so visibility doesn't depend on which
+    subcommand happened to bump the log level.
+    """
+    try:
+        print(message, file=sys.stderr, flush=True)
+    except Exception:
+        # Even a closed stderr must not propagate.
+        pass
+
+
 def send_sync(
     payload: dict[str, object],
     endpoint: str,
@@ -119,27 +176,28 @@ def send_sync(
     """POST the payload synchronously. Returns True on 2xx, False otherwise.
 
     Never raises. Exceptions are caught and logged at DEBUG. When
-    ``DOCGLOW_TELEMETRY_DEBUG`` is truthy, also emits an INFO line per send
-    so users can self-diagnose "why aren't my events showing up?".
+    ``DOCGLOW_TELEMETRY_DEBUG`` is truthy, also writes a one-line diagnostic
+    to stderr per send so users can self-diagnose "why aren't my events
+    showing up?".
     """
     environ = env if env is not None else os.environ
     debug = _is_debug(environ)
     try:
         request = _build_request(payload, endpoint, environ)
-        with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310
+        with _opener.open(request, timeout=timeout) as response:  # noqa: S310
             ok = bool(200 <= response.status < 300)
             if debug:
-                logger.info("telemetry: POST %s -> %s", endpoint, response.status)
+                _diag(f"telemetry: POST {endpoint} -> {response.status}")
             return ok
     except urllib.error.HTTPError as exc:
         logger.debug("telemetry: HTTP %s from %s", exc.code, endpoint)
         if debug:
-            logger.info("telemetry: POST %s -> %s (HTTPError)", endpoint, exc.code)
+            _diag(f"telemetry: POST {endpoint} -> {exc.code} (HTTPError)")
         return False
     except Exception as exc:
         logger.debug("telemetry: send failed: %s", exc)
         if debug:
-            logger.info("telemetry: POST %s -> failed (%s)", endpoint, exc)
+            _diag(f"telemetry: POST {endpoint} -> failed ({exc})")
         return False
 
 
