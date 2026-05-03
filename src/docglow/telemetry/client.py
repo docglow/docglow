@@ -18,6 +18,7 @@ of a hung or crashing CLI is significant.
 
 from __future__ import annotations
 
+import atexit
 import json
 import logging
 import os
@@ -35,6 +36,51 @@ USER_AGENT = f"docglow-cli-telemetry/{_docglow.__version__}"
 
 ENV_VERCEL_BYPASS = "DOCGLOW_VERCEL_BYPASS"
 ENV_DEBUG = "DOCGLOW_TELEMETRY_DEBUG"
+
+# Bounded total wait at process exit, regardless of how many sends are in flight.
+# Each individual send still has its own timeout enforced by urlopen.
+_ATEXIT_BUDGET_SECONDS = 2.5
+
+_pending_lock = threading.Lock()
+_pending_threads: list[threading.Thread] = []
+_atexit_registered = False
+
+
+def _register_atexit_once() -> None:
+    global _atexit_registered
+    if _atexit_registered:
+        return
+    atexit.register(_drain_pending)
+    _atexit_registered = True
+
+
+def _drain_pending() -> None:
+    """Wait up to ``_ATEXIT_BUDGET_SECONDS`` total for in-flight sends to finish.
+
+    Without this, daemon-thread sends are killed mid-flight when the
+    interpreter exits, and POSTs are silently dropped before they reach the
+    network. The budget is shared across all pending threads.
+    """
+    with _pending_lock:
+        threads = [t for t in _pending_threads if t.is_alive()]
+        _pending_threads.clear()
+
+    if not threads:
+        return
+
+    deadline = threading.Event()
+    timer = threading.Timer(_ATEXIT_BUDGET_SECONDS, deadline.set)
+    timer.daemon = True
+    timer.start()
+    try:
+        for thread in threads:
+            if deadline.is_set():
+                break
+            # join blocks until the thread exits or its own timeout fires;
+            # urllib.request.urlopen already enforces a per-request timeout.
+            thread.join(timeout=_ATEXIT_BUDGET_SECONDS)
+    finally:
+        timer.cancel()
 
 
 def _is_debug(env: Mapping[str, str]) -> bool:
@@ -104,7 +150,9 @@ def send(
 ) -> None:
     """Fire-and-forget: POST on a daemon thread. Never raises, never blocks.
 
-    The thread is daemonised so process shutdown does not wait for it.
+    The thread is daemonised so process shutdown does not wait for it
+    indefinitely, but an ``atexit`` hook gives in-flight sends a bounded
+    budget to finish so a fast CLI exit doesn't kill the request mid-TLS.
     """
     try:
         thread = threading.Thread(
@@ -113,6 +161,9 @@ def send(
             name="docglow-telemetry",
             daemon=True,
         )
+        with _pending_lock:
+            _pending_threads.append(thread)
+            _register_atexit_once()
         thread.start()
     except Exception as exc:
         # Even thread-creation failures must not propagate.

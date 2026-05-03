@@ -273,3 +273,28 @@ def test_send_sync_debug_log_on_failure(
 
     info_messages = [r.getMessage() for r in caplog.records if r.levelname == "INFO"]
     assert any("failed" in m for m in info_messages)
+
+
+def test_drain_pending_completes_in_flight_sends() -> None:
+    """An in-flight send launched via send() must complete when _drain_pending runs.
+
+    Regression: without atexit drain, the daemon thread is killed at process
+    exit and the POST never reaches the server. We simulate process exit by
+    invoking _drain_pending() directly after send().
+    """
+
+    def slow_handler(_payload: dict[str, Any]) -> tuple[int, bytes]:
+        # Long enough to ensure the request would not finish before
+        # send() returns, but well within the drain budget.
+        time.sleep(0.3)
+        return (204, b"")
+
+    with _StubServer(on_request=slow_handler) as stub:
+        # Reset module state so this test is hermetic.
+        with client._pending_lock:
+            client._pending_threads.clear()
+        client.send({"x": 1}, stub.url, timeout=2.0)
+        # Simulate process exit.
+        client._drain_pending()
+
+    assert stub.received == [{"x": 1}]
