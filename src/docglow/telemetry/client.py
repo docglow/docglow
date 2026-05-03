@@ -60,6 +60,11 @@ class _PostPreservingRedirectHandler(urllib.request.HTTPRedirectHandler):
         new_method = "GET" if code == 303 else req.get_method()
         new_data = None if new_method == "GET" else req.data
         new_headers = {k: v for k, v in req.header_items() if k.lower() != "host"}
+        if _is_debug(os.environ):
+            _diag(
+                f"telemetry: redirect {code} {req.get_method()} {req.full_url} "
+                f"-> {new_method} {newurl}"
+            )
         return urllib.request.Request(
             newurl,
             data=new_data,
