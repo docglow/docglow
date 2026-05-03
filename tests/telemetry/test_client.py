@@ -209,7 +209,7 @@ def _capture_headers() -> tuple[str, dict[str, str], Callable[[], None]]:
     return url, captured, shutdown
 
 
-def test_send_sync_attaches_vercel_bypass_headers_when_env_set() -> None:
+def test_send_sync_attaches_vercel_bypass_header_when_env_set() -> None:
     url, captured, shutdown = _capture_headers()
     try:
         client.send_sync(
@@ -221,7 +221,11 @@ def test_send_sync_attaches_vercel_bypass_headers_when_env_set() -> None:
         shutdown()
 
     assert captured.get("x-vercel-protection-bypass") == "secret-token"
-    assert captured.get("x-vercel-set-bypass-cookie") == "true"
+    # Must NOT send x-vercel-set-bypass-cookie: stdlib urllib has no cookie
+    # jar, and Vercel's cookie-bypass flow returns a 307 + Set-Cookie that
+    # the client is expected to carry across the redirect. Sending the
+    # header without cookie support produces an unbreakable redirect loop.
+    assert "x-vercel-set-bypass-cookie" not in captured
 
 
 def test_send_sync_omits_vercel_bypass_headers_when_env_unset() -> None:

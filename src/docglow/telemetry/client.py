@@ -146,8 +146,13 @@ def _build_request(
     }
     bypass = env.get(ENV_VERCEL_BYPASS)
     if bypass:
+        # Send only the protection-bypass header, NOT x-vercel-set-bypass-cookie.
+        # The cookie variant returns a 307 + Set-Cookie(_vercel_jwt) that must
+        # be carried across the redirect; stdlib urllib has no cookie jar, so
+        # the loop never resolves. The header alone is enough for single
+        # fire-and-forget POSTs. (The cloud httpx.Client uses both headers
+        # because httpx persists cookies across redirects automatically.)
         headers["x-vercel-protection-bypass"] = bypass
-        headers["x-vercel-set-bypass-cookie"] = "true"
     return urllib.request.Request(
         url=endpoint,
         data=body,
