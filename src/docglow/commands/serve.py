@@ -69,23 +69,22 @@ def serve(
         console.print("  Verbose: request logging enabled")
     console.print("  Press [bold]Ctrl+C[/bold] to stop\n")
 
-    # Telemetry: emit at startup -- a serve session may run for hours and a
-    # shutdown event would be lost on Ctrl+C. We record startup as "success"
-    # because the server is about to start blocking; failure to start would
-    # raise inside start_server below.
+    # Emit at startup, not shutdown: a serve session may run for hours, and
+    # the event would be lost on Ctrl+C.
     from docglow.config import load_config
     from docglow.telemetry import dispatcher as telemetry
+    from docglow.telemetry import state
 
     serve_config = load_config(project_dir)
-    telemetry_features: tuple[str, ...] = ("watch",) if watch else ()
-    telemetry.record_command(
-        serve_config.telemetry,
-        command="serve",
-        result="success",
-        duration_ms=0,
-        project_shape=telemetry.project_shape_from_manifest_path(project_dir / "target"),
-        features_used=telemetry_features,
-    )
+    if telemetry.is_active(serve_config.telemetry, state.get_consent()):
+        telemetry.record_command(
+            serve_config.telemetry,
+            command="serve",
+            result="success",
+            duration_ms=0,
+            project_shape=telemetry.project_shape_from_manifest_path(project_dir / "target"),
+            features_used=("watch",) if watch else (),
+        )
 
     if watch:
         from docglow.server.watcher import start_watcher

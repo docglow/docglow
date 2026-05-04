@@ -13,12 +13,22 @@ This precedence is part of the user-facing privacy contract documented in
 
 from __future__ import annotations
 
+import logging
 import os
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
+from urllib.parse import urlparse
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_ENDPOINT = "https://api.docglow.com/v1/telemetry/events"
+
+# http:// is permitted only for these hosts (test/dev). Everything else must
+# use https:// so payloads aren't sent over plaintext to a misconfigured or
+# attacker-supplied endpoint. Silent fallback to DEFAULT_ENDPOINT preserves
+# the never-break-CLI invariant.
+_HTTP_ALLOWED_HOSTS = {"localhost", "127.0.0.1", "::1"}
 
 ENV_OPT_IN = "DOCGLOW_TELEMETRY"
 ENV_OPT_OUT = "DOCGLOW_NO_TELEMETRY"
@@ -41,8 +51,10 @@ class TelemetryConfig:
     endpoint: str = DEFAULT_ENDPOINT
 
 
-def _parse_tristate(value: str | None) -> bool | None:
-    """Return True/False for an env var, or None when unset/unrecognised."""
+def parse_tristate(value: str | None) -> bool | None:
+    """Return ``True``/``False`` for a truthy/falsy env var value, or ``None``
+    when unset or unrecognised. Public API: re-used by the dispatcher to
+    distinguish "user explicitly opted out" from "default off"."""
     if value is None:
         return None
     normalized = value.strip().lower()
@@ -64,10 +76,10 @@ def resolve_telemetry_config(
     """
     environ = env if env is not None else os.environ
 
-    if _parse_tristate(environ.get(ENV_OPT_OUT)) is True:
+    if parse_tristate(environ.get(ENV_OPT_OUT)) is True:
         return TelemetryConfig(enabled=False, endpoint=_resolve_endpoint(raw, environ))
 
-    env_opt_in = _parse_tristate(environ.get(ENV_OPT_IN))
+    env_opt_in = parse_tristate(environ.get(ENV_OPT_IN))
     if env_opt_in is not None:
         return TelemetryConfig(enabled=env_opt_in, endpoint=_resolve_endpoint(raw, environ))
 
@@ -75,13 +87,46 @@ def resolve_telemetry_config(
     return TelemetryConfig(enabled=yml_enabled, endpoint=_resolve_endpoint(raw, environ))
 
 
+def _is_safe_endpoint(endpoint: str) -> bool:
+    """Return True iff ``endpoint`` is HTTPS, or HTTP to an allowed local host.
+
+    Plaintext HTTP to remote hosts is rejected so a misconfigured yml or env
+    var can't route payloads (and any ``DOCGLOW_VERCEL_BYPASS`` token) over
+    an unencrypted channel.
+    """
+    try:
+        parsed = urlparse(endpoint)
+    except ValueError:
+        return False
+    if parsed.scheme == "https":
+        return bool(parsed.hostname)
+    if parsed.scheme == "http":
+        return parsed.hostname in _HTTP_ALLOWED_HOSTS
+    return False
+
+
 def _resolve_endpoint(raw: dict[str, Any] | None, env: Mapping[str, str]) -> str:
-    """Resolve the endpoint: env override > yml > default."""
+    """Resolve the endpoint: env override > yml > default.
+
+    Rejects non-HTTPS endpoints (except http://localhost) by silently falling
+    back to ``DEFAULT_ENDPOINT``. The user has opted in by configuring an
+    override at all, but we don't honor an override that downgrades transport.
+    """
     override = env.get(ENV_ENDPOINT_OVERRIDE)
     if override:
-        return override
+        if _is_safe_endpoint(override):
+            return override
+        logger.debug(
+            "telemetry: rejecting non-HTTPS endpoint override %r; falling back to default",
+            override,
+        )
     if isinstance(raw, dict):
         endpoint = raw.get("endpoint")
         if isinstance(endpoint, str) and endpoint:
-            return endpoint
+            if _is_safe_endpoint(endpoint):
+                return endpoint
+            logger.debug(
+                "telemetry: rejecting non-HTTPS endpoint from yml %r; falling back to default",
+                endpoint,
+            )
     return DEFAULT_ENDPOINT
