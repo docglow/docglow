@@ -95,3 +95,53 @@ def test_default_uses_real_environ_when_env_not_passed(monkeypatch: pytest.Monke
     monkeypatch.setenv(ENV_OPT_IN, "1")
     config = resolve_telemetry_config(None)
     assert config.enabled is True
+
+
+def test_endpoint_rejects_plaintext_http_remote() -> None:
+    config = resolve_telemetry_config(
+        None,
+        env={ENV_ENDPOINT_OVERRIDE: "http://evil.example.com/v1/telemetry/events"},
+    )
+    assert config.endpoint == DEFAULT_ENDPOINT
+
+
+def test_endpoint_allows_http_localhost_for_dev() -> None:
+    config = resolve_telemetry_config(
+        None,
+        env={ENV_ENDPOINT_OVERRIDE: "http://localhost:8080/v1/telemetry/events"},
+    )
+    assert config.endpoint == "http://localhost:8080/v1/telemetry/events"
+
+
+def test_endpoint_allows_http_127_0_0_1_for_dev() -> None:
+    config = resolve_telemetry_config(
+        None,
+        env={ENV_ENDPOINT_OVERRIDE: "http://127.0.0.1:9000/events"},
+    )
+    assert config.endpoint == "http://127.0.0.1:9000/events"
+
+
+def test_endpoint_rejects_yml_plaintext_http_remote() -> None:
+    config = resolve_telemetry_config({"endpoint": "http://evil.example.com/e"}, env={})
+    assert config.endpoint == DEFAULT_ENDPOINT
+
+
+def test_endpoint_rejects_unknown_scheme() -> None:
+    config = resolve_telemetry_config(
+        None,
+        env={ENV_ENDPOINT_OVERRIDE: "ftp://example.com/events"},
+    )
+    assert config.endpoint == DEFAULT_ENDPOINT
+
+
+def test_endpoint_rejects_javascript_scheme() -> None:
+    config = resolve_telemetry_config(
+        None,
+        env={ENV_ENDPOINT_OVERRIDE: "javascript:alert(1)"},
+    )
+    assert config.endpoint == DEFAULT_ENDPOINT
+
+
+def test_endpoint_rejects_https_with_no_host() -> None:
+    config = resolve_telemetry_config(None, env={ENV_ENDPOINT_OVERRIDE: "https:///path"})
+    assert config.endpoint == DEFAULT_ENDPOINT
