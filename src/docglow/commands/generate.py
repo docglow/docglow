@@ -1,6 +1,5 @@
 """Generate command for docglow CLI."""
 
-import time
 from pathlib import Path
 
 import click
@@ -163,16 +162,11 @@ def generate(
     if profile and profile_adapter and profile_connection:
         profiling_connection = _parse_connection(profile_adapter, profile_connection)
 
-    # Telemetry setup -- dispatched in the finally block so success/error and
-    # duration are recorded regardless of how the command exits. The first-run
-    # consent prompt fires here (before the long generate work) when the
-    # context is interactive and consent has not yet been recorded.
     from docglow.commands.telemetry import maybe_prompt_for_consent
     from docglow.telemetry import dispatcher as telemetry
 
     maybe_prompt_for_consent(console)
 
-    telemetry_started = time.monotonic()
     telemetry_features: list[str] = []
     if column_lineage:
         telemetry_features.append("column_lineage")
@@ -185,64 +179,61 @@ def generate(
     if slim:
         telemetry_features.append("slim")
     telemetry_resolved_target = target_dir or (project_dir / "target")
-    telemetry_result_name = "error"
 
-    try:
-        output_path, health_score = generate_site(
-            project_dir=project_dir,
-            target_dir=target_dir,
-            output_dir=output_dir,
-            static=static,
-            profiling_enabled=profile,
-            profiling_adapter=profile_adapter,
-            profiling_connection=profiling_connection,
-            profiling_sample_size=profile_sample_size,
-            profiling_cache=not profile_no_cache,
-            ai_enabled=ai,
-            title=title,
-            select=select,
-            exclude=exclude,
-            column_lineage_enabled=column_lineage,
-            column_lineage_select=column_lineage_select,
-            column_lineage_depth=column_lineage_depth,
-            exclude_packages=not include_packages,
-            slim=slim,
-            head_script=head_script.read_text(encoding="utf-8") if head_script else None,
-            column_lineage_workers=workers,
-        )
-        console.print(f"\n[bold green]Site generated at {output_path}[/bold green]")
-        if static:
-            console.print("  Single-file mode: open index.html directly in a browser")
-        else:
-            console.print("  Run [bold]docglow serve[/bold] to view locally")
-
-        if fail_under is not None:
-            if health_score < fail_under:
-                console.print(
-                    f"\n[bold red]Health score {health_score:.0f} is below "
-                    f"threshold {fail_under:.0f}[/bold red]"
-                )
-                raise SystemExit(1)
+    with telemetry.record(
+        config.telemetry,
+        command="generate",
+        shape_provider=lambda: telemetry.project_shape_from_manifest_path(
+            telemetry_resolved_target
+        ),
+        features_used=tuple(telemetry_features),
+    ):
+        try:
+            output_path, health_score = generate_site(
+                project_dir=project_dir,
+                target_dir=target_dir,
+                output_dir=output_dir,
+                static=static,
+                profiling_enabled=profile,
+                profiling_adapter=profile_adapter,
+                profiling_connection=profiling_connection,
+                profiling_sample_size=profile_sample_size,
+                profiling_cache=not profile_no_cache,
+                ai_enabled=ai,
+                title=title,
+                select=select,
+                exclude=exclude,
+                column_lineage_enabled=column_lineage,
+                column_lineage_select=column_lineage_select,
+                column_lineage_depth=column_lineage_depth,
+                exclude_packages=not include_packages,
+                slim=slim,
+                head_script=head_script.read_text(encoding="utf-8") if head_script else None,
+                column_lineage_workers=workers,
+            )
+            console.print(f"\n[bold green]Site generated at {output_path}[/bold green]")
+            if static:
+                console.print("  Single-file mode: open index.html directly in a browser")
             else:
-                console.print(
-                    f"\n[bold green]Health score: {health_score:.0f} "
-                    f"(threshold: {fail_under:.0f})[/bold green]"
-                )
+                console.print("  Run [bold]docglow serve[/bold] to view locally")
 
-        maybe_show_hint(console, __version__)
-        telemetry_result_name = "success"
-    except ArtifactLoadError as e:
-        console.print(f"[bold red]Error:[/bold red] {e}")
-        raise SystemExit(1) from e
-    except FileNotFoundError as e:
-        console.print(f"[bold red]Error:[/bold red] {e}")
-        raise SystemExit(1) from e
-    finally:
-        telemetry.record_command(
-            config.telemetry,
-            command="generate",
-            result=telemetry_result_name,  # type: ignore[arg-type]
-            duration_ms=int((time.monotonic() - telemetry_started) * 1000),
-            project_shape=telemetry.project_shape_from_manifest_path(telemetry_resolved_target),
-            features_used=tuple(telemetry_features),
-        )
+            if fail_under is not None:
+                if health_score < fail_under:
+                    console.print(
+                        f"\n[bold red]Health score {health_score:.0f} is below "
+                        f"threshold {fail_under:.0f}[/bold red]"
+                    )
+                    raise SystemExit(1)
+                else:
+                    console.print(
+                        f"\n[bold green]Health score: {health_score:.0f} "
+                        f"(threshold: {fail_under:.0f})[/bold green]"
+                    )
+
+            maybe_show_hint(console, __version__)
+        except ArtifactLoadError as e:
+            console.print(f"[bold red]Error:[/bold red] {e}")
+            raise SystemExit(1) from e
+        except FileNotFoundError as e:
+            console.print(f"[bold red]Error:[/bold red] {e}")
+            raise SystemExit(1) from e
