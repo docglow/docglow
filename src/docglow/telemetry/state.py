@@ -78,8 +78,10 @@ def _is_valid_uuid(value: object) -> bool:
 
 
 def _normalize_consent(value: object) -> ConsentValue:
-    if value in _VALID_CONSENT:
-        return value  # type: ignore[return-value]
+    if value == "yes":
+        return "yes"
+    if value == "no":
+        return "no"
     return "unset"
 
 
