@@ -51,8 +51,10 @@ class TelemetryConfig:
     endpoint: str = DEFAULT_ENDPOINT
 
 
-def _parse_tristate(value: str | None) -> bool | None:
-    """Return True/False for an env var, or None when unset/unrecognised."""
+def parse_tristate(value: str | None) -> bool | None:
+    """Return ``True``/``False`` for a truthy/falsy env var value, or ``None``
+    when unset or unrecognised. Public API: re-used by the dispatcher to
+    distinguish "user explicitly opted out" from "default off"."""
     if value is None:
         return None
     normalized = value.strip().lower()
@@ -74,10 +76,10 @@ def resolve_telemetry_config(
     """
     environ = env if env is not None else os.environ
 
-    if _parse_tristate(environ.get(ENV_OPT_OUT)) is True:
+    if parse_tristate(environ.get(ENV_OPT_OUT)) is True:
         return TelemetryConfig(enabled=False, endpoint=_resolve_endpoint(raw, environ))
 
-    env_opt_in = _parse_tristate(environ.get(ENV_OPT_IN))
+    env_opt_in = parse_tristate(environ.get(ENV_OPT_IN))
     if env_opt_in is not None:
         return TelemetryConfig(enabled=env_opt_in, endpoint=_resolve_endpoint(raw, environ))
 

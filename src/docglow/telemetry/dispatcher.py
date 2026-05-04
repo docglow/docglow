@@ -1,36 +1,25 @@
 """Telemetry dispatcher: the single integration point used by CLI commands.
 
 Owns the gate logic ("should we send?"), payload assembly, and dispatch. CLI
-commands call ``record_command`` (or use the ``record`` context manager) and
-remain ignorant of every other module in this package.
+commands use the :func:`record` context manager and remain ignorant of every
+other module in this package.
 
-Gate logic, in order:
-
-    1. ``DOCGLOW_NO_TELEMETRY=1`` -- force off (re-checked here defensively
-       even though it is also folded into ``TelemetryConfig.enabled``).
-    2. ``config.enabled`` -- env opt-in or yml flag says yes.
-    3. ``consent == 'yes'`` -- the user accepted the first-run prompt.
-
-Anything that fails any of these returns silently. Failures inside this
-module never raise into the caller.
+Failures inside this module never raise into the caller.
 """
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import time
-from collections.abc import Callable, Iterator, Mapping
+from collections.abc import Callable, Iterable, Iterator, Mapping
 from contextlib import contextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from docglow.telemetry import client, state
-from docglow.telemetry.config import (
-    ENV_OPT_OUT,
-    TelemetryConfig,
-    _parse_tristate,
-)
+from docglow.telemetry.config import ENV_OPT_OUT, TelemetryConfig, parse_tristate
 from docglow.telemetry.payload import (
     CommandName,
     ProjectShape,
@@ -49,42 +38,68 @@ def is_active(
     consent: state.ConsentValue,
     env: Mapping[str, str] | None = None,
 ) -> bool:
-    """Return True iff telemetry should fire for this run."""
+    """Return True iff telemetry should fire for this run.
+
+    ``DOCGLOW_NO_TELEMETRY`` is re-checked here because ``config.enabled=False``
+    is overloaded between "default off" and "user explicitly opted out", and
+    only the env-var presence distinguishes the two -- consent="yes" should
+    not beat an explicit opt-out.
+    """
     environ = env if env is not None else os.environ
-    if _parse_tristate(environ.get(ENV_OPT_OUT)) is True:
+    if parse_tristate(environ.get(ENV_OPT_OUT)) is True:
         return False
     if config.enabled:
         return True
     return consent == "yes"
 
 
-def project_shape_from_manifest(manifest: Manifest | None) -> ProjectShape:
-    """Build an anonymous ProjectShape from an in-memory dbt Manifest.
+def _shape_from_resource_types(
+    resource_types: Iterable[str],
+    sources: int,
+    macros: int,
+    adapter_raw: object,
+) -> ProjectShape:
+    """Build a ProjectShape from a stream of resource_type strings + counts.
 
-    Returns a zero-shape if the manifest is None or any field access fails.
+    Shared core for both the in-memory Manifest and on-disk manifest.json
+    paths -- both end up doing the same counting and adapter normalisation.
     """
+    models = seeds = tests = 0
+    for rt in resource_types:
+        if rt == "model":
+            models += 1
+        elif rt == "seed":
+            seeds += 1
+        elif rt == "test":
+            tests += 1
+    adapter_type: str | None = None
+    if isinstance(adapter_raw, str) and adapter_raw:
+        adapter_type = adapter_raw.lower()
+    return ProjectShape(
+        models=models,
+        sources=sources,
+        seeds=seeds,
+        tests=tests,
+        macros=macros,
+        adapter_type=adapter_type,
+    )
+
+
+def project_shape_from_manifest(manifest: Manifest | None) -> ProjectShape:
+    """Build an anonymous ProjectShape from an in-memory dbt Manifest."""
     if manifest is None:
         return ProjectShape()
     try:
-        nodes = manifest.nodes.values() if hasattr(manifest, "nodes") else []
-        models = sum(1 for n in nodes if getattr(n, "resource_type", "") == "model")
-        seeds = sum(1 for n in nodes if getattr(n, "resource_type", "") == "seed")
-        tests = sum(1 for n in nodes if getattr(n, "resource_type", "") == "test")
+        nodes = manifest.nodes.values() if hasattr(manifest, "nodes") else ()
         sources = len(manifest.sources) if hasattr(manifest, "sources") and manifest.sources else 0
         macros = len(manifest.macros) if hasattr(manifest, "macros") and manifest.macros else 0
-        adapter_type: str | None = None
         metadata = getattr(manifest, "metadata", None)
-        if metadata is not None:
-            raw = getattr(metadata, "adapter_type", None)
-            if isinstance(raw, str) and raw:
-                adapter_type = raw.lower()
-        return ProjectShape(
-            models=models,
+        adapter_raw = getattr(metadata, "adapter_type", None) if metadata is not None else None
+        return _shape_from_resource_types(
+            (getattr(n, "resource_type", "") for n in nodes),
             sources=sources,
-            seeds=seeds,
-            tests=tests,
             macros=macros,
-            adapter_type=adapter_type,
+            adapter_raw=adapter_raw,
         )
     except Exception as exc:
         logger.debug("telemetry: failed to derive ProjectShape from manifest: %s", exc)
@@ -92,45 +107,30 @@ def project_shape_from_manifest(manifest: Manifest | None) -> ProjectShape:
 
 
 def project_shape_from_manifest_path(target_dir: str | Path) -> ProjectShape:
-    """Lightweight manifest.json reader for telemetry use.
+    """Lightweight ``manifest.json`` reader for telemetry use.
 
-    Reads only the fields we need (node resource_types, source/macro counts,
-    adapter_type) without going through pydantic validation. Used by CLI
-    commands that don't otherwise hold a Manifest object so they can record
-    a meaningful payload without paying for full artifact loading.
-
-    Returns ProjectShape() on any failure -- this must never break the
-    calling command.
+    Reads only the fields we need without going through pydantic validation.
+    Used by commands that don't otherwise hold a Manifest object so they can
+    record a meaningful payload without paying for full artifact loading.
     """
-    import json
-
     try:
         path = Path(target_dir) / "manifest.json"
         with path.open(encoding="utf-8") as f:
-            data = json.load(f)
-    except Exception as exc:
+            data: dict[str, Any] = json.load(f)
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError) as exc:
         logger.debug("telemetry: manifest.json peek failed: %s", exc)
         return ProjectShape()
 
     try:
         nodes = data.get("nodes", {}) or {}
-        models = sum(1 for n in nodes.values() if n.get("resource_type") == "model")
-        seeds = sum(1 for n in nodes.values() if n.get("resource_type") == "seed")
-        tests = sum(1 for n in nodes.values() if n.get("resource_type") == "test")
         sources = len(data.get("sources", {}) or {})
         macros = len(data.get("macros", {}) or {})
-        adapter_type = None
-        metadata = data.get("metadata") or {}
-        raw = metadata.get("adapter_type")
-        if isinstance(raw, str) and raw:
-            adapter_type = raw.lower()
-        return ProjectShape(
-            models=models,
+        adapter_raw = (data.get("metadata") or {}).get("adapter_type")
+        return _shape_from_resource_types(
+            (n.get("resource_type", "") for n in nodes.values()),
             sources=sources,
-            seeds=seeds,
-            tests=tests,
             macros=macros,
-            adapter_type=adapter_type,
+            adapter_raw=adapter_raw,
         )
     except Exception as exc:
         logger.debug("telemetry: manifest.json parse failed: %s", exc)
@@ -143,7 +143,6 @@ def record_command(
     command: CommandName,
     result: ResultName,
     duration_ms: int,
-    manifest: Manifest | None = None,
     project_shape: ProjectShape | None = None,
     features_used: tuple[str, ...] = (),
     consent: state.ConsentValue | None = None,
@@ -151,11 +150,6 @@ def record_command(
     send: bool = True,
 ) -> dict[str, object] | None:
     """Build and dispatch a telemetry event if telemetry is active.
-
-    Pass ``project_shape`` directly when the caller already has it, or
-    ``manifest`` (an in-memory Manifest) for the dispatcher to derive shape.
-    If both are None the payload reports a zero shape -- still valid for
-    commands like ``serve`` that don't necessarily have a manifest at hand.
 
     Returns the payload that was (or would have been) sent, or None when
     telemetry is inactive. Useful for tests; production callers ignore the
@@ -169,14 +163,12 @@ def record_command(
             return None
 
         instance_id = state.get_instance_id(state_path)
-        if project_shape is None:
-            project_shape = project_shape_from_manifest(manifest)
         payload = build_event(
             instance_id=instance_id,
             command=command,
             result=result,
             duration_ms=duration_ms,
-            project_shape=project_shape,
+            project_shape=project_shape or ProjectShape(),
             features_used=features_used,
         )
         if send:
@@ -192,14 +184,14 @@ def record(
     config: TelemetryConfig,
     *,
     command: CommandName,
-    manifest_provider: Callable[[], Manifest | None] | None = None,
+    shape_provider: Callable[[], ProjectShape] | None = None,
     features_used: tuple[str, ...] = (),
 ) -> Iterator[None]:
-    """Context manager that times a command and records success/error on exit.
+    """Time a command and record success/error on exit.
 
-    ``manifest_provider`` is an optional zero-arg callable returning the
-    Manifest (or None). Called inside the ``finally`` block so it picks up
-    a manifest that was loaded mid-command, even on error.
+    ``shape_provider`` is invoked only when telemetry is active, so commands
+    can pass an expensive thunk (e.g. reading manifest.json from disk) without
+    paying for it on the disabled path.
     """
     started = time.monotonic()
     success = False
@@ -209,19 +201,23 @@ def record(
     finally:
         try:
             duration_ms = int((time.monotonic() - started) * 1000)
-            manifest = None
-            if manifest_provider is not None:
+            consent = state.get_consent()
+            if not is_active(config, consent):
+                return
+            shape: ProjectShape | None = None
+            if shape_provider is not None:
                 try:
-                    manifest = manifest_provider()
+                    shape = shape_provider()
                 except Exception:
-                    manifest = None
+                    shape = None
             record_command(
                 config,
                 command=command,
                 result="success" if success else "error",
                 duration_ms=duration_ms,
-                manifest=manifest,
+                project_shape=shape,
                 features_used=features_used,
+                consent=consent,
             )
         except Exception as exc:
             logger.debug("telemetry: record context exit failed: %s", exc)

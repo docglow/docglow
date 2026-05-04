@@ -1,6 +1,5 @@
 """Health command for docglow CLI."""
 
-import time
 from pathlib import Path
 
 import click
@@ -41,18 +40,21 @@ def health(
     from docglow.telemetry import dispatcher as telemetry
 
     config = load_config(project_dir)
-    telemetry_started = time.monotonic()
-    telemetry_result_name = "error"
-    telemetry_manifest = None
+    loaded_manifest = None
 
-    try:
+    with telemetry.record(
+        config.telemetry,
+        command="health",
+        shape_provider=lambda: telemetry.project_shape_from_manifest(loaded_manifest),
+        features_used=(output_format,),
+    ):
         try:
             artifacts = load_artifacts(project_dir, target_dir)
         except ArtifactLoadError as e:
             console.print(f"[bold red]Error:[/bold red] {e}")
             raise SystemExit(1) from e
 
-        telemetry_manifest = artifacts.manifest
+        loaded_manifest = artifacts.manifest
 
         # Build data to get transformed models/sources
         data = build_docglow_data(artifacts)
@@ -67,7 +69,6 @@ def health(
                     f"threshold {fail_under:.0f}[/bold red]"
                 )
                 raise SystemExit(1)
-            telemetry_result_name = "success"
             return
 
         if output_format == "markdown":
@@ -115,7 +116,6 @@ def health(
                     f"threshold {fail_under:.0f}[/bold red]"
                 )
                 raise SystemExit(1)
-            telemetry_result_name = "success"
             return
 
         # Table output
@@ -182,13 +182,3 @@ def health(
                 f"threshold {fail_under:.0f}[/bold red]"
             )
             raise SystemExit(1)
-        telemetry_result_name = "success"
-    finally:
-        telemetry.record_command(
-            config.telemetry,
-            command="health",
-            result=telemetry_result_name,  # type: ignore[arg-type]
-            duration_ms=int((time.monotonic() - telemetry_started) * 1000),
-            manifest=telemetry_manifest,
-            features_used=(output_format,),
-        )
