@@ -199,25 +199,27 @@ def record(
         yield
         success = True
     finally:
+        # Never `return` from inside this finally -- doing so swallows any
+        # in-flight exception (including SystemExit) the body raised. Use
+        # nested if/else to gate the work instead.
         try:
             duration_ms = int((time.monotonic() - started) * 1000)
             consent = state.get_consent()
-            if not is_active(config, consent):
-                return
-            shape: ProjectShape | None = None
-            if shape_provider is not None:
-                try:
-                    shape = shape_provider()
-                except Exception:
-                    shape = None
-            record_command(
-                config,
-                command=command,
-                result="success" if success else "error",
-                duration_ms=duration_ms,
-                project_shape=shape,
-                features_used=features_used,
-                consent=consent,
-            )
+            if is_active(config, consent):
+                shape: ProjectShape | None = None
+                if shape_provider is not None:
+                    try:
+                        shape = shape_provider()
+                    except Exception:
+                        shape = None
+                record_command(
+                    config,
+                    command=command,
+                    result="success" if success else "error",
+                    duration_ms=duration_ms,
+                    project_shape=shape,
+                    features_used=features_used,
+                    consent=consent,
+                )
         except Exception as exc:
             logger.debug("telemetry: record context exit failed: %s", exc)

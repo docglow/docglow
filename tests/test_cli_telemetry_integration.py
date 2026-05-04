@@ -10,6 +10,7 @@ from click.testing import CliRunner
 
 from docglow import cloud_hint
 from docglow.cli import cli
+from docglow.telemetry import state as telemetry_state
 from docglow.telemetry.config import TelemetryConfig
 
 
@@ -27,8 +28,8 @@ def _mock_config(telemetry_enabled: bool = False) -> MagicMock:
 
 @pytest.fixture(autouse=True)
 def isolated_state(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    state = tmp_path / "cloud_hint.json"
-    monkeypatch.setattr(cloud_hint, "_state_path", lambda: state)
+    monkeypatch.setattr(cloud_hint, "_state_path", lambda: tmp_path / "cloud_hint.json")
+    monkeypatch.setattr(telemetry_state, "_state_path", lambda: tmp_path / "telemetry.json")
     monkeypatch.setenv("DOCGLOW_NO_CLOUD_HINT", "1")
     monkeypatch.delenv("CI", raising=False)
     monkeypatch.delenv("DOCGLOW_TELEMETRY", raising=False)
@@ -94,11 +95,11 @@ def test_generate_records_error_when_fail_under_trips(tmp_path: Path) -> None:
     assert mock_record.call_args.kwargs["result"] == "error"
 
 
-def test_generate_dispatcher_still_called_when_telemetry_disabled(tmp_path: Path) -> None:
-    """When disabled, record_command is still invoked but is internally a no-op.
-
-    The gate logic lives inside record_command, not at the call site -- this
-    keeps the command-level wiring trivial and centralises the gate.
+def test_generate_skips_record_command_when_telemetry_disabled(tmp_path: Path) -> None:
+    """When telemetry is inactive, the record() context manager short-circuits
+    before record_command is invoked. This is intentional: the shape_provider
+    (which may do disk I/O like reading manifest.json) is also skipped on the
+    disabled path, saving 50-500 ms per generate run.
     """
     runner = CliRunner()
     with (
@@ -112,7 +113,7 @@ def test_generate_dispatcher_still_called_when_telemetry_disabled(tmp_path: Path
         result = runner.invoke(cli, ["generate", "--project-dir", str(tmp_path)])
 
     assert result.exit_code == 0
-    mock_record.assert_called_once()
+    mock_record.assert_not_called()
 
 
 def test_generate_features_used_reflects_active_flags(tmp_path: Path) -> None:
