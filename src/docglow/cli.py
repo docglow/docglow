@@ -15,6 +15,7 @@ from docglow.commands.mcp import mcp_server
 from docglow.commands.profile import profile
 from docglow.commands.publish import publish
 from docglow.commands.serve import serve
+from docglow.commands.telemetry import telemetry as telemetry_group
 
 console = Console()
 
@@ -57,3 +58,4 @@ cli.add_command(setup)
 cli.add_command(cloud_group)
 cli.add_command(mcp_server)
 cli.add_command(init)
+cli.add_command(telemetry_group)

@@ -82,4 +82,5 @@ nav:
   - Reference:
     - CLI Commands: reference/cli.md
     - Compatibility: compatibility.md
+    - Telemetry: telemetry.md
   - Cloud: cloud.md
