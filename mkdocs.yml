@@ -72,6 +72,7 @@ nav:
     - Migrating from dbt docs: migrating-from-dbt-docs.md
   - Features:
     - Column-Level Lineage: column-lineage.md
+    - Entity-Relationship Diagram: erd.md
     - Health Scoring: health-scoring.md
     - AI Chat (BYOK): ai-chat.md
     - MCP Server: mcp-server.md

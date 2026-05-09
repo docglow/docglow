@@ -33,6 +33,7 @@ docglow generate [OPTIONS]
 | `--profile-sample-size` | 10000 | Max rows to sample per model |
 | `--profile-no-cache` | off | Skip profile caching |
 | `--fail-under` | none | Exit code 1 if health score below threshold (0-100) |
+| `--enable-erd` | off | Render the [ERD view](../erd.md) at `/erd` from your `relationships` tests, `dbt_constraints`, and `meta.docglow.relationships` blocks |
 | `--verbose` | off | Enable debug logging |
 
 ### `docglow serve`

@@ -21,6 +21,7 @@ Docglow replaces it with a **modern, interactive single-page application** — a
 
 - **Interactive lineage explorer** — drag, filter, and trace upstream/downstream dependencies with configurable depth and layer visualization
 - **Column-level lineage** — trace individual columns across models with transformation labels (direct, derived, aggregated)
+- **Entity-relationship diagram** — opt-in `/erd` view with crow's-foot notation, derived from your `relationships` tests, `dbt_constraints`, and `meta.docglow.relationships` blocks
 - **Project health scoring** — coverage metrics for documentation, tests, naming conventions, complexity, and more
 - **AI chat (BYOK)** — ask natural language questions about your project using your own Anthropic API key
 - **Full-text search** — instant search across all models, sources, and columns
