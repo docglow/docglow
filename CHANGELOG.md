@@ -7,11 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-## [0.7.5] - 2026-05-02
+## [0.8.0] - 2026-05-08
 
 ### Added
-- **Opt-in anonymous telemetry** — new `docglow telemetry` subcommand group (`status`, `enable`, `disable`) and a first-run consent prompt on interactive `docglow generate`. Off by default; honors `DOCGLOW_TELEMETRY=1` / `DOCGLOW_NO_TELEMETRY=1` and a `telemetry.enabled` flag in `docglow.yml`. The full payload and privacy contract are documented in [docs/telemetry.md](docs/telemetry.md). (#24)
-- **Telemetry default endpoint** — `https://api.docglow.com/v1/telemetry/events`. Override with `DOCGLOW_TELEMETRY_ENDPOINT` (e.g. for staging at `https://api-staging.docglow.com/v1/telemetry/events`).
+- **Interactive ERD view** — new `/erd` page renders an entity-relationship diagram with crow's-foot notation, derived automatically from `relationships` tests, `dbt_constraints.foreign_key` declarations, and `meta.docglow.relationships` overrides. Click an edge or node to inspect the underlying test/constraint, severity, and inferred cardinality. Drag positions persist to localStorage; orphan nodes can be hidden via toggle. Opt in with `--enable-erd` on `docglow generate` or `enable_erd: true` in `docglow.yml`. Thanks to [@321k](https://github.com/321k) for the original feature request and feedback on real projects. (#99, #101, #103)
+- **`dbt_constraints` package support** — extracts edges from `dbt_constraints.foreign_key` tests and uses `dbt_constraints.primary_key` / `unique_key` as cardinality signals, so projects standardized on the constraints package surface their full FK graph automatically. Single-column FKs only; composite (model-level) FKs are skipped with a debug log. (#103)
+- **ERD on the model page** — every model has an "ERD" tab showing a 1-hop subgraph of its direct neighbors, with a "Show in full ERD" link that opens `/erd` focused on that model. (#103)
+- **Opt-in anonymous telemetry** — new `docglow telemetry` subcommand group (`status`, `enable`, `disable`) and a first-run consent prompt on interactive `docglow generate`. Off by default; honors `DOCGLOW_TELEMETRY=1` / `DOCGLOW_NO_TELEMETRY=1` and a `telemetry.enabled` flag in `docglow.yml`. Default endpoint is `https://api.docglow.com/v1/telemetry/events`; override with `DOCGLOW_TELEMETRY_ENDPOINT`. The full payload and privacy contract are documented in [docs/telemetry.md](docs/telemetry.md). (#24, #98, #100)
+
+### Changed
+- **ERD layout uses dagre** — automatic left-to-right graph layout (replaces the v1 fixed-cell grid) handles tall keys-mode tables without overlap on first paint. User-dragged positions still take precedence. (#103)
+- **ERD relationship inspector** — restyled to a tighter information hierarchy (eyebrow row with kind / severity / status, headline `from.col → to.col`, two-column metadata grid). Three type styles total; no italics or display headings. (#103)
 
 ## [0.7.4] - 2026-04-26
 
