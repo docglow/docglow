@@ -223,6 +223,139 @@ def _analyze_single_model(
     )
 
 
+def serialize_shared_state(
+    models: dict[str, dict[str, Any]],
+    sources: dict[str, dict[str, Any]],
+    seeds: dict[str, dict[str, Any]],
+    snapshots: dict[str, dict[str, Any]],
+    dialect: str | None = None,
+    manifest_nodes: dict[str, Any] | None = None,
+    manifest_sources: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build the project-wide shared state once and return it JSON-serializable.
+
+    This is the build-once half of the per-model analysis seam: a coordinator
+    calls it a single time, ships the returned blob to per-model workers, and
+    each worker rehydrates it with :func:`deserialize_shared_state` before
+    calling :func:`analyze_one_model`.
+
+    The ``resolver`` and ``schema`` are built with exactly the same constructor
+    calls as :func:`analyze_column_lineage`, so the per-model path produces
+    identical lineage to the whole-project path.
+
+    The state is intentionally serialized via ``TableResolver.to_dict()`` (plain
+    string dicts) rather than pickle: it is only ``dict[str, str]`` data, so JSON
+    is safe, and a versioned dict shape is far more durable across OSS versions
+    than a pickle of a class instance.
+
+    Args:
+        models: Transformed model data from build_docglow_data.
+        sources: Transformed source data.
+        seeds: Transformed seed data.
+        snapshots: Transformed snapshot data.
+        dialect: SQL dialect for parsing.
+        manifest_nodes: Raw manifest nodes (for relation_name resolution).
+        manifest_sources: Raw manifest sources (for relation_name resolution).
+
+    Returns:
+        A JSON-serializable dict: ``{"resolver": <to_dict>, "schema": <mapping>,
+        "dialect": <dialect>}``.
+    """
+    resolver = TableResolver(
+        models=models,
+        sources=sources,
+        seeds=seeds,
+        snapshots=snapshots,
+        manifest_nodes=manifest_nodes,
+        manifest_sources=manifest_sources,
+    )
+    schema = build_schema_mapping(models, sources)
+    return {
+        "resolver": resolver.to_dict(),
+        "schema": schema,
+        "dialect": dialect,
+    }
+
+
+def deserialize_shared_state(
+    blob: dict[str, Any],
+) -> tuple[TableResolver, dict[str, dict[str, str]], str | None]:
+    """Reconstruct ``(resolver, schema, dialect)`` from a serialized blob.
+
+    Inverse of :func:`serialize_shared_state`. The returned tuple is the
+    ``shared_state`` argument expected by :func:`analyze_one_model`.
+
+    Args:
+        blob: The dict produced by :func:`serialize_shared_state`.
+
+    Returns:
+        A ``(resolver, schema, dialect)`` tuple.
+    """
+    resolver = TableResolver.from_dict(blob["resolver"])
+    schema: dict[str, dict[str, str]] = blob.get("schema", {})
+    dialect: str | None = blob.get("dialect")
+    return resolver, schema, dialect
+
+
+def analyze_one_model(
+    uid: str,
+    model_data: dict[str, Any],
+    shared_state: tuple[TableResolver, dict[str, dict[str, str]], str | None],
+) -> _ModelLineageResult:
+    """Analyze column lineage for a single model given pre-built shared state.
+
+    Public, importable per-model entrypoint that wraps the pure
+    :func:`_analyze_single_model`. A downstream worker can analyze ONE model
+    given the shared state produced by :func:`deserialize_shared_state`, without
+    depending on private OSS internals or the whole-project pool path.
+
+    This function NEVER raises on a malformed/unparseable model.
+    ``_analyze_single_model`` already catches parse exceptions and returns the
+    result with its ``failure`` field populated; this wrapper preserves that
+    contract and adds a top-level guard so that any unexpected escape still
+    becomes a structured per-model failure rather than an exception.
+
+    Caching is intentionally disabled here (``cached_entry=None``): the per-model
+    fan-out path treats every dispatched model as fresh work.
+
+    Args:
+        uid: The model's dbt unique_id.
+        model_data: The transformed model dict (carrying ``compiled_sql`` /
+            ``raw_sql`` / ``columns`` / ``name``).
+        shared_state: The ``(resolver, schema, dialect)`` tuple from
+            :func:`deserialize_shared_state`.
+
+    Returns:
+        A :class:`_ModelLineageResult` carrying ``.lineage`` (the
+        ``{col: [dep_dict]}`` fragment for this uid), ``.failure``,
+        ``.skipped``, and ``.cache_entry``.
+    """
+    resolver, schema, dialect = shared_state
+    try:
+        return _analyze_single_model(
+            uid=uid,
+            data=model_data,
+            schema=schema,
+            resolver=resolver,
+            dialect=dialect,
+            cached_entry=None,
+        )
+    except Exception as e:  # noqa: BLE001
+        # Defensive backstop: _analyze_single_model already converts parse
+        # failures into a result.failure, so this should be unreachable for
+        # SQL-parse errors. Guards against any other unexpected escape so the
+        # caller always gets a structured failure, never a raised exception.
+        logger.debug("Unexpected error analyzing %s: %s", uid, e)
+        return _ModelLineageResult(
+            uid=uid,
+            failure={
+                "model": uid,
+                "name": model_data.get("name", ""),
+                "error": str(e),
+            },
+        )
+
+
 def analyze_column_lineage(
     models: dict[str, dict[str, Any]],
     sources: dict[str, dict[str, Any]],

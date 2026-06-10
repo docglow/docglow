@@ -85,6 +85,33 @@ class TableResolver:
                     src_ref = f"{source_name}.{name}"
                     self._short.setdefault(src_ref.lower(), uid)
 
+    def to_dict(self) -> dict[str, dict[str, str]]:
+        """Serialize the resolver's internal lookup state to a plain dict.
+
+        The entire resolvable state is three ``dict[str, str]`` maps, so the
+        result is JSON-serializable and can be transported to another process
+        or host and rehydrated with :meth:`from_dict`.
+        """
+        return {
+            "exact": dict(self._exact),
+            "lower": dict(self._lower),
+            "short": dict(self._short),
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, dict[str, str]]) -> TableResolver:
+        """Reconstruct a resolver from :meth:`to_dict` output.
+
+        Bypasses ``__init__``'s indexing (there is nothing left to re-index —
+        the three lookup maps *are* the entire state) and produces a resolver
+        whose :meth:`resolve` behaves identically to the original.
+        """
+        instance = cls.__new__(cls)
+        instance._exact = dict(data.get("exact", {}))
+        instance._lower = dict(data.get("lower", {}))
+        instance._short = dict(data.get("short", {}))
+        return instance
+
     def resolve(self, table_reference: str) -> str | None:
         """Resolve a SQL table reference to a dbt unique_id.
 
