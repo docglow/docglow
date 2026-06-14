@@ -1,0 +1,16 @@
+version: 2
+
+sources:
+  - name: google_ads
+    description: "Google Ads paid search and display data, ingested via Fivetran."
+    database: RAW
+    schema: google_ads
+    tables:
+      - name: campaigns
+        description: "Google Ads campaigns run by FlowState to acquire studio leads."
+      - name: ad_groups
+        description: "Ad groups nested within a Google Ads campaign."
+      - name: ads
+        description: "Individual ad creatives served within an ad group."
+      - name: campaign_stats
+        description: "Daily performance stats per campaign (impressions, clicks, cost, conversions)."

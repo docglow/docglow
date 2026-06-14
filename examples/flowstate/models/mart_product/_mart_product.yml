@@ -1,0 +1,30 @@
+version: 2
+
+models:
+  - name: member_engagement
+    description: >
+      Daily member engagement by region: active members (DAU), session and
+      event volume, and average session length. Powers the product engagement
+      dashboard and weekly/monthly active member trends.
+    columns:
+      - name: activity_date
+        description: "Calendar date the engagement metrics are measured for."
+      - name: member_region
+        description: "Region the active members roll up to."
+      - name: daily_active_members
+        description: "Distinct members with at least one session on the date."
+      - name: events_per_active_member
+        description: "Total events divided by distinct active members."
+
+  - name: feature_usage
+    description: >
+      Feature adoption by feature area and region: adopting members, adoption
+      rate against the member base, and event volume. Powers the feature
+      adoption funnel and product roadmap prioritization.
+    columns:
+      - name: feature_area
+        description: "Grouped product feature area (scheduling, check_in, membership, fitness_tracking)."
+      - name: adopting_members
+        description: "Distinct members who used the feature area."
+      - name: adoption_rate
+        description: "Adopting members divided by the total member base."

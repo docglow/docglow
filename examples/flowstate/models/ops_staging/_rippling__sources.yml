@@ -1,0 +1,12 @@
+version: 2
+
+sources:
+  - name: rippling
+    description: "Rippling HRIS data for FlowState employees and org structure, ingested via Fivetran."
+    database: RAW
+    schema: rippling
+    tables:
+      - name: employees
+        description: "One row per FlowState employee with department, role, location, and employment lifecycle dates."
+      - name: departments
+        description: "Catalog of company departments with cost center and org grouping."

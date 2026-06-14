@@ -1,0 +1,24 @@
+version: 2
+
+sources:
+  - name: app_db
+    description: "FlowState application Postgres database, ingested via Fivetran."
+    database: RAW
+    schema: app_db
+    tables:
+      - name: studios
+        description: "One row per wellness studio (a FlowState customer's location)."
+      - name: members
+        description: "End clients who book classes at a studio."
+      - name: classes
+        description: "Class offerings configured by a studio (e.g. Vinyasa Flow, HIIT)."
+      - name: class_schedules
+        description: "Scheduled instances of a class at a date/time with an instructor."
+      - name: bookings
+        description: "A member's reservation for a scheduled class."
+      - name: memberships
+        description: "A member's active or historical membership plan."
+      - name: membership_plans
+        description: "Catalog of membership plan tiers a studio offers (unlimited, class-pack, drop-in)."
+      - name: instructors
+        description: "Instructors who teach classes at a studio."

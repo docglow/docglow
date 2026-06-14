@@ -1,0 +1,52 @@
+name: flowstate
+version: "1.0.0"
+config-version: 2
+
+profile: flowstate
+
+model-paths: ["models"]
+macro-paths: ["macros"]
+seed-paths: ["seeds"]
+target-path: "target"
+
+models:
+  flowstate:
+    +materialized: view
+    app_db_staging:
+      +schema: staging_app_db
+    stripe_staging:
+      +schema: staging_stripe
+    billing_staging:
+      +schema: staging_billing
+    marketing_staging:
+      +schema: staging_marketing
+    salesforce_staging:
+      +schema: staging_salesforce
+    product_staging:
+      +schema: staging_product
+    ops_staging:
+      +schema: staging_ops
+    intermediate:
+      +schema: intermediate
+      +materialized: table
+    master_data:
+      +schema: master_data
+      +materialized: table
+    mart_bookings:
+      +schema: mart_bookings
+      +materialized: table
+    mart_revenue:
+      +schema: mart_revenue
+      +materialized: table
+    mart_membership:
+      +schema: mart_membership
+      +materialized: table
+    mart_marketing:
+      +schema: mart_marketing
+      +materialized: table
+    mart_sales:
+      +schema: mart_sales
+      +materialized: table
+    mart_product:
+      +schema: mart_product
+      +materialized: table

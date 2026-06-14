@@ -1,0 +1,22 @@
+# prod: dummy Snowflake target for offline `dbt parse` (no connection opened).
+# dev:  local DuckDB target for `dbt compile` (in-process, no infra, no source data needed).
+#       Note: `dbt run` will NOT work against this — models use Snowflake-only SQL
+#       (seq4(), table(generator()), …) and read from sources that don't exist.
+flowstate:
+  target: prod
+  outputs:
+    prod:
+      type: snowflake
+      account: flowstate-demo
+      user: dbt
+      password: not-a-real-secret
+      role: TRANSFORMER
+      database: ANALYTICS
+      warehouse: TRANSFORMING
+      schema: analytics
+      threads: 4
+    dev:
+      type: duckdb
+      path: target/flowstate.duckdb
+      schema: main
+      threads: 4

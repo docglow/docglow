@@ -1,0 +1,33 @@
+version: 2
+
+models:
+  - name: sales_pipeline
+    description: >
+      Sales pipeline rolled up by rep and stage, showing open / won / lost
+      opportunity counts and ARR (including probability-weighted open ARR).
+      Powers the sales leadership pipeline dashboard.
+    columns:
+      - name: owner_name
+        description: "Sales rep who owns the opportunities in this row."
+      - name: stage_name
+        description: "Pipeline stage the opportunities are in."
+      - name: open_arr_usd
+        description: "Sum of ARR for opportunities still open (not closed)."
+      - name: won_arr_usd
+        description: "Sum of ARR for opportunities closed won."
+      - name: weighted_open_arr_usd
+        description: "Open ARR multiplied by stage win probability."
+
+  - name: opportunity_funnel
+    description: >
+      Stage-by-stage funnel of opportunities with deal counts, ARR, average
+      win probability, and won/lost outcomes for conversion analysis.
+    columns:
+      - name: stage_name
+        description: "Pipeline stage being summarized."
+      - name: opportunity_count
+        description: "Number of opportunities currently in or passing through the stage."
+      - name: total_arr_usd
+        description: "Total ARR of opportunities in the stage."
+      - name: weighted_arr_usd
+        description: "Total ARR weighted by win probability."

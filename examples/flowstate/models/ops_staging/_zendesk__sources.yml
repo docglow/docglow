@@ -1,0 +1,16 @@
+version: 2
+
+sources:
+  - name: zendesk
+    description: "Zendesk customer support data for FlowState member and studio support, ingested via Fivetran."
+    database: RAW
+    schema: zendesk
+    tables:
+      - name: tickets
+        description: "Support tickets raised by members and studios, one row per ticket with status, priority, and resolution timestamps."
+      - name: ticket_comments
+        description: "Individual public and internal comments posted on support tickets."
+      - name: users
+        description: "Zendesk user records for requesters and support agents."
+      - name: satisfaction_ratings
+        description: "CSAT survey responses submitted after a ticket is solved."

@@ -1,0 +1,205 @@
+version: 2
+
+models:
+  - name: dim_member
+    description: "Conformed member dimension — one row per FlowState end client, enriched with their studio."
+    columns:
+      - name: member_id
+        description: "Primary key. Unique identifier for a member."
+        tests: [unique, not_null]
+      - name: studio_id
+        description: "The studio the member belongs to."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_studio')
+              field: studio_id
+      - name: email
+        description: "Member's email address."
+      - name: member_status
+        description: "Lifecycle status: active, paused, or cancelled."
+      - name: tenure_days
+        description: "Days since the member joined."
+
+  - name: dim_studio
+    description: "Conformed studio dimension — one row per studio (a FlowState customer location)."
+    columns:
+      - name: studio_id
+        description: "Primary key. Unique identifier for a studio."
+        tests: [unique, not_null]
+      - name: studio_name
+        description: "Display name of the studio."
+      - name: region
+        description: "Sales/ops region the studio rolls up to."
+
+  - name: dim_class
+    description: "Conformed class dimension — one row per class offering."
+    columns:
+      - name: class_id
+        description: "Primary key. Unique identifier for a class."
+        tests: [unique, not_null]
+      - name: studio_id
+        description: "The studio that offers this class."
+        tests:
+          - relationships:
+              to: ref('dim_studio')
+              field: studio_id
+      - name: class_type
+        description: "Modality, e.g. yoga, HIIT, cycling, pilates."
+
+  - name: dim_instructor
+    description: "Conformed instructor dimension — one row per instructor, enriched with their studio."
+    columns:
+      - name: instructor_id
+        description: "Primary key. Unique identifier for an instructor."
+        tests: [unique, not_null]
+      - name: studio_id
+        description: "The studio the instructor teaches at."
+        tests:
+          - relationships:
+              to: ref('dim_studio')
+              field: studio_id
+      - name: specialty
+        description: "Primary class modality the instructor teaches."
+
+  - name: dim_membership_plan
+    description: "Conformed membership-plan dimension — one row per plan tier offered by a studio."
+    columns:
+      - name: plan_id
+        description: "Primary key. Unique identifier for a membership plan."
+        tests: [unique, not_null]
+      - name: studio_id
+        description: "The studio that offers this plan."
+        tests:
+          - relationships:
+              to: ref('dim_studio')
+              field: studio_id
+      - name: plan_tier
+        description: "Tier of the plan: unlimited, class-pack, or drop-in."
+
+  - name: dim_date
+    description: "Date spine dimension — one row per calendar day, with common date parts."
+    columns:
+      - name: date_day
+        description: "Primary key. The calendar day."
+        tests: [unique, not_null]
+      - name: is_weekend
+        description: "True for Saturday and Sunday."
+
+  - name: fact_booking
+    description: "Booking fact — one row per member reservation for a scheduled class."
+    columns:
+      - name: booking_id
+        description: "Primary key. Unique identifier for a booking."
+        tests: [unique, not_null]
+      - name: studio_id
+        description: "Studio the booking was made at."
+        tests:
+          - relationships:
+              to: ref('dim_studio')
+              field: studio_id
+      - name: member_id
+        description: "Member who made the booking."
+        tests:
+          - relationships:
+              to: ref('dim_member')
+              field: member_id
+      - name: class_id
+        description: "Class that was booked."
+        tests:
+          - relationships:
+              to: ref('dim_class')
+              field: class_id
+      - name: instructor_id
+        description: "Instructor teaching the booked class."
+        tests:
+          - relationships:
+              to: ref('dim_instructor')
+              field: instructor_id
+      - name: is_attended
+        description: "1 if the member checked in, else 0."
+      - name: is_no_show
+        description: "True if the member booked but did not attend."
+
+  - name: fact_payment
+    description: "Payment fact — one row per Stripe charge, with recognized net revenue."
+    columns:
+      - name: charge_id
+        description: "Primary key. Unique identifier for a charge."
+        tests: [unique, not_null]
+      - name: member_id
+        description: "Member the charge belongs to."
+        tests:
+          - relationships:
+              to: ref('dim_member')
+              field: member_id
+      - name: studio_id
+        description: "Studio the member belongs to."
+        tests:
+          - relationships:
+              to: ref('dim_studio')
+              field: studio_id
+      - name: net_revenue_usd
+        description: "Recognized revenue: charge amount when succeeded and not refunded, else 0."
+
+  - name: fact_checkin
+    description: "Check-in fact — one row per attended booking (member physically checked in)."
+    columns:
+      - name: booking_id
+        description: "Primary key. The booking that was checked in."
+        tests: [unique, not_null]
+      - name: studio_id
+        description: "Studio the check-in occurred at."
+        tests:
+          - relationships:
+              to: ref('dim_studio')
+              field: studio_id
+      - name: member_id
+        description: "Member who checked in."
+        tests:
+          - relationships:
+              to: ref('dim_member')
+              field: member_id
+      - name: class_id
+        description: "Class that was attended."
+        tests:
+          - relationships:
+              to: ref('dim_class')
+              field: class_id
+      - name: instructor_id
+        description: "Instructor who taught the attended class."
+        tests:
+          - relationships:
+              to: ref('dim_instructor')
+              field: instructor_id
+      - name: minutes_from_booking_to_checkin
+        description: "Minutes elapsed between booking and check-in."
+
+  - name: fact_membership
+    description: "Membership fact — one row per membership, with active-days and status."
+    columns:
+      - name: membership_id
+        description: "Primary key. Unique identifier for a membership."
+        tests: [unique, not_null]
+      - name: member_id
+        description: "Member who holds the membership."
+        tests:
+          - relationships:
+              to: ref('dim_member')
+              field: member_id
+      - name: plan_id
+        description: "Membership plan the member is on."
+        tests:
+          - relationships:
+              to: ref('dim_membership_plan')
+              field: plan_id
+      - name: studio_id
+        description: "Studio the membership belongs to."
+        tests:
+          - relationships:
+              to: ref('dim_studio')
+              field: studio_id
+      - name: active_days
+        description: "Days the membership has been (or was) active."
+      - name: is_active
+        description: "1 if the membership is currently active, else 0."

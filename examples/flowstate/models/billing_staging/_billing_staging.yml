@@ -1,0 +1,98 @@
+version: 2
+
+models:
+  - name: stg_chargebee__subscriptions
+    description: "Staged Chargebee subscriptions, one row per membership subscription with status, lifecycle timestamps, and monthly recurring revenue."
+    columns:
+      - name: subscription_id
+        description: "Primary key. Unique identifier for the subscription."
+        tests:
+          - unique
+          - not_null
+      - name: member_id
+        description: "Foreign key to the member who owns the subscription (ties to dim_member)."
+      - name: plan_id
+        description: "Foreign key to the subscription plan."
+      - name: status
+        description: "Current subscription status (active, in_trial, cancelled, paused, non_renewing)."
+      - name: mrr_usd
+        description: "Normalized monthly recurring revenue for the subscription in USD."
+
+  - name: stg_chargebee__subscription_plans
+    description: "Staged Chargebee plan catalog with pricing, tier, and billing cadence per membership plan."
+    columns:
+      - name: plan_id
+        description: "Primary key. Unique identifier for the plan."
+        tests:
+          - unique
+          - not_null
+      - name: plan_name
+        description: "Human-readable plan name."
+      - name: plan_tier
+        description: "Plan tier classification (e.g. basic, plus, unlimited)."
+      - name: price_usd
+        description: "List price of the plan per billing period in USD."
+
+  - name: stg_chargebee__invoices
+    description: "Staged Chargebee invoices, one row per invoice with billed totals and payment status."
+    columns:
+      - name: invoice_id
+        description: "Primary key. Unique identifier for the invoice."
+        tests:
+          - unique
+          - not_null
+      - name: subscription_id
+        description: "Foreign key to the subscription the invoice was billed against."
+      - name: member_id
+        description: "Foreign key to the billed member (ties to dim_member)."
+      - name: total_usd
+        description: "Total invoiced amount in USD."
+      - name: amount_paid_usd
+        description: "Amount actually paid against the invoice in USD."
+
+  - name: stg_chargebee__invoice_line_items
+    description: "Staged Chargebee invoice line items, one row per charge composing an invoice."
+    columns:
+      - name: line_item_id
+        description: "Primary key. Unique identifier for the invoice line item."
+        tests:
+          - unique
+          - not_null
+      - name: invoice_id
+        description: "Foreign key to the parent invoice."
+      - name: line_item_type
+        description: "Type of line item (plan, addon, tax, adjustment)."
+      - name: amount_usd
+        description: "Extended amount for the line item in USD."
+
+  - name: stg_chargebee__transactions
+    description: "Staged Chargebee transactions, one row per payment or refund attempt at the gateway."
+    columns:
+      - name: transaction_id
+        description: "Primary key. Unique identifier for the transaction."
+        tests:
+          - unique
+          - not_null
+      - name: invoice_id
+        description: "Foreign key to the invoice the transaction applies to."
+      - name: transaction_type
+        description: "Transaction direction (payment, refund)."
+      - name: status
+        description: "Outcome of the transaction (success, failure, voided)."
+      - name: amount_usd
+        description: "Transaction amount in USD."
+
+  - name: stg_chargebee__credit_notes
+    description: "Staged Chargebee credit notes, one row per refund or adjustment issued against an invoice."
+    columns:
+      - name: credit_note_id
+        description: "Primary key. Unique identifier for the credit note."
+        tests:
+          - unique
+          - not_null
+      - name: invoice_id
+        description: "Foreign key to the invoice the credit note offsets."
+      - name: reason_code
+        description: "Reason the credit note was issued (refund, write_off, adjustment)."
+      - name: total_usd
+        description: "Total credited amount in USD."

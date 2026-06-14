@@ -1,0 +1,59 @@
+version: 2
+
+models:
+  - name: stg_segment__tracks
+    description: "Cleaned custom interaction events (booked_class, checked_in, etc.) with member, device, and platform context."
+    columns:
+      - name: event_id
+        description: "Unique Segment message id for the track event."
+        tests: [unique, not_null]
+      - name: member_id
+        description: "FlowState member the event is attributed to, when identified."
+      - name: event_name
+        description: "Name of the interaction event fired in the app."
+      - name: occurred_at
+        description: "Client-side timestamp when the event occurred."
+
+  - name: stg_segment__pages
+    description: "Web page-view events with path, URL, and referrer for member journey analysis."
+    columns:
+      - name: event_id
+        description: "Unique Segment message id for the page event."
+        tests: [unique, not_null]
+      - name: page_path
+        description: "Relative path of the viewed page."
+      - name: occurred_at
+        description: "Timestamp when the page view occurred."
+
+  - name: stg_segment__screens
+    description: "Mobile screen-view events with screen name and category."
+    columns:
+      - name: event_id
+        description: "Unique Segment message id for the screen event."
+        tests: [unique, not_null]
+      - name: screen_name
+        description: "Name of the mobile screen that was viewed."
+      - name: occurred_at
+        description: "Timestamp when the screen view occurred."
+
+  - name: stg_segment__identifies
+    description: "Identify calls associating a visitor with a known member and their traits."
+    columns:
+      - name: event_id
+        description: "Unique Segment message id for the identify call."
+        tests: [unique, not_null]
+      - name: member_id
+        description: "FlowState member resolved by the identify call."
+      - name: trait_plan_tier
+        description: "Membership plan tier trait set at identify time."
+
+  - name: stg_segment__sessions
+    description: "Derived app sessions bounding contiguous user activity, with duration and event counts."
+    columns:
+      - name: session_id
+        description: "Unique identifier for the app session."
+        tests: [unique, not_null]
+      - name: member_id
+        description: "Member the session is attributed to, when identified."
+      - name: duration_seconds
+        description: "Length of the session in seconds."

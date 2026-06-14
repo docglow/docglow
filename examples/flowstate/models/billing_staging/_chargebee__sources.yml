@@ -1,0 +1,20 @@
+version: 2
+
+sources:
+  - name: chargebee
+    description: "Chargebee recurring billing data for memberships, ingested via Fivetran."
+    database: RAW
+    schema: chargebee
+    tables:
+      - name: subscriptions
+        description: "Recurring membership subscriptions, one row per subscription with status and MRR."
+      - name: subscription_plans
+        description: "Catalog of membership plans with pricing, tier, and billing cadence."
+      - name: invoices
+        description: "Invoices generated per billing cycle against a subscription."
+      - name: invoice_line_items
+        description: "Individual line items composing each invoice (plan charges, add-ons, taxes)."
+      - name: transactions
+        description: "Payment and refund attempts processed through the billing gateway."
+      - name: credit_notes
+        description: "Credit notes issued for refunds, adjustments, or write-offs against invoices."

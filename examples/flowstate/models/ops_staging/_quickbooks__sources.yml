@@ -1,0 +1,14 @@
+version: 2
+
+sources:
+  - name: quickbooks
+    description: "QuickBooks accounting data for FlowState finance and bookkeeping, ingested via Fivetran."
+    database: RAW
+    schema: quickbooks
+    tables:
+      - name: general_ledger
+        description: "General ledger journal entries, one row per posting line with debit/credit and amount."
+      - name: accounts
+        description: "Chart of accounts with account type and financial statement classification."
+      - name: invoices
+        description: "Accounts-receivable invoices issued to studios and partners."

@@ -1,0 +1,16 @@
+version: 2
+
+sources:
+  - name: facebook_ads
+    description: "Facebook (Meta) Ads paid social data, ingested via Fivetran."
+    database: RAW
+    schema: facebook_ads
+    tables:
+      - name: campaigns
+        description: "Facebook Ads campaigns run by FlowState to acquire studio leads."
+      - name: ad_sets
+        description: "Ad sets nested within a Facebook Ads campaign (targeting/budget unit)."
+      - name: ads
+        description: "Individual ad creatives served within an ad set."
+      - name: ad_insights
+        description: "Daily performance insights per campaign (impressions, clicks, spend, leads)."

@@ -1,0 +1,20 @@
+version: 2
+
+sources:
+  - name: salesforce
+    description: "FlowState's B2B sales CRM (Salesforce), ingested via Fivetran. Tracks the pipeline of selling the FlowState platform to studio owners."
+    database: RAW
+    schema: salesforce
+    tables:
+      - name: accounts
+        description: "Studio-owner businesses being sold to (prospects and customers)."
+      - name: contacts
+        description: "Individual people associated with an account."
+      - name: leads
+        description: "Unqualified inbound or outbound prospects not yet tied to an account."
+      - name: opportunities
+        description: "Sales deals to sell the FlowState platform, with stage and ARR."
+      - name: opportunity_history
+        description: "Stage and amount change log for opportunities over time."
+      - name: users
+        description: "FlowState sales reps and managers who own leads and opportunities."

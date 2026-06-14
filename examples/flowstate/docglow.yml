@@ -1,0 +1,50 @@
+version: 1
+
+lineage_layers:
+  layers:
+    - name: source
+      rank: 0
+      color: "#dcfce7"
+    - name: staging
+      rank: 1
+      color: "#dbeafe"
+    - name: intermediate
+      rank: 1.5
+      color: "#ffd700"
+    - name: transform
+      rank: 2
+      color: "#fef3c7"
+    - name: mart
+      rank: 3
+      color: "#fce7f3"
+    - name: exposure
+      rank: 4
+      color: "#f3e8ff"
+
+  rules:
+    # Schema-based rules
+    - layer: staging
+      match: schema
+      pattern: "staging_*"
+    - layer: intermediate
+      match: schema
+      pattern: "intermediate"
+    - layer: transform
+      match: schema
+      pattern: "master_data"
+    - layer: mart
+      match: schema
+      pattern: "mart_*"
+    # Folder-based fallbacks
+    - layer: staging
+      match: folder
+      pattern: "*_staging"
+    - layer: intermediate
+      match: folder
+      pattern: "intermediate*"
+    - layer: transform
+      match: folder
+      pattern: "master_data*"
+    - layer: mart
+      match: folder
+      pattern: "mart*"

@@ -1,0 +1,10 @@
+version: 2
+
+sources:
+  - name: stripe
+    description: "Stripe billing data, ingested via Fivetran."
+    database: RAW
+    schema: stripe
+    tables:
+      - name: charges
+        description: "Individual payment charges against a member's card."

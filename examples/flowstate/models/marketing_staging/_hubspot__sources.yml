@@ -1,0 +1,14 @@
+version: 2
+
+sources:
+  - name: hubspot
+    description: "HubSpot email marketing and CRM data, ingested via Fivetran."
+    database: RAW
+    schema: hubspot
+    tables:
+      - name: email_campaigns
+        description: "Email marketing campaigns sent to studio owners and prospects."
+      - name: email_events
+        description: "Per-recipient email events (sent, open, click, bounce, unsubscribe)."
+      - name: contacts
+        description: "Marketing contacts and prospects tracked in HubSpot CRM."

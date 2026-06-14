@@ -1,0 +1,145 @@
+version: 2
+
+models:
+  - name: stg_zendesk__tickets
+    description: "Staged Zendesk support tickets, one row per ticket with status, priority, channel, and resolution timestamps."
+    columns:
+      - name: ticket_id
+        description: "Primary key. Unique identifier for the support ticket."
+        tests:
+          - unique
+          - not_null
+      - name: requester_member_id
+        description: "Foreign key to the member who opened the ticket (ties to dim_member)."
+      - name: assignee_id
+        description: "Foreign key to the Zendesk user (agent) assigned to the ticket."
+      - name: status
+        description: "Current ticket status (new, open, pending, solved, closed)."
+      - name: priority
+        description: "Ticket priority level (low, normal, high, urgent)."
+      - name: channel
+        description: "Channel the ticket originated from (email, chat, phone, web_form)."
+      - name: solved_at
+        description: "Timestamp the ticket was marked solved; null if unresolved."
+      - name: satisfaction_score
+        description: "CSAT outcome recorded on the ticket (good, bad, offered, unoffered)."
+
+  - name: stg_zendesk__ticket_comments
+    description: "Staged Zendesk ticket comments, one row per public or internal comment posted on a ticket."
+    columns:
+      - name: comment_id
+        description: "Primary key. Unique identifier for the comment."
+        tests:
+          - unique
+          - not_null
+      - name: ticket_id
+        description: "Foreign key to the parent support ticket."
+      - name: author_id
+        description: "Foreign key to the Zendesk user who authored the comment."
+      - name: is_public
+        description: "Whether the comment is visible to the requester."
+
+  - name: stg_zendesk__users
+    description: "Staged Zendesk users, one row per support agent or requester account."
+    columns:
+      - name: user_id
+        description: "Primary key. Unique identifier for the Zendesk user."
+        tests:
+          - unique
+          - not_null
+      - name: role
+        description: "User role (end-user, agent, admin)."
+      - name: organization_id
+        description: "Foreign key to the Zendesk organization the user belongs to."
+
+  - name: stg_zendesk__satisfaction_ratings
+    description: "Staged Zendesk CSAT survey responses, one row per rating submitted after a ticket is solved."
+    columns:
+      - name: rating_id
+        description: "Primary key. Unique identifier for the satisfaction rating."
+        tests:
+          - unique
+          - not_null
+      - name: ticket_id
+        description: "Foreign key to the ticket the rating was submitted against."
+      - name: score
+        description: "Rating value submitted by the requester (good, bad)."
+
+  - name: stg_rippling__employees
+    description: "Staged Rippling employees, one row per FlowState employee with department, role, location, and employment lifecycle dates."
+    columns:
+      - name: employee_id
+        description: "Primary key. Unique identifier for the employee."
+        tests:
+          - unique
+          - not_null
+      - name: department
+        description: "Department the employee belongs to."
+      - name: role
+        description: "Employee job title or role."
+      - name: hired_at
+        description: "Date the employee was hired."
+      - name: terminated_at
+        description: "Date the employee was terminated; null if currently employed."
+
+  - name: stg_rippling__departments
+    description: "Staged Rippling departments, one row per company department with cost center and org grouping."
+    columns:
+      - name: department_id
+        description: "Primary key. Unique identifier for the department."
+        tests:
+          - unique
+          - not_null
+      - name: department_name
+        description: "Human-readable department name."
+      - name: cost_center
+        description: "Finance cost center code the department rolls up to."
+
+  - name: stg_quickbooks__general_ledger
+    description: "Staged QuickBooks general ledger, one row per journal posting line with debit/credit and amount."
+    columns:
+      - name: entry_id
+        description: "Primary key. Unique identifier for the ledger entry line."
+        tests:
+          - unique
+          - not_null
+      - name: account_id
+        description: "Foreign key to the chart-of-accounts account."
+      - name: posted_at
+        description: "Date the entry was posted to the ledger."
+      - name: amount_usd
+        description: "Posting amount in USD (always positive; sign derived from debit_credit)."
+      - name: debit_credit
+        description: "Whether the line is a debit or credit posting."
+
+  - name: stg_quickbooks__accounts
+    description: "Staged QuickBooks chart of accounts, one row per account with type and statement classification."
+    columns:
+      - name: account_id
+        description: "Primary key. Unique identifier for the account."
+        tests:
+          - unique
+          - not_null
+      - name: account_name
+        description: "Human-readable account name."
+      - name: account_type
+        description: "Account type (asset, liability, equity, revenue, expense)."
+      - name: statement_category
+        description: "Financial statement the account rolls up to (balance_sheet, profit_and_loss)."
+
+  - name: stg_quickbooks__invoices
+    description: "Staged QuickBooks accounts-receivable invoices issued to studios and partners."
+    columns:
+      - name: invoice_id
+        description: "Primary key. Unique identifier for the invoice."
+        tests:
+          - unique
+          - not_null
+      - name: customer_id
+        description: "Foreign key to the billed customer (studio or partner)."
+      - name: total_usd
+        description: "Total invoiced amount in USD."
+      - name: balance_usd
+        description: "Outstanding balance remaining on the invoice in USD."
+      - name: invoice_status
+        description: "Invoice status (draft, sent, paid, overdue, void)."

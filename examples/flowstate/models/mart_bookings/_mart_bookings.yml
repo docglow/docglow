@@ -1,0 +1,14 @@
+version: 2
+
+models:
+  - name: studio_class_utilization
+    description: >
+      Per-studio, per-class-type utilization: total bookings, attendance,
+      no-shows, and attendance rate. Powers the studio performance dashboard.
+    columns:
+      - name: studio_id
+        description: "Studio the metrics roll up to."
+      - name: class_type
+        description: "Class modality the metrics are grouped by."
+      - name: attendance_rate
+        description: "Attended bookings / total bookings."

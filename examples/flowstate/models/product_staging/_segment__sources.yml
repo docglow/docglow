@@ -1,0 +1,18 @@
+version: 2
+
+sources:
+  - name: segment
+    description: "FlowState web/mobile app behavioral event data, collected via Segment."
+    database: RAW
+    schema: segment
+    tables:
+      - name: tracks
+        description: "Custom interaction events fired in the app (e.g. booked_class, checked_in)."
+      - name: pages
+        description: "Web page-view events with URL, path, and referrer context."
+      - name: screens
+        description: "Mobile screen-view events with screen name and category."
+      - name: identifies
+        description: "Identify calls linking an anonymous visitor to a known member with traits."
+      - name: sessions
+        description: "Derived app sessions bounding a contiguous run of user activity."

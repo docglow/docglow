@@ -1,0 +1,72 @@
+version: 2
+
+exposures:
+  - name: studio_performance_dashboard
+    label: "Studio Performance Dashboard"
+    type: dashboard
+    maturity: high
+    url: https://bi.flowstate.io/dashboards/studio-performance
+    description: >
+      Executive dashboard tracking per-studio class utilization, attendance,
+      and daily revenue. Used by the FlowState revenue and customer-success teams.
+    depends_on:
+      - ref('studio_class_utilization')
+      - ref('daily_revenue')
+    owner:
+      name: Revenue Analytics
+      email: analytics@flowstate.io
+
+  - name: revenue_and_growth_dashboard
+    label: "Revenue & Growth Dashboard"
+    type: dashboard
+    maturity: high
+    url: https://bi.flowstate.io/dashboards/revenue-growth
+    description: >
+      MRR/ARR, daily revenue, and subscription movement (new/expansion/churn)
+      across studios. The finance and leadership weekly business review.
+    depends_on:
+      - ref('membership_mrr_by_studio')
+      - ref('membership_change_events')
+      - ref('daily_revenue')
+    owner:
+      name: Finance
+      email: finance@flowstate.io
+
+  - name: marketing_performance_dashboard
+    label: "Marketing Performance Dashboard"
+    type: dashboard
+    maturity: medium
+    url: https://bi.flowstate.io/dashboards/marketing
+    description: "Paid channel spend, CAC, and campaign performance across Google and Facebook."
+    depends_on:
+      - ref('campaign_performance')
+      - ref('channel_attribution')
+    owner:
+      name: Growth Marketing
+      email: growth@flowstate.io
+
+  - name: sales_pipeline_dashboard
+    label: "B2B Sales Pipeline Dashboard"
+    type: dashboard
+    maturity: high
+    url: https://bi.flowstate.io/dashboards/sales-pipeline
+    description: "Open/won/lost ARR by stage and rep for the studio-acquisition sales team."
+    depends_on:
+      - ref('sales_pipeline')
+      - ref('opportunity_funnel')
+    owner:
+      name: Revenue Operations
+      email: revops@flowstate.io
+
+  - name: product_engagement_dashboard
+    label: "Product Engagement Dashboard"
+    type: dashboard
+    maturity: medium
+    url: https://bi.flowstate.io/dashboards/product-engagement
+    description: "DAU/WAU/MAU, session activity, and feature adoption across the member app."
+    depends_on:
+      - ref('member_engagement')
+      - ref('feature_usage')
+    owner:
+      name: Product Analytics
+      email: product@flowstate.io

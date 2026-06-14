@@ -1,0 +1,14 @@
+version: 2
+
+models:
+  - name: daily_revenue
+    description: >
+      Daily net revenue by studio, with the count of paying members.
+      Powers the studio performance dashboard.
+    columns:
+      - name: revenue_date
+        description: "Day the revenue was recognized (truncated charge timestamp)."
+      - name: net_revenue_usd
+        description: "Sum of recognized net revenue for the studio/day."
+      - name: paying_members
+        description: "Distinct members with at least one successful charge that day."

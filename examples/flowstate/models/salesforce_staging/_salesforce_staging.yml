@@ -1,0 +1,90 @@
+version: 2
+
+models:
+  - name: stg_salesforce__accounts
+    description: "One row per studio-owner business in the sales CRM (prospect or customer)."
+    columns:
+      - name: account_id
+        description: "Primary key. Unique identifier for an account."
+        tests: [unique, not_null]
+      - name: account_name
+        description: "Legal or trading name of the studio-owner business."
+      - name: studio_count
+        description: "Number of studio locations the account operates."
+      - name: account_owner_id
+        description: "Sales rep who owns the account relationship."
+      - name: is_customer
+        description: "Whether the account is a closed-won FlowState customer."
+
+  - name: stg_salesforce__contacts
+    description: "One row per individual person associated with an account."
+    columns:
+      - name: contact_id
+        description: "Primary key. Unique identifier for a contact."
+        tests: [unique, not_null]
+      - name: account_id
+        description: "Account the contact belongs to."
+      - name: email
+        description: "Contact's email address."
+      - name: is_primary_contact
+        description: "Whether this contact is the primary buyer for the account."
+
+  - name: stg_salesforce__leads
+    description: "One row per unqualified prospect not yet tied to an account."
+    columns:
+      - name: lead_id
+        description: "Primary key. Unique identifier for a lead."
+        tests: [unique, not_null]
+      - name: lead_source
+        description: "Channel the lead originated from (e.g. webinar, referral, paid)."
+      - name: lead_status
+        description: "Funnel status: new, working, qualified, or unqualified."
+      - name: is_converted
+        description: "Whether the lead converted into an account and opportunity."
+      - name: owner_id
+        description: "Sales rep who owns the lead."
+
+  - name: stg_salesforce__opportunities
+    description: "One row per sales deal to sell the FlowState platform to a studio owner."
+    columns:
+      - name: opportunity_id
+        description: "Primary key. Unique identifier for an opportunity."
+        tests: [unique, not_null]
+      - name: account_id
+        description: "Account the opportunity belongs to."
+      - name: owner_id
+        description: "Sales rep who owns the opportunity."
+      - name: stage_name
+        description: "Current pipeline stage (e.g. Discovery, Proposal, Closed Won)."
+      - name: amount_arr_usd
+        description: "Annual recurring revenue value of the deal in USD."
+      - name: is_won
+        description: "Whether the opportunity closed won."
+      - name: is_closed
+        description: "Whether the opportunity is in a closed (won or lost) state."
+
+  - name: stg_salesforce__opportunity_history
+    description: "Stage and amount change log for opportunities over time."
+    columns:
+      - name: opportunity_history_id
+        description: "Primary key. Unique identifier for a history record."
+        tests: [unique, not_null]
+      - name: opportunity_id
+        description: "Opportunity the history record belongs to."
+      - name: to_stage_name
+        description: "Stage the opportunity moved into at this change."
+      - name: is_stage_change
+        description: "Whether this record represents a pipeline stage transition."
+
+  - name: stg_salesforce__users
+    description: "One row per FlowState sales rep or manager in the CRM."
+    columns:
+      - name: user_id
+        description: "Primary key. Unique identifier for a CRM user."
+        tests: [unique, not_null]
+      - name: full_name
+        description: "Sales rep or manager's full name."
+      - name: role_name
+        description: "CRM role (e.g. Account Executive, Sales Manager)."
+      - name: quota_arr_usd
+        description: "Annual ARR quota assigned to the rep in USD."
