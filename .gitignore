@@ -22,8 +22,16 @@ dev/
 site/
 .docglow-column-lineage-cache.json
 .docglow-column-lineage-failures.log
+# dbt/docglow build output. Ignore all target/ contents, but keep the three
+# dbt artifacts each example needs as a docglow fixture (manifest/catalog/run_results).
 target/
 !examples/**/target/
+examples/**/target/*
+!examples/**/target/manifest.json
+!examples/**/target/catalog.json
+!examples/**/target/run_results.json
+# dbt run logs inside examples
+examples/**/logs/
 *.duckdb
 *.duckdb.wal
 
