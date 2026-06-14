@@ -11,9 +11,52 @@ Usage:
 from __future__ import annotations
 
 import json
+import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+
+try:
+    import sqlglot
+except ImportError:  # graceful fallback: documented columns only
+    sqlglot = None  # type: ignore[assignment]
+
+_JINJA_COMMENT = re.compile(r"\{#.*?#\}", re.DOTALL)
+_JINJA_STMT = re.compile(r"\{%.*?%\}", re.DOTALL)
+_JINJA_EXPR = re.compile(r"\{\{.*?\}\}", re.DOTALL)
+
+
+def _strip_jinja(sql: str) -> str:
+    """Remove Jinja so sqlglot can parse. ref()/source() become a dummy relation."""
+    sql = _JINJA_COMMENT.sub("", sql)
+    sql = _JINJA_STMT.sub("", sql)
+    return _JINJA_EXPR.sub("_jinja_rel", sql)
+
+
+def extract_sql_columns(node: dict) -> list[str]:
+    """Derive a model's output column names from its SQL via sqlglot.
+
+    Returns [] when sqlglot is unavailable, the SQL is `select *`, or parsing fails —
+    callers fall back to documented columns.
+    """
+    if sqlglot is None:
+        return []
+    sql = (
+        node.get("compiled_code")
+        or node.get("compiled_sql")
+        or node.get("raw_code")
+        or node.get("raw_sql")
+        or ""
+    )
+    if not sql.strip():
+        return []
+    try:
+        parsed = sqlglot.parse_one(_strip_jinja(sql), dialect="snowflake")
+        names = parsed.named_selects if parsed is not None else []
+    except Exception:
+        return []
+    return [n for n in names if n and n != "*"]
+
 
 # Snowflake-style type inference from column names and data_type hints
 TYPE_HINTS: dict[str, str] = {
@@ -106,11 +149,25 @@ def materialization_to_table_type(materialization: str) -> str:
 
 
 def build_catalog_node(unique_id: str, node: dict) -> dict:
-    """Build a catalog entry for a model/seed/snapshot node."""
-    columns = {}
-    manifest_cols = node.get("columns", {})
+    """Build a catalog entry for a model/seed/snapshot node.
 
-    for idx, (col_name, col_def) in enumerate(manifest_cols.items(), start=1):
+    Output columns come from the model's SQL (sqlglot) so undocumented columns
+    still appear; documented columns supply descriptions/types and order first.
+    """
+    manifest_cols = node.get("columns", {})
+    doc_lookup = {k.lower(): (k, v) for k, v in manifest_cols.items()}
+
+    # Ordered union: documented columns first (authored order), then SQL-derived extras.
+    ordered: list[str] = list(manifest_cols.keys())
+    seen = {k.lower() for k in ordered}
+    for col_name in extract_sql_columns(node):
+        if col_name.lower() not in seen:
+            ordered.append(col_name)
+            seen.add(col_name.lower())
+
+    columns = {}
+    for idx, col_name in enumerate(ordered, start=1):
+        _, col_def = doc_lookup.get(col_name.lower(), (col_name, {}))
         columns[col_name] = {
             "type": infer_type(col_name, col_def.get("data_type")),
             "index": idx,
@@ -143,12 +200,28 @@ def build_catalog_node(unique_id: str, node: dict) -> dict:
     }
 
 
-def build_catalog_source(unique_id: str, source: dict) -> dict:
-    """Build a catalog entry for a source node."""
-    columns = {}
-    manifest_cols = source.get("columns", {})
+def build_catalog_source(
+    unique_id: str, source: dict, derived_cols: list[str] | None = None
+) -> dict:
+    """Build a catalog entry for a source node.
 
-    for idx, (col_name, col_def) in enumerate(manifest_cols.items(), start=1):
+    Sources have no SQL of their own, so columns are inferred from the staging
+    model(s) that select from them (``derived_cols``), with any documented
+    columns taking precedence for description/type.
+    """
+    manifest_cols = source.get("columns", {})
+    doc_lookup = {k.lower(): (k, v) for k, v in manifest_cols.items()}
+
+    ordered: list[str] = list(manifest_cols.keys())
+    seen = {k.lower() for k in ordered}
+    for col_name in derived_cols or []:
+        if col_name.lower() not in seen:
+            ordered.append(col_name)
+            seen.add(col_name.lower())
+
+    columns = {}
+    for idx, col_name in enumerate(ordered, start=1):
+        _, col_def = doc_lookup.get(col_name.lower(), (col_name, {}))
         columns[col_name] = {
             "type": infer_type(col_name, col_def.get("data_type")),
             "index": idx,
@@ -189,6 +262,19 @@ def generate_catalog(manifest_path: Path) -> dict:
     catalog_nodes = {}
     catalog_sources = {}
 
+    # Infer source columns from the staging models that read each source 1:1.
+    source_columns: dict[str, list[str]] = {}
+    for node in manifest.get("nodes", {}).values():
+        if node.get("resource_type") != "model":
+            continue
+        deps = node.get("depends_on", {}).get("nodes", [])
+        src_deps = [d for d in deps if d.startswith("source.")]
+        model_deps = [d for d in deps if d.startswith("model.")]
+        if len(src_deps) == 1 and not model_deps:  # pure staging model
+            cols = extract_sql_columns(node)
+            if cols and src_deps[0] not in source_columns:
+                source_columns[src_deps[0]] = cols
+
     # Process models, seeds, snapshots
     for unique_id, node in manifest.get("nodes", {}).items():
         resource_type = node.get("resource_type", "")
@@ -197,7 +283,9 @@ def generate_catalog(manifest_path: Path) -> dict:
 
     # Process sources
     for unique_id, source in manifest.get("sources", {}).items():
-        catalog_sources[unique_id] = build_catalog_source(unique_id, source)
+        catalog_sources[unique_id] = build_catalog_source(
+            unique_id, source, source_columns.get(unique_id)
+        )
 
     nodes_with_cols = sum(1 for n in catalog_nodes.values() if n["columns"])
     sources_with_cols = sum(1 for s in catalog_sources.values() if s["columns"])
