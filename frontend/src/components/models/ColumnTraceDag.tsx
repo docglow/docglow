@@ -88,7 +88,6 @@ function ColumnTraceDagInner({
       nodesDraggable={false}
       nodesConnectable={false}
       elementsSelectable={false}
-      panOnScroll
     >
       <Background variant={BackgroundVariant.Dots} gap={16} size={0.5} />
       <Controls
