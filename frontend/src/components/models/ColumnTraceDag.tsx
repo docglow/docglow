@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react'
+import { useMemo, useCallback, useEffect, useRef } from 'react'
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -16,6 +16,8 @@ interface ColumnTraceDagProps {
   readonly traceEdges: readonly ColumnEdge[]
   readonly currentModelId: string
   readonly currentColumn: string
+  /** Toggling this value re-fits the graph to the (resized) container. */
+  readonly fitSignal?: boolean
 }
 
 const nodeTypes: NodeTypes = {
@@ -26,6 +28,7 @@ function ColumnTraceDagInner({
   traceEdges,
   currentModelId,
   currentColumn,
+  fitSignal,
 }: ColumnTraceDagProps) {
   const { fitView } = useReactFlow()
 
@@ -38,6 +41,21 @@ function ColumnTraceDagInner({
     // Small delay to let nodes render before fitting
     requestAnimationFrame(() => fitView({ padding: 0.2 }))
   }, [fitView])
+
+  // Re-fit when the container resizes (e.g. entering/exiting fullscreen).
+  // Skip the initial mount — onInit already handles the first fit.
+  const isFirstFit = useRef(true)
+  useEffect(() => {
+    if (isFirstFit.current) {
+      isFirstFit.current = false
+      return
+    }
+    // Wait for the CSS-driven resize to settle before fitting.
+    const id = requestAnimationFrame(() =>
+      requestAnimationFrame(() => fitView({ padding: 0.2 })),
+    )
+    return () => cancelAnimationFrame(id)
+  }, [fitSignal, fitView])
 
   if (nodes.length === 0) {
     return (

@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useMemo } from 'react'
+import { useEffect, useCallback, useMemo, useState } from 'react'
 import type { ColumnEdge, ColumnLineageData } from '../../types'
 import {
   getColumnTraceResult,
@@ -28,12 +28,19 @@ export function ColumnTraceDrawer({
   columnLineageData,
   onClose,
 }: ColumnTraceDrawerProps) {
-  // Close on Escape
+  const [isFullscreen, setIsFullscreen] = useState(false)
+
+  // Escape exits fullscreen first, then closes the drawer
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key !== 'Escape') return
+      if (isFullscreen) {
+        setIsFullscreen(false)
+      } else {
+        onClose()
+      }
     },
-    [onClose],
+    [isFullscreen, onClose],
   )
 
   useEffect(() => {
@@ -84,28 +91,30 @@ export function ColumnTraceDrawer({
         justifyContent: 'flex-end',
       }}
     >
-      {/* Backdrop */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'rgba(0,0,0,0.4)',
-        }}
-        onClick={onClose}
-      />
+      {/* Backdrop (hidden in fullscreen — the panel fills the viewport) */}
+      {!isFullscreen && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'rgba(0,0,0,0.4)',
+          }}
+          onClick={onClose}
+        />
+      )}
 
       {/* Drawer panel */}
       <div
         style={{
           position: 'relative',
           zIndex: 1,
-          width: 'clamp(500px, 50vw, 800px)',
+          width: isFullscreen ? '100%' : 'clamp(500px, 50vw, 800px)',
           height: '100%',
           background: 'var(--bg, #fff)',
-          borderLeft: '1px solid var(--border, #e2e8f0)',
+          borderLeft: isFullscreen ? 'none' : '1px solid var(--border, #e2e8f0)',
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: '-4px 0 24px rgba(0,0,0,0.12)',
+          boxShadow: isFullscreen ? 'none' : '-4px 0 24px rgba(0,0,0,0.12)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -145,36 +154,82 @@ export function ColumnTraceDrawer({
             </div>
           </div>
 
-          {/* Close button */}
-          <button
-            onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: 4,
-              color: 'var(--text-muted, #64748b)',
-              borderRadius: 4,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-            title="Close (Esc)"
-          >
-            <svg
-              width={20}
-              height={20}
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+            {/* Fullscreen toggle */}
+            <button
+              onClick={() => setIsFullscreen((f) => !f)}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: 4,
+                color: 'var(--text-muted, #64748b)',
+                borderRadius: 4,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
             >
-              <path d="M18 6L6 18M6 6l12 12" />
-            </svg>
-          </button>
+              {isFullscreen ? (
+                <svg
+                  width={18}
+                  height={18}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M8 3v3a2 2 0 01-2 2H3M21 8h-3a2 2 0 01-2-2V3M3 16h3a2 2 0 012 2v3M16 21v-3a2 2 0 012-2h3" />
+                </svg>
+              ) : (
+                <svg
+                  width={18}
+                  height={18}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+                </svg>
+              )}
+            </button>
+
+            {/* Close button */}
+            <button
+              onClick={onClose}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: 4,
+                color: 'var(--text-muted, #64748b)',
+                borderRadius: 4,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              title="Close (Esc)"
+            >
+              <svg
+                width={20}
+                height={20}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {/* DAG body */}
@@ -183,6 +238,7 @@ export function ColumnTraceDrawer({
             traceEdges={traceResult.edges}
             currentModelId={modelId}
             currentColumn={columnName}
+            fitSignal={isFullscreen}
           />
         </div>
 
