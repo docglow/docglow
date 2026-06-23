@@ -11,6 +11,7 @@ from typing import Any
 
 from docglow.cloud.client import CloudApiError, CloudClient
 from docglow.cloud.config import CloudConfig
+from docglow.config import CONFIG_FILENAMES
 
 logger = logging.getLogger(__name__)
 
@@ -21,11 +22,6 @@ ARTIFACT_FILES = [
     "sources.json",
     "profiles.json",
 ]
-
-# Author config shipped from the project root (not target/) so Cloud renders the
-# project's own layer rules + ERD preference instead of OSS defaults. First match
-# wins; absent is fine (Cloud falls back to defaults).
-CONFIG_FILES = ["docglow.yml", "docglow.yaml"]
 
 
 def run_publish(
@@ -111,8 +107,13 @@ def _find_artifacts(target_dir: Path) -> list[Path]:
 
 
 def _find_config_file(project_dir: Path) -> Path | None:
-    """Return the project's docglow config file (root), or None if absent."""
-    for name in CONFIG_FILES:
+    """Return the project's docglow config file (root), or None if absent.
+
+    Shipped from the project root (not target/) so Cloud renders the project's
+    own layer rules + ERD preference instead of OSS defaults. First match wins;
+    absence is fine (Cloud falls back to defaults).
+    """
+    for name in CONFIG_FILENAMES:
         path = project_dir / name
         if path.exists():
             return path

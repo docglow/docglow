@@ -13,6 +13,11 @@ from docglow.telemetry.config import TelemetryConfig, resolve_telemetry_config
 
 logger = logging.getLogger(__name__)
 
+# Config filenames, in precedence order (first match wins). Single source of
+# truth for discovery — used by load_config, `docglow init`, and the Cloud
+# publish bundler.
+CONFIG_FILENAMES = ("docglow.yml", "docglow.yaml")
+
 
 @dataclass(frozen=True)
 class ProfilingConfig:
@@ -129,7 +134,7 @@ def load_config(project_dir: Path) -> DocglowConfig:
 
     Falls back to default config if no file is found.
     """
-    for name in ("docglow.yml", "docglow.yaml"):
+    for name in CONFIG_FILENAMES:
         config_path = project_dir / name
         if config_path.exists():
             logger.info("Loading config from %s", config_path)
