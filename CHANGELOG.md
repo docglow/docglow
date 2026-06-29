@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.8.4] - 2026-06-29
+
+### Added
+- **Exposure detail page** — dbt exposures are now first-class pages. New `/exposure/:id` route showing type, owner, dashboard URL, description, tags, a maturity badge, and a focused upstream lineage subgraph (with its own full-screen toggle). An **"Upstream data health"** rollup aggregates test pass/warn/fail across the exposure's upstream models, computed client-side from each model's existing `test_results`. Exposures are listed in the sidebar tree and indexed in full-text search. The maturity badge is a passthrough of dbt's author-declared `maturity` (high/medium/low) — its tooltip says so, to avoid implying Docglow computes it. Thanks to [@321k](https://github.com/321k). (#120)
+- **Full-screen view for the Column Trace drawer** — wide column traces can now expand from the ~50vw side drawer to a full-viewport panel via a header toggle; Esc exits full-screen first, then closes the drawer. (#115, #118)
+- **flowstate example project** — a larger synthetic dbt project (83 models across staging → intermediate → master_data → mart, fed by 11 sources) so lineage, column-level lineage, and the layered view have a realistic multi-source warehouse to render. Sits alongside the existing jaffle-shop example. (#117)
+- **Public per-model column-lineage API** — `analyze_one_model(...)` plus `serialize_shared_state(...)` / `deserialize_shared_state(...)` and `TableResolver.to_dict()` / `from_dict()`, so a single model can be analyzed against pre-built, JSON-serializable project shared state (enables distributed and cached column-lineage analysis). (#116)
+
+### Fixed
+- **`docglow publish` default API URL** — `DEFAULT_API_URL` now points at `https://app.docglow.com`; the previous `https://api.docglow.dev` default did not resolve and broke first-run publish for anyone without `DOCGLOW_API_URL` set. Adds a `--api-url` flag on `docglow publish` and `docglow status` (precedence: flag > `DOCGLOW_API_URL` env > `~/.docglow/config.json` > default). (#111)
+
+### Documentation
+- **Publishing to Docglow Cloud guide** — new `docs/publishing.md` narrative how-to for the `docglow publish` workflow, registered under the Guides nav section. (#119)
+
 ## [0.8.3] - 2026-05-20
 
 ### Added
