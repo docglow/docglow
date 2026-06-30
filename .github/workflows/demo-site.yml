@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'examples/jaffle-shop/**'
+      - 'examples/flowstate/**'
       - 'src/docglow/**'
       - 'frontend/**'
       - '.github/workflows/demo-site.yml'
@@ -43,10 +43,10 @@ jobs:
         run: pip install .
 
       - name: Prepare PostHog snippet
-        run: sed "s/POSTHOG_API_KEY/${{ secrets.POSTHOG_API_KEY }}/" examples/jaffle-shop/posthog.html > /tmp/posthog.html
+        run: sed "s/POSTHOG_API_KEY/${{ secrets.POSTHOG_API_KEY }}/" examples/flowstate/posthog.html > /tmp/posthog.html
 
       - name: Generate demo site
-        run: docglow generate --project-dir examples/jaffle-shop --output-dir demo-output --static --enable-erd --head-script /tmp/posthog.html
+        run: docglow generate --project-dir examples/flowstate --output-dir demo-output --static --enable-erd --head-script /tmp/posthog.html
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
