@@ -190,8 +190,8 @@ export function HealthPage() {
           {health.complexity.models.length === 0 ? (
             <p className="text-sm text-[var(--text-muted)]">No high-complexity models found.</p>
           ) : (
-            <div className="border border-[var(--border)] rounded-lg overflow-hidden">
-              <table className="w-full text-sm">
+            <div className="border border-[var(--border)] rounded-lg overflow-x-auto">
+              <table className="w-full min-w-[720px] text-sm">
                 <thead className="bg-[var(--bg-surface)]">
                   <tr>
                     <th className="text-left px-4 py-2 font-medium">Model</th>
@@ -230,8 +230,8 @@ export function HealthPage() {
           {health.naming.violations.length === 0 ? (
             <p className="text-sm text-[var(--text-muted)]">All models follow naming conventions.</p>
           ) : (
-            <div className="border border-[var(--border)] rounded-lg overflow-hidden">
-              <table className="w-full text-sm">
+            <div className="border border-[var(--border)] rounded-lg overflow-x-auto">
+              <table className="w-full min-w-[640px] text-sm">
                 <thead className="bg-[var(--bg-surface)]">
                   <tr>
                     <th className="text-left px-4 py-2 font-medium">Model</th>
@@ -310,8 +310,8 @@ function ModelTable({
   onNavigate: (uid: string) => void
 }) {
   return (
-    <div className="border border-[var(--border)] rounded-lg overflow-hidden">
-      <table className="w-full text-sm">
+    <div className="border border-[var(--border)] rounded-lg overflow-x-auto">
+      <table className="w-full min-w-[640px] text-sm">
         <thead className="bg-[var(--bg-surface)]">
           <tr>
             <th className="text-left px-4 py-2 font-medium">Model</th>
