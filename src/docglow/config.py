@@ -93,6 +93,7 @@ class InsightsConfig:
 
 
 LINEAGE_BADGE_ABBREVIATIONS = ("smart", "truncate", "middle", "none")
+TABLE_LAYOUT_MODES = ("auto", "scroll", "fit")
 
 
 @dataclass(frozen=True)
@@ -103,8 +104,26 @@ class LineageBadgeConfig:
 
 
 @dataclass(frozen=True)
+class SidebarConfig:
+    default_width: int = 256
+    min_width: int = 180
+    max_width: int = 480
+    resizable: bool = True
+
+
+@dataclass(frozen=True)
+class TableLayoutConfig:
+    mode: str = "auto"  # auto | scroll | fit
+    min_width: int | None = None
+    content_sized_columns: tuple[str, ...] = ("column", "type", "tests")
+    content_sized_max_width: int = 360
+
+
+@dataclass(frozen=True)
 class UiConfig:
     lineage_badge: LineageBadgeConfig = field(default_factory=LineageBadgeConfig)
+    sidebar: SidebarConfig = field(default_factory=SidebarConfig)
+    table_layout: TableLayoutConfig = field(default_factory=TableLayoutConfig)
 
 
 @dataclass(frozen=True)
@@ -304,11 +323,19 @@ def _build_ui_config(raw: dict[str, Any]) -> UiConfig:
     if not isinstance(raw, dict) or not raw:
         return UiConfig()
 
-    badge_raw = raw.get("lineage_badge", {})
-    if not isinstance(badge_raw, dict) or not badge_raw:
-        return UiConfig()
+    return UiConfig(
+        lineage_badge=_build_lineage_badge_config(raw.get("lineage_badge", {})),
+        sidebar=_build_sidebar_config(raw.get("sidebar", {})),
+        table_layout=_build_table_layout_config(raw.get("table_layout", {})),
+    )
 
-    abbreviation = badge_raw.get("abbreviation", "smart")
+
+def _build_lineage_badge_config(raw: dict[str, Any]) -> LineageBadgeConfig:
+    """Parse ``ui.lineage_badge``."""
+    if not isinstance(raw, dict) or not raw:
+        return LineageBadgeConfig()
+
+    abbreviation = raw.get("abbreviation", "smart")
     if abbreviation not in LINEAGE_BADGE_ABBREVIATIONS:
         logger.warning(
             "Invalid ui.lineage_badge.abbreviation %r — expected one of %s; using 'smart'",
@@ -318,19 +345,134 @@ def _build_ui_config(raw: dict[str, Any]) -> UiConfig:
         abbreviation = "smart"
 
     max_model_chars = _coerce_positive_int(
-        badge_raw.get("max_model_chars"), default=30, name="ui.lineage_badge.max_model_chars"
+        raw.get("max_model_chars"), default=30, name="ui.lineage_badge.max_model_chars"
     )
     max_column_chars = _coerce_positive_int(
-        badge_raw.get("max_column_chars"), default=22, name="ui.lineage_badge.max_column_chars"
+        raw.get("max_column_chars"), default=22, name="ui.lineage_badge.max_column_chars"
     )
 
-    return UiConfig(
-        lineage_badge=LineageBadgeConfig(
-            abbreviation=abbreviation,
-            max_model_chars=max_model_chars,
-            max_column_chars=max_column_chars,
-        )
+    return LineageBadgeConfig(
+        abbreviation=abbreviation,
+        max_model_chars=max_model_chars,
+        max_column_chars=max_column_chars,
     )
+
+
+def _build_sidebar_config(raw: dict[str, Any]) -> SidebarConfig:
+    """Parse ``ui.sidebar``."""
+    if not isinstance(raw, dict) or not raw:
+        return SidebarConfig()
+
+    min_width = _coerce_positive_int(
+        raw.get("min_width"), default=180, name="ui.sidebar.min_width"
+    )
+    max_width = _coerce_positive_int(
+        raw.get("max_width"), default=480, name="ui.sidebar.max_width"
+    )
+    if max_width < min_width:
+        logger.warning(
+            "Invalid ui.sidebar.max_width %r — must be at least min_width; using %d",
+            max_width,
+            min_width,
+        )
+        max_width = min_width
+
+    default_width = _coerce_positive_int(
+        raw.get("default_width"), default=256, name="ui.sidebar.default_width"
+    )
+    if default_width < min_width or default_width > max_width:
+        logger.warning(
+            "Invalid ui.sidebar.default_width %r — expected %d..%d; clamping",
+            default_width,
+            min_width,
+            max_width,
+        )
+        default_width = max(min_width, min(max_width, default_width))
+
+    return SidebarConfig(
+        default_width=default_width,
+        min_width=min_width,
+        max_width=max_width,
+        resizable=_coerce_bool(raw.get("resizable"), default=True, name="ui.sidebar.resizable"),
+    )
+
+
+def _build_table_layout_config(raw: dict[str, Any]) -> TableLayoutConfig:
+    """Parse ``ui.table_layout``."""
+    if not isinstance(raw, dict) or not raw:
+        return TableLayoutConfig()
+
+    mode = raw.get("mode", "auto")
+    if mode not in TABLE_LAYOUT_MODES:
+        logger.warning(
+            "Invalid ui.table_layout.mode %r — expected one of %s; using 'auto'",
+            mode,
+            TABLE_LAYOUT_MODES,
+        )
+        mode = "auto"
+
+    return TableLayoutConfig(
+        mode=mode,
+        min_width=_coerce_optional_positive_int(
+            raw.get("min_width"), name="ui.table_layout.min_width"
+        ),
+        content_sized_columns=_coerce_string_tuple(
+            raw.get("content_sized_columns"),
+            default=TableLayoutConfig().content_sized_columns,
+            name="ui.table_layout.content_sized_columns",
+        ),
+        content_sized_max_width=_coerce_positive_int(
+            raw.get("content_sized_max_width"),
+            default=TableLayoutConfig().content_sized_max_width,
+            name="ui.table_layout.content_sized_max_width",
+        ),
+    )
+
+
+def _coerce_bool(value: Any, *, default: bool, name: str) -> bool:
+    """Return a bool from raw yaml value, warning and defaulting otherwise."""
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalised = value.strip().lower()
+        if normalised in {"true", "yes", "1", "on"}:
+            return True
+        if normalised in {"false", "no", "0", "off"}:
+            return False
+    logger.warning("Invalid %s %r — expected a boolean; using %s", name, value, default)
+    return default
+
+
+def _coerce_optional_positive_int(value: Any, *, name: str) -> int | None:
+    """Return a positive int or None from raw yaml value."""
+    if value is None:
+        return None
+    return _coerce_positive_int(value, default=0, name=name) or None
+
+
+def _coerce_string_tuple(value: Any, *, default: tuple[str, ...], name: str) -> tuple[str, ...]:
+    """Return a tuple of normalized strings from a YAML scalar or sequence."""
+    if value is None:
+        return default
+    if isinstance(value, str):
+        items = (value,)
+    elif isinstance(value, (list, tuple)):
+        items = tuple(value)
+    else:
+        logger.warning("Invalid %s %r — expected a string list; using %s", name, value, default)
+        return default
+
+    result: list[str] = []
+    for item in items:
+        if not isinstance(item, str):
+            logger.warning("Invalid %s item %r — expected a string; skipping", name, item)
+            continue
+        normalized = item.strip().lower()
+        if normalized:
+            result.append(normalized)
+    return tuple(dict.fromkeys(result))
 
 
 def _coerce_positive_int(value: Any, *, default: int, name: str) -> int:

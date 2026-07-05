@@ -72,6 +72,9 @@ export type {
   HostedFeatures,
   LineageBadgeAbbreviation,
   LineageBadgeConfig,
+  SidebarConfig,
+  TableLayoutConfig,
+  TableLayoutMode,
   UiConfig,
 } from "./site.js";
 

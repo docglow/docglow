@@ -69,6 +69,16 @@ INIT_TEMPLATE = """\
 #     abbreviation: smart   # smart | truncate | middle | none
 #     max_model_chars: 30
 #     max_column_chars: 22
+#   sidebar:
+#     default_width: 256
+#     min_width: 180
+#     max_width: 480
+#     resizable: true
+#   table_layout:
+#     mode: auto  # auto | scroll | fit
+#     min_width: null
+#     content_sized_columns: [column, type, tests]
+#     content_sized_max_width: 360
 """
 
 

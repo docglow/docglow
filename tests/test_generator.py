@@ -175,6 +175,49 @@ class TestGenerateSite:
         data = json.loads((output / "docglow-data.json").read_text())
         assert data["metadata"]["project_name"] == "My Custom Docs"
 
+    def test_generate_serializes_ui_layout_config(self, tmp_path: Path) -> None:
+        project = _setup_target(tmp_path)
+        (project / "docglow.yml").write_text(
+            "\n".join(
+                [
+                    "ui:",
+                    "  sidebar:",
+                    "    default_width: 320",
+                    "    min_width: 220",
+                    "    max_width: 560",
+                    "    resizable: false",
+                    "  table_layout:",
+                    "    mode: scroll",
+                    "    min_width: 1120",
+                    "    content_sized_columns:",
+                    "      - column",
+                    "      - type",
+                    "      - tests",
+                    "      - lineage",
+                    "    content_sized_max_width: 420",
+                    "",
+                ]
+            ),
+            encoding="utf-8",
+        )
+        output = tmp_path / "layout_config"
+
+        generate_site(project, output_dir=output)
+
+        data = json.loads((output / "docglow-data.json").read_text())
+        assert data["ui"]["sidebar"] == {
+            "default_width": 320,
+            "min_width": 220,
+            "max_width": 560,
+            "resizable": False,
+        }
+        assert data["ui"]["table_layout"] == {
+            "mode": "scroll",
+            "min_width": 1120,
+            "content_sized_columns": ["column", "type", "tests", "lineage"],
+            "content_sized_max_width": 420,
+        }
+
     def test_generate_static_with_head_script(self, tmp_path: Path) -> None:
         project = _setup_target(tmp_path)
         output = tmp_path / "head_script_out"
