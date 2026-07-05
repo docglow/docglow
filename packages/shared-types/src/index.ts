@@ -67,6 +67,7 @@ export type {
   AiCompactSource,
   AiContext,
   AiHealthSummary,
+  ContentLayoutConfig,
   DocglowData,
   DocglowMetadata,
   HostedFeatures,

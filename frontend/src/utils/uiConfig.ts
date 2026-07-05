@@ -1,4 +1,9 @@
-import type { SidebarConfig, TableLayoutConfig, TableLayoutMode } from '../types'
+import type {
+  ContentLayoutConfig,
+  SidebarConfig,
+  TableLayoutConfig,
+  TableLayoutMode,
+} from '../types'
 
 export const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
   default_width: 256,
@@ -12,6 +17,10 @@ export const DEFAULT_TABLE_LAYOUT_CONFIG: TableLayoutConfig = {
   min_width: null,
   content_sized_columns: ['column', 'type', 'tests'],
   content_sized_max_width: 360,
+}
+
+export const DEFAULT_CONTENT_LAYOUT_CONFIG: ContentLayoutConfig = {
+  max_width: null,
 }
 
 function positiveNumber(value: unknown): number | null {
@@ -66,5 +75,13 @@ export function normalizeTableLayoutConfig(
     content_sized_max_width:
       positiveNumber(config?.content_sized_max_width)
       ?? DEFAULT_TABLE_LAYOUT_CONFIG.content_sized_max_width,
+  }
+}
+
+export function normalizeContentLayoutConfig(
+  config?: Partial<ContentLayoutConfig> | null,
+): ContentLayoutConfig {
+  return {
+    max_width: positiveNumber(config?.max_width) ?? DEFAULT_CONTENT_LAYOUT_CONFIG.max_width,
   }
 }

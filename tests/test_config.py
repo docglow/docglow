@@ -1,6 +1,7 @@
 """Tests for configuration loading."""
 
 from docglow.config import (
+    ContentLayoutConfig,
     DocglowConfig,
     HealthWeights,
     LineageBadgeConfig,
@@ -208,6 +209,7 @@ class TestUiConfig:
         assert config.ui.lineage_badge == LineageBadgeConfig()
         assert config.ui.sidebar == SidebarConfig()
         assert config.ui.table_layout == TableLayoutConfig()
+        assert config.ui.content_layout == ContentLayoutConfig()
         assert config.ui.lineage_badge.abbreviation == "smart"
         assert config.ui.lineage_badge.max_model_chars == 30
         assert config.ui.lineage_badge.max_column_chars == 22
@@ -325,3 +327,11 @@ class TestUiConfig:
             }
         )
         assert config.ui.table_layout.content_sized_columns == ("column", "type")
+
+    def test_custom_content_layout(self):
+        config = _build_config_from_dict({"ui": {"content_layout": {"max_width": 1440}}})
+        assert config.ui.content_layout == ContentLayoutConfig(max_width=1440)
+
+    def test_invalid_content_layout_max_width_is_ignored(self):
+        config = _build_config_from_dict({"ui": {"content_layout": {"max_width": 0}}})
+        assert config.ui.content_layout.max_width is None

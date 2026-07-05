@@ -195,6 +195,8 @@ class TestGenerateSite:
                     "      - tests",
                     "      - lineage",
                     "    content_sized_max_width: 420",
+                    "  content_layout:",
+                    "    max_width: 1440",
                     "",
                 ]
             ),
@@ -217,6 +219,7 @@ class TestGenerateSite:
             "content_sized_columns": ["column", "type", "tests", "lineage"],
             "content_sized_max_width": 420,
         }
+        assert data["ui"]["content_layout"] == {"max_width": 1440}
 
     def test_generate_static_with_head_script(self, tmp_path: Path) -> None:
         project = _setup_target(tmp_path)

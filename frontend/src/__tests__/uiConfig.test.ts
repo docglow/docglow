@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
+  DEFAULT_CONTENT_LAYOUT_CONFIG,
   DEFAULT_SIDEBAR_CONFIG,
   DEFAULT_TABLE_LAYOUT_CONFIG,
   clamp,
+  normalizeContentLayoutConfig,
   normalizeSidebarConfig,
   normalizeTableLayoutConfig,
 } from '../utils/uiConfig'
@@ -67,6 +69,22 @@ describe('uiConfig', () => {
         content_sized_columns: 'column' as never,
         content_sized_max_width: -1,
       })).toEqual(DEFAULT_TABLE_LAYOUT_CONFIG)
+    })
+  })
+
+  describe('normalizeContentLayoutConfig', () => {
+    it('uses defaults when config is absent', () => {
+      expect(normalizeContentLayoutConfig()).toEqual(DEFAULT_CONTENT_LAYOUT_CONFIG)
+    })
+
+    it('keeps valid max width', () => {
+      expect(normalizeContentLayoutConfig({ max_width: 1440 })).toEqual({
+        max_width: 1440,
+      })
+    })
+
+    it('falls back when max width is invalid', () => {
+      expect(normalizeContentLayoutConfig({ max_width: -1 })).toEqual(DEFAULT_CONTENT_LAYOUT_CONFIG)
     })
   })
 

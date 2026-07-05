@@ -120,10 +120,16 @@ class TableLayoutConfig:
 
 
 @dataclass(frozen=True)
+class ContentLayoutConfig:
+    max_width: int | None = None
+
+
+@dataclass(frozen=True)
 class UiConfig:
     lineage_badge: LineageBadgeConfig = field(default_factory=LineageBadgeConfig)
     sidebar: SidebarConfig = field(default_factory=SidebarConfig)
     table_layout: TableLayoutConfig = field(default_factory=TableLayoutConfig)
+    content_layout: ContentLayoutConfig = field(default_factory=ContentLayoutConfig)
 
 
 @dataclass(frozen=True)
@@ -327,6 +333,7 @@ def _build_ui_config(raw: dict[str, Any]) -> UiConfig:
         lineage_badge=_build_lineage_badge_config(raw.get("lineage_badge", {})),
         sidebar=_build_sidebar_config(raw.get("sidebar", {})),
         table_layout=_build_table_layout_config(raw.get("table_layout", {})),
+        content_layout=_build_content_layout_config(raw.get("content_layout", {})),
     )
 
 
@@ -426,6 +433,18 @@ def _build_table_layout_config(raw: dict[str, Any]) -> TableLayoutConfig:
             default=TableLayoutConfig().content_sized_max_width,
             name="ui.table_layout.content_sized_max_width",
         ),
+    )
+
+
+def _build_content_layout_config(raw: dict[str, Any]) -> ContentLayoutConfig:
+    """Parse ``ui.content_layout``."""
+    if not isinstance(raw, dict) or not raw:
+        return ContentLayoutConfig()
+
+    return ContentLayoutConfig(
+        max_width=_coerce_optional_positive_int(
+            raw.get("max_width"), name="ui.content_layout.max_width"
+        )
     )
 
 

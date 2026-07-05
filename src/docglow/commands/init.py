@@ -79,6 +79,8 @@ INIT_TEMPLATE = """\
 #     min_width: null
 #     content_sized_columns: [column, type, tests]
 #     content_sized_max_width: 360
+#   content_layout:
+#     max_width: null  # null for full width, or a pixel value such as 1440
 """
 
 

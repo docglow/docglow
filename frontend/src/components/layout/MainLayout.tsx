@@ -4,11 +4,13 @@ import { Header } from './Header'
 import { Sidebar } from './Sidebar'
 import { ChatPanel } from '../ai/ChatPanel'
 import { useProjectStore } from '../../stores/projectStore'
-import { clamp, normalizeSidebarConfig } from '../../utils/uiConfig'
+import { clamp, normalizeContentLayoutConfig, normalizeSidebarConfig } from '../../utils/uiConfig'
 
 export function MainLayout() {
   const rawSidebarConfig = useProjectStore(s => s.data?.ui?.sidebar)
+  const rawContentLayoutConfig = useProjectStore(s => s.data?.ui?.content_layout)
   const sidebarConfig = normalizeSidebarConfig(rawSidebarConfig)
+  const contentLayoutConfig = normalizeContentLayoutConfig(rawContentLayoutConfig)
   const [sidebarWidth, setSidebarWidth] = useState(() => sidebarConfig.default_width)
   const boundedSidebarWidth = clamp(sidebarWidth, sidebarConfig.min_width, sidebarConfig.max_width)
   const [collapsed, setCollapsed] = useState(false)
@@ -91,8 +93,13 @@ export function MainLayout() {
           </svg>
         </button>
 
-        <main className="flex-1 overflow-y-auto p-6 min-w-0">
-          <Outlet />
+        <main className="flex-1 overflow-y-auto min-w-0">
+          <div
+            className="w-full min-w-0 mx-auto p-6"
+            style={{ maxWidth: contentLayoutConfig.max_width ?? undefined }}
+          >
+            <Outlet />
+          </div>
         </main>
         <ChatPanel />
       </div>

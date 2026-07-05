@@ -499,6 +499,9 @@ def context_to_dict(ctx: PipelineContext) -> dict[str, Any]:
                 "content_sized_columns": list(ctx.ui_config.table_layout.content_sized_columns),
                 "content_sized_max_width": ctx.ui_config.table_layout.content_sized_max_width,
             },
+            "content_layout": {
+                "max_width": ctx.ui_config.content_layout.max_width,
+            },
         },
     }
     # DOC-214: serialize relationships only when ERD is enabled. Byte-identical

@@ -59,10 +59,15 @@ export interface TableLayoutConfig {
   readonly content_sized_max_width: number;
 }
 
+export interface ContentLayoutConfig {
+  readonly max_width: number | null;
+}
+
 export interface UiConfig {
   readonly lineage_badge: LineageBadgeConfig;
   readonly sidebar: SidebarConfig;
   readonly table_layout: TableLayoutConfig;
+  readonly content_layout: ContentLayoutConfig;
 }
 
 export interface DocglowData {
