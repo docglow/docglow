@@ -4,6 +4,14 @@ import { readFileSync } from 'node:fs'
 const fixturePath = new URL('./fixtures/docglow-data.json', import.meta.url)
 const stressModelId = 'model.jaffle_shop.orders'
 
+async function routeDefaultData(page: Page) {
+  await page.route('**/docglow-data.json', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: readFileSync(fixturePath, 'utf-8'),
+  }))
+}
+
 async function routeColumnLayoutStressData(page: Page) {
   const fixture = JSON.parse(readFileSync(fixturePath, 'utf-8'))
   const model = fixture.models[stressModelId]
@@ -120,6 +128,7 @@ test.describe('Model Detail Page', () => {
   const mainSelector = 'main'
 
   test.beforeEach(async ({ page }) => {
+    await routeDefaultData(page)
     await page.goto('/')
     await page.locator('table tbody tr').filter({ hasText: 'orders' }).first().click()
     await page.waitForURL(/#\/model\//)
@@ -194,23 +203,46 @@ test.describe('Model Detail Page', () => {
     expect(rowMetrics.columnText).toContain('subquota_interpretation_review_status')
     expect(rowMetrics.testsText).toContain('accepted_values')
 
-    const badge = page.locator('button[title*="course_allocation_report_readiness"]').first()
+    const lineageRow = page.locator('#col-recommendation_readiness_status')
+    await expect(lineageRow).toBeVisible()
+    const badge = lineageRow.getByRole('button', {
+      name: /To: model\.jaffle_shop\.course_allocation_report_readiness/,
+    }).first()
     await expect(badge).toBeVisible()
 
     const compact = await badge.evaluate(button => {
       const buttonRect = button.getBoundingClientRect()
       const cellRect = button.closest('td')?.getBoundingClientRect()
       if (!cellRect) throw new Error('lineage cell missing')
+      const childOverflows = Array.from(button.children)
+        .filter((child): child is HTMLElement => child instanceof HTMLElement)
+        .map(child => {
+          const rect = child.getBoundingClientRect()
+          return {
+            left: rect.left,
+            right: rect.right,
+            width: rect.width,
+          }
+        })
+        .filter(rect => rect.width > 0 && (
+          rect.left < buttonRect.left - 1 ||
+          rect.right > buttonRect.right + 1
+        ))
       return {
         buttonRight: buttonRect.right,
         buttonWidth: buttonRect.width,
+        childOverflows,
         cellRight: cellRect.right,
+        hasNativeTitle: button.hasAttribute('title'),
         height: buttonRect.height,
         rowHeight: button.closest('tr')?.getBoundingClientRect().height ?? 0,
       }
     })
 
     expect(compact.buttonRight).toBeLessThanOrEqual(compact.cellRight + 1)
+    expect(compact.buttonWidth).toBeLessThanOrEqual(261)
+    expect(compact.childOverflows).toEqual([])
+    expect(compact.hasNativeTitle).toBe(false)
 
     await badge.hover()
     const detailPanel = page.getByTestId('lineage-badge-detail')
@@ -261,6 +293,7 @@ test.describe('Model Detail Page', () => {
 
 test.describe('Model Not Found', () => {
   test('shows not found message for invalid model id', async ({ page }) => {
+    await routeDefaultData(page)
     await page.goto('/#/model/nonexistent-model-id')
     await expect(page.getByText('Model not found')).toBeVisible()
   })

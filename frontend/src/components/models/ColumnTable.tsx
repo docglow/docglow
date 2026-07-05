@@ -63,6 +63,7 @@ const DEFAULT_BADGE_CONFIG: LineageBadgeConfig = {
   max_model_chars: 30,
   max_column_chars: 22,
 }
+const COMPACT_BADGE_MAX_CHARS = 36
 
 function NullBar({ rate }: { rate: number }) {
   const color = rate > 0.5 ? 'bg-danger' : rate > 0.1 ? 'bg-warning' : 'bg-success'
@@ -145,10 +146,14 @@ function LineageBadge({
   const colLabel = columns.length === 1 ? columns[0] : `{${columns.join(', ')}}`
   const modelDisplay = applyBadgeAbbreviation(modelName, badgeConfig.max_model_chars, badgeConfig.abbreviation)
   const colDisplay = applyBadgeAbbreviation(colLabel, badgeConfig.max_column_chars, badgeConfig.abbreviation)
-  // Only expand on hover when the compact form had to abbreviate or could not
-  // show the full text. Short names that render fully stay as static badges —
-  // expanding them just adds vertical noise with no new information.
-  const isAbbreviated = modelDisplay !== modelName || colDisplay !== colLabel
+  const fullBadgeText = `${modelName}.${colLabel}`
+  // Show the detail panel when either side was explicitly abbreviated, or when
+  // the combined badge text is too long to fit the fixed pill comfortably.
+  const needsDetailPanel =
+    modelDisplay !== modelName ||
+    colDisplay !== colLabel ||
+    fullBadgeText.length > COMPACT_BADGE_MAX_CHARS
+  const badgeLabel = `${direction === 'upstream' ? 'From' : 'To'}: ${modelId}; columns: ${columns.join(', ')}; type: ${transformation}`
 
   const commonButtonProps = {
     onClick: (e: MouseEvent) => {
@@ -156,7 +161,7 @@ function LineageBadge({
       const colAnchor = columns.length === 1 ? `#col-${columns[0].toLowerCase()}` : ''
       navigate(`/${navType}/${encodeURIComponent(modelId)}${colAnchor}`)
     },
-    title: `${direction === 'upstream' ? 'From' : 'To'}: ${modelId}\nColumns: ${columns.join(', ')}\nType: ${transformation}`,
+    'aria-label': badgeLabel,
     style: {
       background: style.bg,
       color: style.color,
@@ -179,12 +184,12 @@ function LineageBadge({
     setHoverPanel({ top, left })
   }
 
-  if (!isAbbreviated) {
+  if (!needsDetailPanel) {
     return (
       <button
         {...commonButtonProps}
-        className="box-border max-w-[260px] inline-flex flex-row flex-nowrap items-center gap-1
-                   rounded border px-1.5 py-0.5 text-[11px] cursor-pointer text-left
+        className="box-border max-w-[min(260px,100%)] min-w-0 inline-flex flex-row flex-nowrap items-center gap-1
+                   rounded border px-1.5 py-0.5 text-[11px] overflow-hidden cursor-pointer text-left
                    transition-all hover:brightness-95"
       >
         {direction === 'upstream' && (
@@ -192,8 +197,8 @@ function LineageBadge({
             &#x2190;
           </span>
         )}
-        <span className="font-medium">{modelName}</span>
-        <span style={{ opacity: 0.7 }}>.{colLabel}</span>
+        <span className="min-w-0 truncate font-medium">{modelName}</span>
+        <span className="min-w-0 truncate" style={{ opacity: 0.7 }}>.{colLabel}</span>
         {direction === 'downstream' && (
           <span className="shrink-0" style={{ opacity: 0.6, fontSize: 11, lineHeight: 1 }}>
             &#x2192;
@@ -204,14 +209,14 @@ function LineageBadge({
   }
 
   return (
-    <span className="group/lineage-badge relative inline-flex max-w-[260px] align-top">
+    <span className="group/lineage-badge relative inline-flex max-w-[min(260px,100%)] min-w-0 align-top">
       <button
         {...commonButtonProps}
         onMouseEnter={(e) => showHoverPanel(e.currentTarget)}
         onFocus={(e) => showHoverPanel(e.currentTarget)}
         onMouseLeave={() => setHoverPanel(null)}
         onBlur={() => setHoverPanel(null)}
-        className="box-border max-w-[260px] inline-flex flex-row flex-nowrap items-center gap-1.5
+        className="box-border w-full max-w-[min(260px,100%)] min-w-0 inline-flex flex-row flex-nowrap items-center gap-1.5
                    rounded border px-[7px] py-[3px] text-[11px] overflow-hidden cursor-pointer text-left
                    transition-[background-color,border-color,filter] duration-200 ease-out
                    hover:brightness-95"
