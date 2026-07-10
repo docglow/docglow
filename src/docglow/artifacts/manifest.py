@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class ManifestMetadata(BaseModel):
@@ -135,6 +135,15 @@ class ManifestExposure(BaseModel):
     owner: dict[str, str] = Field(default_factory=dict)
     tags: list[str] = Field(default_factory=list)
     meta: dict[str, object] = Field(default_factory=dict)
+
+    @field_validator("owner", mode="before")
+    @classmethod
+    def _drop_null_owner_fields(cls, value: object) -> object:
+        # dbt serializes omitted owner fields as null (owner.name and
+        # owner.email are both optional), so strip them before validation.
+        if isinstance(value, dict):
+            return {k: v for k, v in value.items() if v is not None}
+        return value
 
 
 class ManifestMetric(BaseModel):

@@ -5,9 +5,102 @@ from pathlib import Path
 
 import pytest
 
+from docglow.artifacts.catalog import CatalogNode, CatalogStat
 from docglow.artifacts.loader import ArtifactLoadError, LoadedArtifacts, load_artifacts
+from docglow.artifacts.manifest import ManifestExposure
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
+
+
+class TestCatalogStatNulls:
+    """Adapters like Databricks emit null stat fields; parsing must tolerate them."""
+
+    def test_null_value_and_description(self) -> None:
+        """Databricks reports bytes/rows stats with null value and description."""
+        stat = CatalogStat.model_validate(
+            {"id": "bytes", "label": "Size", "value": None, "include": True, "description": None}
+        )
+        assert stat.value is None
+        assert stat.description == ""
+
+    def test_null_label_and_include(self) -> None:
+        stat = CatalogStat.model_validate(
+            {"id": "rows", "label": None, "value": 42, "include": None, "description": None}
+        )
+        assert stat.label == ""
+        assert stat.include is False
+        assert stat.value == 42
+
+    def test_catalog_node_with_databricks_style_stats(self) -> None:
+        node = CatalogNode.model_validate(
+            {
+                "unique_id": "model.jaffle_shop.orders",
+                "metadata": {"type": "table", "schema": "main", "name": "orders"},
+                "columns": {},
+                "stats": {
+                    "bytes": {
+                        "id": "bytes",
+                        "label": "bytes",
+                        "value": None,
+                        "include": True,
+                        "description": None,
+                    },
+                    "rows": {
+                        "id": "rows",
+                        "label": "rows",
+                        "value": None,
+                        "include": True,
+                        "description": None,
+                    },
+                    "has_stats": {
+                        "id": "has_stats",
+                        "label": "Has Stats?",
+                        "value": True,
+                        "include": False,
+                        "description": "Indicates whether there are statistics for this table",
+                    },
+                },
+            }
+        )
+        assert node.stats["bytes"].value is None
+        assert node.stats["rows"].value is None
+        assert node.stats["has_stats"].value is True
+
+
+class TestManifestExposureOwner:
+    """Exposure owner fields are optional in dbt; nulls must not break parsing."""
+
+    def test_owner_name_null(self) -> None:
+        """dbt writes owner.name as null when only email is set."""
+        exposure = ManifestExposure(
+            unique_id="exposure.jaffle_shop.dashboard",
+            name="dashboard",
+            owner={"name": None, "email": "data@example.com"},
+        )
+        assert exposure.owner == {"email": "data@example.com"}
+
+    def test_owner_email_null(self) -> None:
+        exposure = ManifestExposure(
+            unique_id="exposure.jaffle_shop.dashboard",
+            name="dashboard",
+            owner={"name": "Data Team", "email": None},
+        )
+        assert exposure.owner == {"name": "Data Team"}
+
+    def test_owner_all_null(self) -> None:
+        exposure = ManifestExposure(
+            unique_id="exposure.jaffle_shop.dashboard",
+            name="dashboard",
+            owner={"name": None, "email": None},
+        )
+        assert exposure.owner == {}
+
+    def test_owner_missing(self) -> None:
+        exposure = ManifestExposure(
+            unique_id="exposure.jaffle_shop.dashboard",
+            name="dashboard",
+        )
+        assert exposure.owner == {}
 
 
 class TestLoadArtifacts:

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class CatalogMetadata(BaseModel):
@@ -26,6 +26,17 @@ class CatalogStat(BaseModel):
     value: object = None
     include: bool = False
     description: str = ""
+
+    @model_validator(mode="before")
+    @classmethod
+    def _drop_null_fields(cls, data: object) -> object:
+        # Adapters (e.g. Databricks) emit null for stat fields they don't
+        # populate — dbt itself types description as optional, and nulls show
+        # up in label/include too. Strip them so the field defaults apply
+        # instead of failing validation.
+        if isinstance(data, dict):
+            return {k: v for k, v in data.items() if v is not None}
+        return data
 
 
 class CatalogNodeMetadata(BaseModel):
