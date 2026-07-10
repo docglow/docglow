@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.8.5] - 2026-07-10
+
+### Added
+- **`docglow publish` ships `docglow.yml` in the tarball** — the publish bundle previously contained only dbt JSON artifacts, so Docglow Cloud rendered OSS default layer rules and forced the ERD on, ignoring the project author's config. `docglow.yml`/`docglow.yaml` from the project root is now bundled and read by the Cloud coordinator; projects without a config file still fall back to defaults. (#121)
+
+### Fixed
+- **Null-tolerant artifact parsing for exposure owners and catalog stats** — dbt marks exposure `owner.name`/`owner.email` as optional and serializes omitted fields as `null`, and adapters like Databricks emit `null` for catalog stat fields they don't populate (`bytes`/`rows` values, stat descriptions — which virtually no adapter fills for numeric stats). Docglow's artifact models rejected these explicit nulls, aborting the entire manifest or catalog load with a validation error. Null fields are now stripped before validation so defaults apply. (#132)
+
 ## [0.8.4] - 2026-06-29
 
 ### Added
