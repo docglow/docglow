@@ -6,8 +6,45 @@ from pathlib import Path
 import pytest
 
 from docglow.artifacts.loader import ArtifactLoadError, LoadedArtifacts, load_artifacts
+from docglow.artifacts.manifest import ManifestExposure
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
+
+
+class TestManifestExposureOwner:
+    """Exposure owner fields are optional in dbt; nulls must not break parsing."""
+
+    def test_owner_name_null(self) -> None:
+        """dbt writes owner.name as null when only email is set."""
+        exposure = ManifestExposure(
+            unique_id="exposure.jaffle_shop.dashboard",
+            name="dashboard",
+            owner={"name": None, "email": "data@example.com"},
+        )
+        assert exposure.owner == {"email": "data@example.com"}
+
+    def test_owner_email_null(self) -> None:
+        exposure = ManifestExposure(
+            unique_id="exposure.jaffle_shop.dashboard",
+            name="dashboard",
+            owner={"name": "Data Team", "email": None},
+        )
+        assert exposure.owner == {"name": "Data Team"}
+
+    def test_owner_all_null(self) -> None:
+        exposure = ManifestExposure(
+            unique_id="exposure.jaffle_shop.dashboard",
+            name="dashboard",
+            owner={"name": None, "email": None},
+        )
+        assert exposure.owner == {}
+
+    def test_owner_missing(self) -> None:
+        exposure = ManifestExposure(
+            unique_id="exposure.jaffle_shop.dashboard",
+            name="dashboard",
+        )
+        assert exposure.owner == {}
 
 
 class TestLoadArtifacts:
