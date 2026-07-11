@@ -3,93 +3,10 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useProjectStore } from '../../stores/projectStore'
 import { useTagFilterStore } from '../../stores/tagFilterStore'
 import { collectAllTags, nodeMatchesTags, type SidebarTreeNode } from '../../utils/sidebarFilters'
+import { buildTree, collectFolderPaths } from '../../utils/sidebarTree'
 import { buildResourcePath } from '../../utils/resourceRoutes'
-import type { DocglowExposure, DocglowModel, DocglowSource } from '../../types'
 
 type TreeNode = SidebarTreeNode
-
-function buildTree(
-  models: Record<string, DocglowModel>,
-  sources: Record<string, DocglowSource>,
-  exposures: Record<string, DocglowExposure>,
-): TreeNode {
-  const root: TreeNode = { name: 'root', path: '', children: new Map() }
-
-  // Add models organized by folder
-  const modelRoot: TreeNode = { name: 'models', path: 'models', children: new Map() }
-  for (const model of Object.values(models)) {
-    const parts = model.path.replace(/^models\//, '').split('/')
-    parts.pop() // remove filename
-    let current = modelRoot
-    for (const part of parts) {
-      if (!current.children.has(part)) {
-        current.children.set(part, {
-          name: part,
-          path: `${current.path}/${part}`,
-          children: new Map(),
-        })
-      }
-      current = current.children.get(part)!
-    }
-    current.children.set(model.name, {
-      name: model.name,
-      path: model.unique_id,
-      uniqueId: model.unique_id,
-      resourceType: 'model',
-      tags: model.tags,
-      children: new Map(),
-    })
-  }
-  if (modelRoot.children.size > 0) root.children.set('models', modelRoot)
-
-  // Add sources grouped by source_name
-  const sourceRoot: TreeNode = { name: 'sources', path: 'sources', children: new Map() }
-  for (const source of Object.values(sources)) {
-    if (!sourceRoot.children.has(source.source_name)) {
-      sourceRoot.children.set(source.source_name, {
-        name: source.source_name,
-        path: `sources/${source.source_name}`,
-        children: new Map(),
-      })
-    }
-    const sourceGroup = sourceRoot.children.get(source.source_name)!
-    sourceGroup.children.set(source.name, {
-      name: source.name,
-      path: source.unique_id,
-      uniqueId: source.unique_id,
-      resourceType: 'source',
-      tags: source.tags,
-      children: new Map(),
-    })
-  }
-  if (sourceRoot.children.size > 0) root.children.set('sources', sourceRoot)
-
-  const exposureRoot: TreeNode = { name: 'exposures', path: 'exposures', children: new Map() }
-  for (const exposure of Object.values(exposures)) {
-    exposureRoot.children.set(exposure.name, {
-      name: exposure.name,
-      path: exposure.unique_id,
-      uniqueId: exposure.unique_id,
-      resourceType: 'exposure',
-      tags: exposure.tags,
-      children: new Map(),
-    })
-  }
-  if (exposureRoot.children.size > 0) root.children.set('exposures', exposureRoot)
-
-  return root
-}
-
-function collectFolderPaths(node: TreeNode): string[] {
-  const paths: string[] = []
-  if (node.children.size > 0 && !node.uniqueId) {
-    paths.push(node.path)
-    for (const child of node.children.values()) {
-      paths.push(...collectFolderPaths(child))
-    }
-  }
-  return paths
-}
 
 interface TreeItemProps {
   node: TreeNode
@@ -176,12 +93,12 @@ export function Sidebar() {
 
   const tree = useMemo(() => {
     if (!data) return null
-    return buildTree(data.models, data.sources, data.exposures)
+    return buildTree(data.models, data.sources, data.exposures, data.seeds, data.snapshots)
   }, [data])
 
   const allTags = useMemo(() => {
     if (!data) return []
-    return collectAllTags(data.models, data.sources, data.exposures)
+    return collectAllTags(data.models, data.sources, data.exposures, data.seeds, data.snapshots)
   }, [data])
 
   // Only "models" expanded by default; sub-folders collapsed
@@ -224,6 +141,8 @@ export function Sidebar() {
   }, [data, tagSelected, tagMode, modelCount])
 
   const exposureCount = data ? Object.keys(data.exposures).length : 0
+  const seedCount = data ? Object.keys(data.seeds).length : 0
+  const snapshotCount = data ? Object.keys(data.snapshots).length : 0
 
   if (!tree) return null
 
@@ -363,6 +282,8 @@ export function Sidebar() {
           ? <>{filteredModelCount} of {modelCount} models &middot; {sourceCount} sources &middot; {exposureCount} exposures</>
           : <>{modelCount} models &middot; {sourceCount} sources &middot; {exposureCount} exposures</>
         }
+        {snapshotCount > 0 && <> &middot; {snapshotCount} snapshots</>}
+        {seedCount > 0 && <> &middot; {seedCount} seeds</>}
       </div>
     </aside>
   )

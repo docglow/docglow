@@ -98,6 +98,17 @@ describe('collectAllTags', () => {
     const tags = collectAllTags(models, {})
     expect(tags).toEqual(['alpha', 'zebra'])
   })
+
+  it('collects tags from seeds and snapshots', () => {
+    const seeds = {
+      'seed.project.raw_customers': makeModel('raw_customers', ['static']),
+    }
+    const snapshots = {
+      'snapshot.project.orders_snapshot': makeModel('orders_snapshot', ['scd2']),
+    }
+    const tags = collectAllTags({}, {}, {}, seeds, snapshots)
+    expect(tags).toEqual(['scd2', 'static'])
+  })
 })
 
 describe('nodeMatchesTags', () => {
