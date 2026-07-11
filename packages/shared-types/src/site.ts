@@ -43,8 +43,31 @@ export interface LineageBadgeConfig {
   readonly max_column_chars: number;
 }
 
+export interface SidebarConfig {
+  readonly default_width: number;
+  readonly min_width: number;
+  readonly max_width: number;
+  readonly resizable: boolean;
+}
+
+export type TableLayoutMode = "auto" | "scroll" | "fit";
+
+export interface TableLayoutConfig {
+  readonly mode: TableLayoutMode;
+  readonly min_width: number | null;
+  readonly content_sized_columns: readonly string[];
+  readonly content_sized_max_width: number;
+}
+
+export interface ContentLayoutConfig {
+  readonly max_width: number | null;
+}
+
 export interface UiConfig {
   readonly lineage_badge: LineageBadgeConfig;
+  readonly sidebar: SidebarConfig;
+  readonly table_layout: TableLayoutConfig;
+  readonly content_layout: ContentLayoutConfig;
 }
 
 export interface DocglowData {

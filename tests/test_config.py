@@ -1,9 +1,12 @@
 """Tests for configuration loading."""
 
 from docglow.config import (
+    ContentLayoutConfig,
     DocglowConfig,
     HealthWeights,
     LineageBadgeConfig,
+    SidebarConfig,
+    TableLayoutConfig,
     UiConfig,
     _build_config_from_dict,
     load_config,
@@ -204,6 +207,9 @@ class TestUiConfig:
         config = _build_config_from_dict({})
         assert config.ui == UiConfig()
         assert config.ui.lineage_badge == LineageBadgeConfig()
+        assert config.ui.sidebar == SidebarConfig()
+        assert config.ui.table_layout == TableLayoutConfig()
+        assert config.ui.content_layout == ContentLayoutConfig()
         assert config.ui.lineage_badge.abbreviation == "smart"
         assert config.ui.lineage_badge.max_model_chars == 30
         assert config.ui.lineage_badge.max_column_chars == 22
@@ -243,3 +249,89 @@ class TestUiConfig:
         for strategy in ("smart", "truncate", "middle", "none"):
             config = _build_config_from_dict({"ui": {"lineage_badge": {"abbreviation": strategy}}})
             assert config.ui.lineage_badge.abbreviation == strategy
+
+    def test_custom_sidebar_layout(self):
+        config = _build_config_from_dict(
+            {
+                "ui": {
+                    "sidebar": {
+                        "default_width": 320,
+                        "min_width": 220,
+                        "max_width": 560,
+                        "resizable": False,
+                    }
+                }
+            }
+        )
+        assert config.ui.sidebar == SidebarConfig(
+            default_width=320,
+            min_width=220,
+            max_width=560,
+            resizable=False,
+        )
+
+    def test_sidebar_default_width_is_clamped_to_bounds(self):
+        config = _build_config_from_dict(
+            {"ui": {"sidebar": {"default_width": 120, "min_width": 220, "max_width": 560}}}
+        )
+        assert config.ui.sidebar.default_width == 220
+
+    def test_sidebar_max_width_cannot_be_less_than_min_width(self):
+        config = _build_config_from_dict(
+            {"ui": {"sidebar": {"default_width": 260, "min_width": 360, "max_width": 240}}}
+        )
+        assert config.ui.sidebar.min_width == 360
+        assert config.ui.sidebar.max_width == 360
+        assert config.ui.sidebar.default_width == 360
+
+    def test_sidebar_resizable_accepts_string_boolean(self):
+        config = _build_config_from_dict({"ui": {"sidebar": {"resizable": "off"}}})
+        assert config.ui.sidebar.resizable is False
+
+    def test_custom_table_layout(self):
+        config = _build_config_from_dict(
+            {
+                "ui": {
+                    "table_layout": {
+                        "mode": "scroll",
+                        "min_width": 1040,
+                        "content_sized_columns": ["column", "lineage", "tests"],
+                        "content_sized_max_width": 420,
+                    }
+                }
+            }
+        )
+        assert config.ui.table_layout == TableLayoutConfig(
+            mode="scroll",
+            min_width=1040,
+            content_sized_columns=("column", "lineage", "tests"),
+            content_sized_max_width=420,
+        )
+
+    def test_invalid_table_layout_mode_falls_back_to_auto(self):
+        config = _build_config_from_dict({"ui": {"table_layout": {"mode": "squish"}}})
+        assert config.ui.table_layout.mode == "auto"
+
+    def test_invalid_table_min_width_is_ignored(self):
+        config = _build_config_from_dict({"ui": {"table_layout": {"min_width": -10}}})
+        assert config.ui.table_layout.min_width is None
+
+    def test_table_layout_content_sized_columns_are_normalized(self):
+        config = _build_config_from_dict(
+            {
+                "ui": {
+                    "table_layout": {
+                        "content_sized_columns": ["Column", "type", "column", "", 12],
+                    }
+                }
+            }
+        )
+        assert config.ui.table_layout.content_sized_columns == ("column", "type")
+
+    def test_custom_content_layout(self):
+        config = _build_config_from_dict({"ui": {"content_layout": {"max_width": 1440}}})
+        assert config.ui.content_layout == ContentLayoutConfig(max_width=1440)
+
+    def test_invalid_content_layout_max_width_is_ignored(self):
+        config = _build_config_from_dict({"ui": {"content_layout": {"max_width": 0}}})
+        assert config.ui.content_layout.max_width is None

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { ResponsiveTable } from '../components/ui/ResponsiveTable'
 import { useProjectStore } from '../stores/projectStore'
 import { formatPercent } from '../utils/formatting'
 import type { CoverageMetric } from '../types'
@@ -39,18 +40,22 @@ function ScoreBar({ label, score }: { label: string; score: number }) {
 }
 
 function CoverageBar({ metric, label }: { metric: CoverageMetric; label: string }) {
+  const value = `${metric.covered}/${metric.total} (${formatPercent(metric.rate)})`
+
   return (
-    <div className="flex items-center gap-3">
-      <span className="text-sm w-48 shrink-0 text-[var(--text-muted)]">{label}</span>
-      <div className="flex-1 h-2 bg-[var(--bg-surface)] rounded-full overflow-hidden">
+    <div className="grid grid-cols-[minmax(0,1fr)_8.5rem] gap-x-4 gap-y-2 sm:grid-cols-[minmax(10rem,18rem)_minmax(8rem,1fr)_8.5rem] sm:items-center">
+      <span className="text-sm text-[var(--text-muted)] truncate" title={label}>
+        {label}
+      </span>
+      <span className="text-xs text-right text-[var(--text-muted)] whitespace-nowrap tabular-nums sm:col-start-3">
+        {value}
+      </span>
+      <div className="col-span-2 h-2 bg-[var(--bg-surface)] rounded-full overflow-hidden sm:col-span-1 sm:col-start-2 sm:row-start-1">
         <div
           className={`h-full rounded-full ${scoreBarColor(metric.rate * 100)}`}
           style={{ width: `${metric.rate * 100}%` }}
         />
       </div>
-      <span className="text-xs w-20 text-right text-[var(--text-muted)]">
-        {metric.covered}/{metric.total} ({formatPercent(metric.rate)})
-      </span>
     </div>
   )
 }
@@ -76,7 +81,7 @@ export function HealthPage() {
   ]
 
   return (
-    <div className="max-w-4xl">
+    <div className="w-full max-w-none">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold mb-2">Project Health</h1>
@@ -190,37 +195,49 @@ export function HealthPage() {
           {health.complexity.models.length === 0 ? (
             <p className="text-sm text-[var(--text-muted)]">No high-complexity models found.</p>
           ) : (
-            <div className="border border-[var(--border)] rounded-lg overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-[var(--bg-surface)]">
-                  <tr>
-                    <th className="text-left px-4 py-2 font-medium">Model</th>
-                    <th className="text-right px-4 py-2 font-medium">SQL Lines</th>
-                    <th className="text-right px-4 py-2 font-medium">Joins</th>
-                    <th className="text-right px-4 py-2 font-medium">CTEs</th>
-                    <th className="text-right px-4 py-2 font-medium">Subqueries</th>
-                    <th className="text-right px-4 py-2 font-medium">Downstream</th>
+            <ResponsiveTable defaultMinWidth={1040}>
+              <colgroup>
+                <col />
+                <col className="w-24" />
+                <col className="w-20" />
+                <col className="w-20" />
+                <col className="w-28" />
+                <col className="w-28" />
+              </colgroup>
+              <thead className="bg-[var(--bg-surface)]">
+                <tr>
+                  <th className="text-left px-4 py-2 font-medium">Model</th>
+                  <th className="text-right px-4 py-2 font-medium whitespace-nowrap">SQL Lines</th>
+                  <th className="text-right px-4 py-2 font-medium whitespace-nowrap">Joins</th>
+                  <th className="text-right px-4 py-2 font-medium whitespace-nowrap">CTEs</th>
+                  <th className="text-right px-4 py-2 font-medium whitespace-nowrap">Subqueries</th>
+                  <th className="text-right px-4 py-2 font-medium whitespace-nowrap">Downstream</th>
+                </tr>
+              </thead>
+              <tbody>
+                {health.complexity.models.map(m => (
+                  <tr key={m.unique_id}
+                      className="border-t border-[var(--border)] hover:bg-[var(--bg-surface)] cursor-pointer"
+                      onClick={() => navigate(`/model/${encodeURIComponent(m.unique_id)}`)}>
+                    <td className="px-4 py-2">
+                      <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
+                        <span className="font-medium text-primary break-words" title={m.name}>
+                          {m.name}
+                        </span>
+                        <span className="text-xs text-[var(--text-muted)] whitespace-nowrap" title={m.folder}>
+                          {m.folder}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-2 text-right tabular-nums">{m.sql_lines}</td>
+                    <td className="px-4 py-2 text-right tabular-nums">{m.join_count}</td>
+                    <td className="px-4 py-2 text-right tabular-nums">{m.cte_count}</td>
+                    <td className="px-4 py-2 text-right tabular-nums">{m.subquery_count}</td>
+                    <td className="px-4 py-2 text-right tabular-nums">{m.downstream_count}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {health.complexity.models.map(m => (
-                    <tr key={m.unique_id}
-                        className="border-t border-[var(--border)] hover:bg-[var(--bg-surface)] cursor-pointer"
-                        onClick={() => navigate(`/model/${encodeURIComponent(m.unique_id)}`)}>
-                      <td className="px-4 py-2">
-                        <span className="font-medium text-primary">{m.name}</span>
-                        <span className="text-xs text-[var(--text-muted)] ml-2">{m.folder}</span>
-                      </td>
-                      <td className="px-4 py-2 text-right">{m.sql_lines}</td>
-                      <td className="px-4 py-2 text-right">{m.join_count}</td>
-                      <td className="px-4 py-2 text-right">{m.cte_count}</td>
-                      <td className="px-4 py-2 text-right">{m.subquery_count}</td>
-                      <td className="px-4 py-2 text-right">{m.downstream_count}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </ResponsiveTable>
           )}
         </div>
       )}
@@ -230,31 +247,29 @@ export function HealthPage() {
           {health.naming.violations.length === 0 ? (
             <p className="text-sm text-[var(--text-muted)]">All models follow naming conventions.</p>
           ) : (
-            <div className="border border-[var(--border)] rounded-lg overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-[var(--bg-surface)]">
-                  <tr>
-                    <th className="text-left px-4 py-2 font-medium">Model</th>
-                    <th className="text-left px-4 py-2 font-medium">Layer</th>
-                    <th className="text-left px-4 py-2 font-medium">Expected Pattern</th>
+            <ResponsiveTable defaultMinWidth={760}>
+              <thead className="bg-[var(--bg-surface)]">
+                <tr>
+                  <th className="text-left px-4 py-2 font-medium">Model</th>
+                  <th className="text-left px-4 py-2 font-medium">Layer</th>
+                  <th className="text-left px-4 py-2 font-medium">Expected Pattern</th>
+                </tr>
+              </thead>
+              <tbody>
+                {health.naming.violations.map(v => (
+                  <tr key={v.unique_id}
+                      className="border-t border-[var(--border)] hover:bg-[var(--bg-surface)] cursor-pointer"
+                      onClick={() => navigate(`/model/${encodeURIComponent(v.unique_id)}`)}>
+                    <td className="px-4 py-2">
+                      <span className="font-medium text-primary">{v.name}</span>
+                      <span className="text-xs text-[var(--text-muted)] ml-2">{v.folder}</span>
+                    </td>
+                    <td className="px-4 py-2 capitalize">{v.layer}</td>
+                    <td className="px-4 py-2 font-mono text-xs">{v.expected_pattern}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {health.naming.violations.map(v => (
-                    <tr key={v.unique_id}
-                        className="border-t border-[var(--border)] hover:bg-[var(--bg-surface)] cursor-pointer"
-                        onClick={() => navigate(`/model/${encodeURIComponent(v.unique_id)}`)}>
-                      <td className="px-4 py-2">
-                        <span className="font-medium text-primary">{v.name}</span>
-                        <span className="text-xs text-[var(--text-muted)] ml-2">{v.folder}</span>
-                      </td>
-                      <td className="px-4 py-2 capitalize">{v.layer}</td>
-                      <td className="px-4 py-2 font-mono text-xs">{v.expected_pattern}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </ResponsiveTable>
           )}
         </div>
       )}
@@ -310,31 +325,42 @@ function ModelTable({
   onNavigate: (uid: string) => void
 }) {
   return (
-    <div className="border border-[var(--border)] rounded-lg overflow-hidden">
-      <table className="w-full text-sm">
-        <thead className="bg-[var(--bg-surface)]">
-          <tr>
-            <th className="text-left px-4 py-2 font-medium">Model</th>
-            <th className="text-left px-4 py-2 font-medium">Folder</th>
-            {extraColumn && (
-              <th className="text-right px-4 py-2 font-medium">{extraColumn}</th>
+    <ResponsiveTable defaultMinWidth={760}>
+      <colgroup>
+        <col />
+        <col className="w-72" />
+        {extraColumn && <col className="w-32" />}
+      </colgroup>
+      <thead className="bg-[var(--bg-surface)]">
+        <tr>
+          <th className="text-left px-4 py-2 font-medium">Model</th>
+          <th className="text-left px-4 py-2 font-medium">Folder</th>
+          {extraColumn && (
+            <th className="text-right px-4 py-2 font-medium">{extraColumn}</th>
+          )}
+        </tr>
+      </thead>
+      <tbody>
+        {models.map(m => (
+          <tr key={m.unique_id}
+              className="border-t border-[var(--border)] hover:bg-[var(--bg-surface)] cursor-pointer"
+              onClick={() => onNavigate(m.unique_id)}>
+            <td className="px-4 py-2">
+              <div className="font-medium text-primary break-words" title={m.name}>
+                {m.name}
+              </div>
+            </td>
+            <td className="px-4 py-2 text-[var(--text-muted)]">
+              <div className="truncate" title={m.folder || '—'}>
+                {m.folder || '—'}
+              </div>
+            </td>
+            {extraColumn && extraValue && (
+              <td className="px-4 py-2 text-right tabular-nums">{extraValue(m)}</td>
             )}
           </tr>
-        </thead>
-        <tbody>
-          {models.map(m => (
-            <tr key={m.unique_id}
-                className="border-t border-[var(--border)] hover:bg-[var(--bg-surface)] cursor-pointer"
-                onClick={() => onNavigate(m.unique_id)}>
-              <td className="px-4 py-2 font-medium text-primary">{m.name}</td>
-              <td className="px-4 py-2 text-[var(--text-muted)]">{m.folder || '—'}</td>
-              {extraColumn && extraValue && (
-                <td className="px-4 py-2 text-right">{extraValue(m)}</td>
-              )}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+        ))}
+      </tbody>
+    </ResponsiveTable>
   )
 }

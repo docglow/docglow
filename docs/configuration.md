@@ -79,6 +79,19 @@ ui:
     abbreviation: smart           # smart | truncate | middle | none
     max_model_chars: 30           # Max chars before the model name is shortened
     max_column_chars: 22          # Max chars before the column name is shortened
+  sidebar:
+    default_width: 256            # Default navigation width in pixels
+    min_width: 180                # Minimum resizable navigation width
+    max_width: 480                # Maximum resizable navigation width
+    resizable: true               # Allow users to drag the navigation width
+  table_layout:
+    mode: auto                    # auto | scroll | fit
+    min_width: null               # Optional global table min-width in pixels
+    content_sized_columns:        # Columns that size to their content first
+      - column
+      - type
+      - tests
+    content_sized_max_width: 360  # Maximum width for content-sized columns
 ```
 
 ## Theme
@@ -113,7 +126,7 @@ The column-level lineage column on a model page renders a small pill for each up
 
 | Strategy   | What it does | Example (`fact_orders_by_supplier_over_time_by_state_and_segment`) |
 |---|---|---|
-| `smart` *(default)* | Collapses leading snake_case segments to single-letter initials joined by `·`, keeping the distinguishing tail intact | `f·o·b·s·o·t·b·s·a·segment` |
+| `smart` *(default)* | Keeps a readable prefix and suffix with a middle ellipsis | `fact_orders_by_supplie…segment` |
 | `truncate` | Keeps the first N characters and appends `…` — simplest and closest to `dbt docs` behavior | `fact_orders_by_supplier_over_t...` |
 | `middle` | Keeps both the prefix (`fct_` / `stg_`) and the suffix, inserting `…` in the middle | `fact_orders_by_supplie…segment` |
 | `none` | Renders the full name; relies on the badge's CSS max-width plus the tooltip for overflow | `fact_orders_by_supplier_over_time_by_state_and_segment` |
@@ -121,4 +134,40 @@ The column-level lineage column on a model page renders a small pill for each up
 `max_model_chars` and `max_column_chars` set the character threshold at which abbreviation kicks in (they have no effect on `none`). Defaults are 30 and 22 respectively; raise them if you want longer names to render in full, lower them if you want more aggressive shortening.
 
 !!! tip
-    Not sure which to pick? Start with `smart` (the default) — it preserves the most unique part of the name. If your team expects names to match `dbt docs` output exactly, switch to `truncate`.
+    Not sure which to pick? Start with `smart` (the default) because it keeps the label recognisable without letting long names dominate the row.
+    If your team expects names to match `dbt docs` output exactly, switch to `truncate`.
+
+## Layout
+
+The `ui.sidebar` section controls the default navigation width and resize bounds.
+Use it when your project has deeply nested folders or long model names that need more navigation space.
+
+```yaml
+ui:
+  sidebar:
+    default_width: 320
+    min_width: 220
+    max_width: 560
+    resizable: true
+```
+
+The `ui.table_layout` section controls how wide operational tables are allowed to be before they scroll or fit into the available content area.
+
+| Mode | Behaviour |
+|---|---|
+| `auto` *(default)* | Tables use their page-specific minimum width and scroll only when the available space is smaller. |
+| `scroll` | Tables keep their minimum width and always expose horizontal overflow when needed. |
+| `fit` | Tables fit the available space, truncating long text where the page defines fixed numeric columns. |
+
+Set `min_width` to override page-specific table minimums globally.
+Set `content_sized_columns` when dense tables should reserve room for important fields before the description column takes the remaining space.
+The Columns tab currently recognises `column`, `type`, `lineage`, and `tests`.
+
+```yaml
+ui:
+  table_layout:
+    mode: auto
+    min_width: 1120
+    content_sized_columns: [column, type, tests]
+    content_sized_max_width: 360
+```

@@ -124,6 +124,9 @@ export function ChatPanel() {
     apiKey, requestCount, maxRequests, error,
     sendMessage, clearMessages,
   } = useChatStore()
+  const aiChatEnabled = data?.metadata.ai_enabled === true
+    || data?.metadata.features?.ai_chat === true
+    || data?.ai_context != null
 
   const [input, setInput] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -137,8 +140,13 @@ export function ChatPanel() {
     if (open) inputRef.current?.focus()
   }, [open])
 
+  useEffect(() => {
+    if (!aiChatEnabled && open) setOpen(false)
+  }, [aiChatEnabled, open, setOpen])
+
   // Keyboard shortcut: Ctrl/Cmd + J to toggle
   useEffect(() => {
+    if (!aiChatEnabled) return
     function handleKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === 'j') {
         e.preventDefault()
@@ -147,9 +155,9 @@ export function ChatPanel() {
     }
     window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
-  }, [])
+  }, [aiChatEnabled])
 
-  if (!open) return null
+  if (!aiChatEnabled || !open) return null
 
   const aiContext = data?.ai_context
 

@@ -1,10 +1,14 @@
-import { useState, useMemo, type MouseEvent } from 'react'
+import { Fragment, useState, useMemo, type MouseEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import type { DocglowColumn, ColumnProfile, TopValue, HistogramBin, ColumnLineageDependency, ColumnDownstreamDependency, ColumnLineageData, LineageBadgeConfig } from '../../types'
 import { useProjectStore } from '../../stores/projectStore'
 import { TestBadge } from '../tests/TestBadge'
 import { formatNumber, formatPercent } from '../../utils/formatting'
 import { ColumnTraceDrawer } from './ColumnTraceDrawer'
+import { ResponsiveTable } from '../ui/ResponsiveTable'
+import { normalizeTableLayoutConfig } from '../../utils/uiConfig'
+import { applyBadgeAbbreviation } from '../../utils/lineageBadgeAbbreviation'
 
 interface ColumnTableProps {
   columns: DocglowColumn[]
@@ -59,44 +63,7 @@ const DEFAULT_BADGE_CONFIG: LineageBadgeConfig = {
   max_model_chars: 30,
   max_column_chars: 22,
 }
-
-function middleEllipsis(s: string, max: number): string {
-  if (s.length <= max) return s
-  const keep = max - 1
-  const head = Math.ceil(keep * 0.55)
-  const tail = Math.floor(keep * 0.45)
-  return s.slice(0, head) + '…' + s.slice(-tail)
-}
-
-function smartAbbr(s: string, max: number): string {
-  if (s.length <= max) return s
-  const parts = s.split('_')
-  if (parts.length < 3) return middleEllipsis(s, max)
-  for (let n = 1; n < parts.length; n++) {
-    const head = parts.slice(0, n).map(p => p[0]).join('·')
-    const tail = parts.slice(n).join('_')
-    const candidate = head + '·' + tail
-    if (candidate.length <= max) return candidate
-  }
-  return middleEllipsis(s, max)
-}
-
-function truncateStart(s: string, max: number): string {
-  if (s.length <= max) return s
-  if (max <= 1) return '…'
-  return s.slice(0, max - 1) + '…'
-}
-
-/** Apply the configured abbreviation strategy. Returns the raw string for 'none'. */
-export function applyBadgeAbbreviation(s: string, max: number, strategy: LineageBadgeConfig['abbreviation']): string {
-  switch (strategy) {
-    case 'none':     return s
-    case 'truncate': return truncateStart(s, max)
-    case 'middle':   return middleEllipsis(s, max)
-    case 'smart':
-    default:         return smartAbbr(s, max)
-  }
-}
+const COMPACT_BADGE_MAX_CHARS = 36
 
 function NullBar({ rate }: { rate: number }) {
   const color = rate > 0.5 ? 'bg-danger' : rate > 0.1 ? 'bg-warning' : 'bg-success'
@@ -170,6 +137,7 @@ function LineageBadge({
   direction: 'upstream' | 'downstream'
 }) {
   const navigate = useNavigate()
+  const [hoverPanel, setHoverPanel] = useState<{ top: number; left: number } | null>(null)
   const badgeConfig = useProjectStore(s => s.data?.ui?.lineage_badge) ?? DEFAULT_BADGE_CONFIG
   const modelName = modelId.split('.').pop() ?? modelId
   const resourceType = modelId.split('.')[0] ?? 'model'
@@ -178,10 +146,14 @@ function LineageBadge({
   const colLabel = columns.length === 1 ? columns[0] : `{${columns.join(', ')}}`
   const modelDisplay = applyBadgeAbbreviation(modelName, badgeConfig.max_model_chars, badgeConfig.abbreviation)
   const colDisplay = applyBadgeAbbreviation(colLabel, badgeConfig.max_column_chars, badgeConfig.abbreviation)
-  // Only expand on hover when the compact form had to abbreviate or could not
-  // show the full text. Short names that render fully stay as static badges —
-  // expanding them just adds vertical noise with no new information.
-  const isAbbreviated = modelDisplay !== modelName || colDisplay !== colLabel
+  const fullBadgeText = `${modelName}.${colLabel}`
+  // Show the detail panel when either side was explicitly abbreviated, or when
+  // the combined badge text is too long to fit the fixed pill comfortably.
+  const needsDetailPanel =
+    modelDisplay !== modelName ||
+    colDisplay !== colLabel ||
+    fullBadgeText.length > COMPACT_BADGE_MAX_CHARS
+  const badgeLabel = `${direction === 'upstream' ? 'From' : 'To'}: ${modelId}; columns: ${columns.join(', ')}; type: ${transformation}`
 
   const commonButtonProps = {
     onClick: (e: MouseEvent) => {
@@ -189,7 +161,7 @@ function LineageBadge({
       const colAnchor = columns.length === 1 ? `#col-${columns[0].toLowerCase()}` : ''
       navigate(`/${navType}/${encodeURIComponent(modelId)}${colAnchor}`)
     },
-    title: `${direction === 'upstream' ? 'From' : 'To'}: ${modelId}\nColumns: ${columns.join(', ')}\nType: ${transformation}`,
+    'aria-label': badgeLabel,
     style: {
       background: style.bg,
       color: style.color,
@@ -197,12 +169,27 @@ function LineageBadge({
     },
   }
 
-  if (!isAbbreviated) {
+  const showHoverPanel = (element: HTMLElement) => {
+    const rect = element.getBoundingClientRect()
+    const longestLabel = Math.max(modelName.length, colLabel.length + 2)
+    const panelWidth = Math.min(360, Math.max(180, longestLabel * 7 + 36), window.innerWidth - 16)
+    const left = Math.min(
+      Math.max(8, rect.left),
+      Math.max(8, window.innerWidth - panelWidth - 8),
+    )
+    const belowTop = rect.bottom + 6
+    const top = belowTop > window.innerHeight - 140 && rect.top > 140
+      ? Math.max(8, rect.top - 126)
+      : belowTop
+    setHoverPanel({ top, left })
+  }
+
+  if (!needsDetailPanel) {
     return (
       <button
         {...commonButtonProps}
-        className="box-border max-w-[260px] inline-flex flex-row flex-nowrap items-center gap-1
-                   rounded border px-1.5 py-0.5 text-[11px] cursor-pointer text-left
+        className="box-border max-w-[min(260px,100%)] min-w-0 inline-flex flex-row flex-nowrap items-center gap-1
+                   rounded border px-1.5 py-0.5 text-[11px] overflow-hidden cursor-pointer text-left
                    transition-all hover:brightness-95"
       >
         {direction === 'upstream' && (
@@ -210,8 +197,8 @@ function LineageBadge({
             &#x2190;
           </span>
         )}
-        <span className="font-medium">{modelName}</span>
-        <span style={{ opacity: 0.7 }}>.{colLabel}</span>
+        <span className="min-w-0 truncate font-medium">{modelName}</span>
+        <span className="min-w-0 truncate" style={{ opacity: 0.7 }}>.{colLabel}</span>
         {direction === 'downstream' && (
           <span className="shrink-0" style={{ opacity: 0.6, fontSize: 11, lineHeight: 1 }}>
             &#x2192;
@@ -222,93 +209,72 @@ function LineageBadge({
   }
 
   return (
-    <button
-      {...commonButtonProps}
-      className="relative box-border max-w-[260px] inline-flex flex-row flex-nowrap items-center gap-1.5
-                 rounded border px-[7px] py-[3px] text-[11px] overflow-hidden cursor-pointer text-left
-                 transition-[padding,background-color,border-color,filter] duration-200 ease-out
-                 hover:brightness-95
-                 group-hover:flex group-hover:w-[260px] group-hover:flex-col group-hover:items-start
-                 group-hover:gap-0.5 group-hover:px-2 group-hover:pt-[5px] group-hover:pb-[6px]"
-    >
-      {direction === 'upstream' && (
-        <span
-          className="shrink-0 group-hover:hidden"
-          style={{ opacity: 0.6, fontSize: 11, lineHeight: 1 }}
-        >
-          &#x2190;
-        </span>
-      )}
+    <span className="group/lineage-badge relative inline-flex max-w-[min(260px,100%)] min-w-0 align-top">
+      <button
+        {...commonButtonProps}
+        onMouseEnter={(e) => showHoverPanel(e.currentTarget)}
+        onFocus={(e) => showHoverPanel(e.currentTarget)}
+        onMouseLeave={() => setHoverPanel(null)}
+        onBlur={() => setHoverPanel(null)}
+        className="box-border w-full max-w-[min(260px,100%)] min-w-0 inline-flex flex-row flex-nowrap items-center gap-1.5
+                   rounded border px-[7px] py-[3px] text-[11px] overflow-hidden cursor-pointer text-left
+                   transition-[background-color,border-color,filter] duration-200 ease-out
+                   hover:brightness-95"
+      >
+        {direction === 'upstream' && (
+          <span
+            className="shrink-0"
+            style={{ opacity: 0.6, fontSize: 11, lineHeight: 1 }}
+          >
+            &#x2190;
+          </span>
+        )}
 
-      {/* Model name: compact abbr crossfades into full name on row hover.
-          flex-1 gives the model line priority to absorb shrink pressure so a
-          short column label (e.g. "order_id") can render without truncation. */}
-      <span className="relative min-w-0 flex-1 overflow-hidden group-hover:w-full group-hover:flex-none">
-        <span
-          className="block font-medium whitespace-nowrap overflow-hidden text-ellipsis
-                     transition-opacity duration-200 group-hover:opacity-0"
-        >
+        <span className="min-w-0 flex-1 overflow-hidden font-medium whitespace-nowrap text-ellipsis">
           {modelDisplay}
         </span>
-        <span
-          className="absolute inset-x-0 top-0 block font-medium opacity-0 pointer-events-none
-                     whitespace-normal [overflow-wrap:anywhere] [word-break:normal]
-                     transition-opacity duration-200
-                     group-hover:static group-hover:opacity-100 group-hover:pointer-events-auto"
-        >
-          {modelName}
+        <span className="shrink-0" style={{ opacity: 0.7 }}>
+          .
         </span>
-      </span>
-
-      {/* Separator swap: compact shows a subtle "." prefix on the column;
-          expanded shows a returning ↳ glyph on a new line. */}
-      <span
-        className="shrink-0 group-hover:hidden"
-        style={{ opacity: 0.7 }}
-      >
-        .
-      </span>
-      <span
-        className="hidden shrink-0 group-hover:inline"
-        style={{ opacity: 0.6, fontSize: 11, lineHeight: 1, marginRight: 2 }}
-      >
-        &#x21b3;
-      </span>
-
-      {/* Column label: compact shows abbr and truncates; expanded swaps to the
-          full name and wraps on word boundaries */}
-      <span
-        className="relative min-w-0 flex-initial max-w-[60%] overflow-hidden whitespace-nowrap text-ellipsis
-                   group-hover:whitespace-normal group-hover:[overflow-wrap:anywhere]
-                   group-hover:[word-break:normal] group-hover:flex-none
-                   group-hover:max-w-none group-hover:w-full group-hover:overflow-visible"
-        style={{ opacity: 0.7 }}
-      >
         <span
-          className="block whitespace-nowrap overflow-hidden text-ellipsis
-                     transition-opacity duration-200 group-hover:opacity-0"
+          className="min-w-0 flex-initial max-w-[60%] overflow-hidden whitespace-nowrap text-ellipsis"
+          style={{ opacity: 0.7 }}
         >
           {colDisplay}
         </span>
-        <span
-          className="absolute inset-x-0 top-0 block opacity-0 pointer-events-none
-                     whitespace-normal [overflow-wrap:anywhere] [word-break:normal]
-                     transition-opacity duration-200
-                     group-hover:static group-hover:opacity-100 group-hover:pointer-events-auto"
-        >
-          {colLabel}
-        </span>
-      </span>
 
-      {direction === 'downstream' && (
-        <span
-          className="shrink-0 group-hover:hidden"
-          style={{ opacity: 0.6, fontSize: 11, lineHeight: 1 }}
+        {direction === 'downstream' && (
+          <span
+            className="shrink-0"
+            style={{ opacity: 0.6, fontSize: 11, lineHeight: 1 }}
+          >
+            &#x2192;
+          </span>
+        )}
+      </button>
+      {hoverPanel && typeof document !== 'undefined' && createPortal(
+        <div
+          data-testid="lineage-badge-detail"
+          className="fixed z-[9999] w-fit min-w-[180px] max-w-[min(360px,calc(100vw-16px))]
+                     rounded border bg-[var(--bg)] px-2.5 py-2 text-[11px]
+                     text-[var(--text)] shadow-xl ring-1 ring-black/5"
+          style={{
+            top: hoverPanel.top,
+            left: hoverPanel.left,
+            borderColor: `${style.color}40`,
+          }}
         >
-          &#x2192;
-        </span>
+          <div className="font-medium [overflow-wrap:anywhere]" style={{ color: style.color }}>
+            {modelName}
+          </div>
+          <div className="mt-1 flex gap-1 [overflow-wrap:anywhere]">
+            <span className="shrink-0" style={{ color: style.color }}>&#x21b3;</span>
+            <span>{colLabel}</span>
+          </div>
+        </div>,
+        document.body,
       )}
-    </button>
+    </span>
   )
 }
 
@@ -356,10 +322,10 @@ function LineageCell({
   const hiddenDown = downstreamGrouped.length - MAX_BADGES_PER_DIRECTION
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex max-w-full min-w-0 flex-col gap-1">
       {/* Upstream badges */}
       {hasUp && (
-        <div className="flex flex-wrap gap-1 items-center">
+        <div className="flex min-w-0 flex-wrap gap-1 items-center">
           {visibleUp.map(([modelId, modelDeps]) => (
             <LineageBadge
               key={`up-${modelId}`}
@@ -382,7 +348,7 @@ function LineageCell({
 
       {/* Downstream badges */}
       {hasDown && (
-        <div className="flex flex-wrap gap-1 items-center">
+        <div className="flex min-w-0 flex-wrap gap-1 items-center">
           {visibleDown.map(([modelId, modelDeps]) => (
             <LineageBadge
               key={`down-${modelId}`}
@@ -519,27 +485,148 @@ function ProfileDetail({ profile }: { profile: ColumnProfile }) {
   )
 }
 
-/** Approximate monospace ch-width for the column name, capped at 30ch */
-const MAX_NAME_CH = 30
-const MIN_NAME_CH = 12
-const CH_PX = 7.2 // approximate px per monospace character at text-xs
+const CH_PX = 7.2
+const BADGE_CH_PX = 6.8
+const CELL_X_PADDING = 32
+const CHEVRON_WIDTH = 16
+const DESCRIPTION_MIN_WIDTH = 340
+
+const FALLBACK_COLUMN_WIDTHS = {
+  column: 220,
+  type: 160,
+  lineage: 360,
+  nulls: 120,
+  distinct: 96,
+  tests: 120,
+}
+
+const MIN_CONTENT_SIZED_WIDTHS = {
+  column: 160,
+  type: 112,
+  lineage: 280,
+  tests: 120,
+}
+
+function clampWidth(value: number, min: number, max: number): number {
+  return Math.ceil(Math.max(min, Math.min(max, value)))
+}
+
+function maxStringLength(values: readonly string[]): number {
+  return values.reduce((max, value) => Math.max(max, value.length), 0)
+}
+
+function estimateTestsWidth(columns: readonly DocglowColumn[]): number {
+  const widest = columns.reduce((max, column) => {
+    if (column.tests.length === 0) return max
+    const width = column.tests.reduce((sum, test, index) => {
+      const gap = index === 0 ? 0 : 4
+      return sum + gap + test.test_type.length * BADGE_CH_PX + 20
+    }, 0)
+    return Math.max(max, width)
+  }, 0)
+  return widest + CELL_X_PADDING
+}
+
+function modelNameFromId(modelId: string): string {
+  return modelId.split('.').pop() ?? modelId
+}
+
+function estimateLineageWidth(
+  columnLineage?: Record<string, ColumnLineageDependency[]>,
+  columnDownstream?: Record<string, ColumnDownstreamDependency[]>,
+): number {
+  const labels: string[] = []
+  for (const deps of Object.values(columnLineage ?? {})) {
+    for (const dep of deps) {
+      labels.push(`${modelNameFromId(dep.source_model)}.${dep.source_column}`)
+    }
+  }
+  for (const deps of Object.values(columnDownstream ?? {})) {
+    for (const dep of deps) {
+      labels.push(`${modelNameFromId(dep.target_model)}.${dep.target_column}`)
+    }
+  }
+  return maxStringLength(labels) * BADGE_CH_PX + CELL_X_PADDING + 28
+}
 
 export function ColumnTable({ columns, columnLineage, columnDownstream, modelId, columnLineageData }: ColumnTableProps) {
   const [expandedCol, setExpandedCol] = useState<string | null>(null)
   const [traceColumn, setTraceColumn] = useState<string | null>(null)
+  const rawTableLayout = useProjectStore(s => s.data?.ui?.table_layout)
+  const tableLayout = normalizeTableLayoutConfig(rawTableLayout)
   const canTrace = modelId != null && columnLineageData != null
   const hasAnyProfile = columns.some(c => c.profile != null)
   const hasAnyLineage = (columnLineage != null && Object.keys(columnLineage).length > 0)
     || (columnDownstream != null && Object.keys(columnDownstream).length > 0)
 
-  // Compute a consistent name column width based on the longest name (capped)
-  const nameColWidth = useMemo(() => {
-    if (columns.length === 0) return MIN_NAME_CH * CH_PX
-    const longest = Math.max(...columns.map(c => c.name.length))
-    const chars = Math.min(Math.max(longest, MIN_NAME_CH), MAX_NAME_CH)
-    // +4 for the expand chevron space, +32 for padding
-    return chars * CH_PX + 4 + 32
-  }, [columns])
+  const layout = useMemo(() => {
+    const contentSized = new Set(tableLayout.content_sized_columns)
+    const maxContentWidth = Math.max(tableLayout.content_sized_max_width, 1)
+    const sized = (
+      key: string,
+      preferred: number,
+      fallback: number,
+      min: number,
+    ) => contentSized.has(key)
+      ? clampWidth(preferred, min, Math.max(maxContentWidth, min))
+      : fallback
+
+    const columnPreferred = maxStringLength(columns.map(c => c.name)) * CH_PX
+      + CELL_X_PADDING
+      + CHEVRON_WIDTH
+    const typePreferred = maxStringLength(
+      columns.flatMap(c => [c.data_type || '—', c.insights?.semantic_type ?? '']),
+    ) * CH_PX + CELL_X_PADDING
+    const testsPreferred = estimateTestsWidth(columns)
+    const lineagePreferred = estimateLineageWidth(columnLineage, columnDownstream)
+
+    const columnWidth = sized(
+      'column',
+      columnPreferred,
+      FALLBACK_COLUMN_WIDTHS.column,
+      MIN_CONTENT_SIZED_WIDTHS.column,
+    )
+    const typeWidth = sized(
+      'type',
+      typePreferred,
+      FALLBACK_COLUMN_WIDTHS.type,
+      MIN_CONTENT_SIZED_WIDTHS.type,
+    )
+    const lineageWidth = sized(
+      'lineage',
+      lineagePreferred,
+      FALLBACK_COLUMN_WIDTHS.lineage,
+      MIN_CONTENT_SIZED_WIDTHS.lineage,
+    )
+    const testsWidth = sized(
+      'tests',
+      testsPreferred,
+      FALLBACK_COLUMN_WIDTHS.tests,
+      MIN_CONTENT_SIZED_WIDTHS.tests,
+    )
+    const tableMinWidth = columnWidth
+      + typeWidth
+      + DESCRIPTION_MIN_WIDTH
+      + testsWidth
+      + (hasAnyLineage ? lineageWidth : 0)
+      + (hasAnyProfile ? FALLBACK_COLUMN_WIDTHS.nulls + FALLBACK_COLUMN_WIDTHS.distinct : 0)
+
+    return {
+      columnWidth,
+      typeWidth,
+      lineageWidth,
+      testsWidth,
+      tableMinWidth,
+    }
+  }, [
+    columns,
+    columnDownstream,
+    columnLineage,
+    hasAnyLineage,
+    hasAnyProfile,
+    tableLayout.content_sized_columns,
+    tableLayout.content_sized_max_width,
+  ])
 
   const totalCols = 4
     + (hasAnyProfile ? 2 : 0)
@@ -550,25 +637,25 @@ export function ColumnTable({ columns, columnLineage, columnDownstream, modelId,
   }
 
   return (
-    <div className="border border-[var(--border)] rounded-lg overflow-hidden">
-      <table className="w-full text-sm table-fixed">
+    <>
+      <ResponsiveTable defaultMinWidth={layout.tableMinWidth} tableClassName="table-fixed">
         <colgroup>
-          <col style={{ width: nameColWidth }} />
-          <col style={{ width: 160 }} />
+          <col style={{ width: layout.columnWidth }} />
+          <col style={{ width: layout.typeWidth }} />
           <col />
-          {hasAnyLineage && <col style={{ width: 320 }} />}
+          {hasAnyLineage && <col style={{ width: layout.lineageWidth }} />}
           {hasAnyProfile && (
             <>
-              <col style={{ width: 120 }} />
-              <col style={{ width: 80 }} />
+              <col style={{ width: FALLBACK_COLUMN_WIDTHS.nulls }} />
+              <col style={{ width: FALLBACK_COLUMN_WIDTHS.distinct }} />
             </>
           )}
-          <col style={{ width: 100 }} />
+          <col style={{ width: layout.testsWidth }} />
         </colgroup>
         <thead className="bg-[var(--bg-surface)]">
           <tr>
-            <th className="text-left px-4 py-2 font-medium">Column</th>
-            <th className="text-left px-4 py-2 font-medium">Type</th>
+            <th className="text-left px-4 py-2 font-medium whitespace-nowrap">Column</th>
+            <th className="text-left px-4 py-2 font-medium whitespace-nowrap">Type</th>
             <th className="text-left px-4 py-2 font-medium">Description</th>
             {hasAnyLineage && (
               <th className="text-left px-4 py-2 font-medium">
@@ -582,7 +669,7 @@ export function ColumnTable({ columns, columnLineage, columnDownstream, modelId,
                 <th className="text-right px-4 py-2 font-medium">Distinct</th>
               </>
             )}
-            <th className="text-left px-4 py-2 font-medium">Tests</th>
+            <th className="text-left px-4 py-2 font-medium whitespace-nowrap">Tests</th>
           </tr>
         </thead>
         <tbody>
@@ -592,19 +679,15 @@ export function ColumnTable({ columns, columnLineage, columnDownstream, modelId,
             const upDeps = columnLineage?.[col.name]
             const downDeps = columnDownstream?.[col.name]
             return (
-              <tr key={col.name} id={`col-${col.name}`} className="group">
-                <td colSpan={totalCols} className="p-0">
-                  <div
-                    className={`flex items-center border-t border-[var(--border)]
-                      ${canExpand ? 'cursor-pointer hover:bg-[var(--bg-surface)]' : ''}
-                      ${isExpanded ? 'bg-[var(--bg-surface)]' : ''}`}
-                    onClick={() => canExpand && setExpandedCol(isExpanded ? null : col.name)}
-                  >
-                    {/* Column name */}
-                    <div
-                      className="px-4 py-2 font-mono text-xs font-medium shrink-0 flex items-start min-w-0"
-                      style={{ width: nameColWidth }}
-                    >
+              <Fragment key={col.name}>
+                <tr
+                  id={`col-${col.name}`}
+                  className={`group ${canExpand ? 'cursor-pointer hover:bg-[var(--bg-surface)]' : ''}
+                    ${isExpanded ? 'bg-[var(--bg-surface)]' : ''}`}
+                  onClick={() => canExpand && setExpandedCol(isExpanded ? null : col.name)}
+                >
+                  <td className="border-t border-[var(--border)] align-top px-4 py-2 font-mono text-xs font-medium">
+                    <div className="flex min-w-0 items-start">
                       {canExpand && (
                         <svg
                           className={`w-3 h-3 shrink-0 mr-1 mt-0.5 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
@@ -615,8 +698,11 @@ export function ColumnTable({ columns, columnLineage, columnDownstream, modelId,
                                 clipRule="evenodd" />
                         </svg>
                       )}
-                      <div>
-                        <span style={{ wordBreak: 'break-all' }}>
+                      <div className="min-w-0">
+                        <span
+                          className="block [overflow-wrap:anywhere] [word-break:normal]"
+                          title={col.name}
+                        >
                           {col.name}
                         </span>
                         {col.insights?.role && (
@@ -626,47 +712,51 @@ export function ColumnTable({ columns, columnLineage, columnDownstream, modelId,
                         )}
                       </div>
                     </div>
+                  </td>
 
-                    {/* Type + semantic type */}
-                    <div
-                      className="px-4 py-2 font-mono text-xs text-[var(--text-muted)] uppercase shrink-0"
-                      style={{ width: 160 }}
-                    >
-                      <div>{col.data_type || '—'}</div>
-                      {col.insights?.semantic_type && (
-                        <div className="text-[9px] normal-case opacity-60 mt-0.5">
-                          {col.insights.semantic_type}
-                        </div>
-                      )}
+                  <td className="border-t border-[var(--border)] align-top px-4 py-2 font-mono text-xs text-[var(--text-muted)] uppercase [overflow-wrap:anywhere]">
+                    <div title={col.data_type || '—'}>
+                      {col.data_type || '—'}
                     </div>
+                    {col.insights?.semantic_type && (
+                      <div
+                        className="text-[9px] normal-case opacity-60 mt-0.5"
+                        title={col.insights.semantic_type}
+                      >
+                        {col.insights.semantic_type}
+                      </div>
+                    )}
+                  </td>
 
-                    {/* Description + insights */}
-                    <div className="px-4 py-2 flex-1 min-w-0">
-                      {col.description ? (
-                        <span className="text-sm block">
-                          {col.description}
-                          {col.insights?.generated_description && col.description === col.insights.generated_description && (
-                            <span className="ml-1.5 text-[9px] text-[var(--text-muted)] opacity-60 font-medium uppercase">auto</span>
-                          )}
-                        </span>
-                      ) : (
-                        <span className="text-sm text-[var(--text-muted)] italic">No description</span>
-                      )}
-                      {col.insights?.sql_usage && col.insights.sql_usage.length > 0 && !col.insights.sql_usage.every(u => u === 'selected_only') && (
-                        <div className="flex gap-1 mt-0.5">
-                          {col.insights.sql_usage.filter(u => u !== 'selected_only').map(usage => (
-                            <span key={usage} className="text-[9px] text-[var(--text-muted)] opacity-70">
-                              {usage.replace('_', ' ')}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                  <td className="border-t border-[var(--border)] align-top px-4 py-2 min-w-0">
+                    {col.description ? (
+                      <span
+                        title={col.description}
+                        className="text-sm leading-snug block [overflow-wrap:anywhere]"
+                      >
+                        {col.description}
+                        {col.insights?.generated_description && col.description === col.insights.generated_description && (
+                          <span className="ml-1.5 text-[9px] text-[var(--text-muted)] opacity-60 font-medium uppercase">auto</span>
+                        )}
+                      </span>
+                    ) : (
+                      <span className="text-sm text-[var(--text-muted)] italic">No description</span>
+                    )}
+                    {col.insights?.sql_usage && col.insights.sql_usage.length > 0 && !col.insights.sql_usage.every(u => u === 'selected_only') && (
+                      <div className="flex flex-wrap gap-1 mt-0.5">
+                        {col.insights.sql_usage.filter(u => u !== 'selected_only').map(usage => (
+                          <span key={usage} className="text-[9px] text-[var(--text-muted)] opacity-70">
+                            {usage.replace('_', ' ')}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </td>
 
-                    {/* Unified lineage cell */}
-                    {hasAnyLineage && (
-                      <div className="px-4 py-1.5 shrink-0 flex items-center gap-1.5" style={{ width: 320 }}>
-                        <div className="flex-1 min-w-0">
+                  {hasAnyLineage && (
+                    <td className="border-t border-[var(--border)] align-top px-4 py-1.5 min-w-0">
+                      <div className="flex min-w-0 items-start gap-1.5">
+                        <div className="min-w-0 flex-1">
                           <LineageCell upstream={upDeps} downstream={downDeps} />
                         </div>
                         {canTrace && (upDeps || downDeps) && (
@@ -686,53 +776,57 @@ export function ColumnTable({ columns, columnLineage, columnDownstream, modelId,
                           </button>
                         )}
                       </div>
-                    )}
-
-                    {hasAnyProfile && (
-                      <>
-                        <div className="px-4 py-2 shrink-0" style={{ width: 120 }}>
-                          {col.profile ? (
-                            <NullBar rate={col.profile.null_rate} />
-                          ) : (
-                            <span className="text-[var(--text-muted)]">—</span>
-                          )}
-                        </div>
-                        <div className="px-4 py-2 text-right shrink-0" style={{ width: 80 }}>
-                          {col.profile ? (
-                            <span className="text-xs" title={`${col.profile.distinct_count} distinct`}>
-                              {formatNumber(col.profile.distinct_count)}
-                              {col.profile.is_unique && (
-                                <span className="ml-1 text-success text-[10px]">U</span>
-                              )}
-                            </span>
-                          ) : (
-                            <span className="text-[var(--text-muted)]">—</span>
-                          )}
-                        </div>
-                      </>
-                    )}
-
-                    <div className="px-4 py-2 shrink-0" style={{ width: 100 }}>
-                      {col.tests.length > 0 ? (
-                        <div className="flex gap-1 flex-wrap">
-                          {col.tests.map((test, i) => (
-                            <TestBadge key={i} status={test.status} label={test.test_type} />
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="text-[var(--text-muted)]">—</span>
-                      )}
-                    </div>
-                  </div>
-                  {isExpanded && col.profile && (
-                    <ProfileDetail profile={col.profile} />
+                    </td>
                   )}
-                </td>
-              </tr>
+
+                  {hasAnyProfile && (
+                    <>
+                      <td className="border-t border-[var(--border)] align-top px-4 py-2">
+                        {col.profile ? (
+                          <NullBar rate={col.profile.null_rate} />
+                        ) : (
+                          <span className="text-[var(--text-muted)]">—</span>
+                        )}
+                      </td>
+                      <td className="border-t border-[var(--border)] align-top px-4 py-2 text-right">
+                        {col.profile ? (
+                          <span className="text-xs" title={`${col.profile.distinct_count} distinct`}>
+                            {formatNumber(col.profile.distinct_count)}
+                            {col.profile.is_unique && (
+                              <span className="ml-1 text-success text-[10px]">U</span>
+                            )}
+                          </span>
+                        ) : (
+                          <span className="text-[var(--text-muted)]">—</span>
+                        )}
+                      </td>
+                    </>
+                  )}
+
+                  <td className="border-t border-[var(--border)] align-top px-4 py-2">
+                    {col.tests.length > 0 ? (
+                      <div className="flex min-w-0 flex-wrap gap-1">
+                        {col.tests.map((test, i) => (
+                          <TestBadge key={i} status={test.status} label={test.test_type} />
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-[var(--text-muted)]">—</span>
+                    )}
+                  </td>
+                </tr>
+                {isExpanded && col.profile && (
+                  <tr className="bg-[var(--bg-surface)]">
+                    <td colSpan={totalCols} className="p-0">
+                      <ProfileDetail profile={col.profile} />
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
             )
           })}
         </tbody>
-      </table>
+      </ResponsiveTable>
       {traceColumn && canTrace && (
         <ColumnTraceDrawer
           modelId={modelId}
@@ -741,6 +835,6 @@ export function ColumnTable({ columns, columnLineage, columnDownstream, modelId,
           onClose={() => setTraceColumn(null)}
         />
       )}
-    </div>
+    </>
   )
 }

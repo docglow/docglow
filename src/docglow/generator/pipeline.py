@@ -487,6 +487,21 @@ def context_to_dict(ctx: PipelineContext) -> dict[str, Any]:
                 "max_model_chars": ctx.ui_config.lineage_badge.max_model_chars,
                 "max_column_chars": ctx.ui_config.lineage_badge.max_column_chars,
             },
+            "sidebar": {
+                "default_width": ctx.ui_config.sidebar.default_width,
+                "min_width": ctx.ui_config.sidebar.min_width,
+                "max_width": ctx.ui_config.sidebar.max_width,
+                "resizable": ctx.ui_config.sidebar.resizable,
+            },
+            "table_layout": {
+                "mode": ctx.ui_config.table_layout.mode,
+                "min_width": ctx.ui_config.table_layout.min_width,
+                "content_sized_columns": list(ctx.ui_config.table_layout.content_sized_columns),
+                "content_sized_max_width": ctx.ui_config.table_layout.content_sized_max_width,
+            },
+            "content_layout": {
+                "max_width": ctx.ui_config.content_layout.max_width,
+            },
         },
     }
     # DOC-214: serialize relationships only when ERD is enabled. Byte-identical

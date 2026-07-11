@@ -7,6 +7,9 @@ export function Header() {
   const { setOpen } = useSearchStore()
   const projectName = data?.metadata.project_name ?? 'docglow'
   const homeHref = import.meta.env.BASE_URL
+  const aiChatEnabled = data?.metadata.ai_enabled === true
+    || data?.metadata.features?.ai_chat === true
+    || data?.ai_context != null
 
   return (
     <header className="h-14 border-b border-[var(--border)] bg-[var(--bg)] flex items-center px-4 gap-4 shrink-0">
@@ -34,16 +37,18 @@ export function Header() {
         </kbd>
       </button>
 
-      <button
-        onClick={() => useChatStore.getState().toggleOpen()}
-        className="p-2 rounded-lg hover:bg-[var(--bg-surface)] transition-colors cursor-pointer"
-        title="AI Chat (Ctrl+J)"
-      >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-        </svg>
-      </button>
+      {aiChatEnabled && (
+        <button
+          onClick={() => useChatStore.getState().toggleOpen()}
+          className="p-2 rounded-lg hover:bg-[var(--bg-surface)] transition-colors cursor-pointer"
+          title="AI Chat (Ctrl+J)"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+          </svg>
+        </button>
+      )}
 
       <button
         onClick={toggleTheme}

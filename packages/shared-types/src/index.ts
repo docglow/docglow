@@ -67,11 +67,15 @@ export type {
   AiCompactSource,
   AiContext,
   AiHealthSummary,
+  ContentLayoutConfig,
   DocglowData,
   DocglowMetadata,
   HostedFeatures,
   LineageBadgeAbbreviation,
   LineageBadgeConfig,
+  SidebarConfig,
+  TableLayoutConfig,
+  TableLayoutMode,
   UiConfig,
 } from "./site.js";
 
