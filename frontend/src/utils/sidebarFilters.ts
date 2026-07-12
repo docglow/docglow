@@ -9,11 +9,13 @@ export interface SidebarTreeNode {
   children: Map<string, SidebarTreeNode>
 }
 
-/** Collect and deduplicate all tags from models, sources, and exposures, sorted alphabetically. */
+/** Collect and deduplicate all tags from models, sources, exposures, seeds, and snapshots, sorted alphabetically. */
 export function collectAllTags(
   models: Record<string, DocglowModel>,
   sources: Record<string, DocglowSource>,
   exposures: Record<string, DocglowExposure> = {},
+  seeds: Record<string, DocglowModel> = {},
+  snapshots: Record<string, DocglowModel> = {},
 ): string[] {
   const tags = new Set<string>()
   for (const m of Object.values(models)) {
@@ -24,6 +26,12 @@ export function collectAllTags(
   }
   for (const exposure of Object.values(exposures)) {
     for (const tag of exposure.tags) tags.add(tag)
+  }
+  for (const seed of Object.values(seeds)) {
+    for (const tag of seed.tags) tags.add(tag)
+  }
+  for (const snapshot of Object.values(snapshots)) {
+    for (const tag of snapshot.tags) tags.add(tag)
   }
   return [...tags].sort()
 }
