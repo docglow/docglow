@@ -6,7 +6,7 @@ from docglow.analyzer.complexity import analyze_complexity
 from docglow.analyzer.coverage import compute_coverage
 from docglow.analyzer.health import compute_health, health_to_dict
 from docglow.analyzer.naming import check_naming
-from docglow.config import ComplexityThresholds, NamingRules
+from docglow.config import ComplexityThresholds, NamingRules, UiConfig
 
 
 def _make_model(
@@ -503,6 +503,85 @@ class TestHealthPackageExclusion:
         health = ctx.health
         assert health["coverage"]["models_tested"]["total"] == 1
         assert health["coverage"]["models_tested"]["covered"] == 1
+
+
+    def test_context_to_dict_excludes_packages(self) -> None:
+        """context_to_dict should filter package models from output."""
+        from unittest.mock import MagicMock
+
+        from docglow.generator.pipeline import PipelineContext, context_to_dict
+
+        ctx = MagicMock(spec=PipelineContext)
+        ctx.exclude_packages = True
+        ctx.enable_erd = False
+        ctx.models = {
+            "model.my_project.orders": {
+                **_make_model(uid="model.my_project.orders", name="orders"),
+                "is_package": False,
+            },
+            "model.dbt_utils.helper": {
+                **_make_model(uid="model.dbt_utils.helper", name="helper"),
+                "is_package": True,
+            },
+        }
+        ctx.sources = {}
+        ctx.seeds = {
+            "seed.my_project.countries": {"is_package": False},
+            "seed.dbt_utils.ref": {"is_package": True},
+        }
+        ctx.snapshots = {}
+        ctx.exposures = {}
+        ctx.metrics = {}
+        ctx.lineage = {}
+        ctx.health = {}
+        ctx.search_index = {}
+        ctx.ai_context = None
+        ctx.column_lineage = None
+        ctx.metadata = {}
+        ctx.ui_config = UiConfig()
+
+        result = context_to_dict(ctx)
+
+        assert "model.my_project.orders" in result["models"]
+        assert "model.dbt_utils.helper" not in result["models"]
+        assert "seed.my_project.countries" in result["seeds"]
+        assert "seed.dbt_utils.ref" not in result["seeds"]
+
+    def test_context_to_dict_includes_packages_when_disabled(self) -> None:
+        """When exclude_packages is False, package models stay in output."""
+        from unittest.mock import MagicMock
+
+        from docglow.generator.pipeline import PipelineContext, context_to_dict
+
+        ctx = MagicMock(spec=PipelineContext)
+        ctx.exclude_packages = False
+        ctx.enable_erd = False
+        ctx.models = {
+            "model.my_project.orders": {
+                **_make_model(uid="model.my_project.orders", name="orders"),
+                "is_package": False,
+            },
+            "model.dbt_utils.helper": {
+                **_make_model(uid="model.dbt_utils.helper", name="helper"),
+                "is_package": True,
+            },
+        }
+        ctx.sources = {}
+        ctx.seeds = {}
+        ctx.snapshots = {}
+        ctx.exposures = {}
+        ctx.metrics = {}
+        ctx.lineage = {}
+        ctx.health = {}
+        ctx.search_index = {}
+        ctx.ai_context = None
+        ctx.column_lineage = None
+        ctx.metadata = {}
+        ctx.ui_config = UiConfig()
+
+        result = context_to_dict(ctx)
+
+        assert len(result["models"]) == 2
 
 
 class TestHealthIntegration:

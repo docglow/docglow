@@ -402,16 +402,16 @@ class TestPackageFiltering:
         node_ids = {n["id"] for n in lineage["nodes"]}
         assert "model.jaffle_shop.orders" in node_ids
 
-    def test_package_models_still_in_models_dict(self, tmp_path: Path) -> None:
-        """Package models should still appear in the models dict (for the model list)."""
+    def test_package_models_excluded_from_models_dict(self, tmp_path: Path) -> None:
+        """Package models should be excluded from the output models dict."""
         data = _load_fixtures_with_packages(tmp_path)
 
-        assert "model.dbt_utils.surrogate_key" in data["models"]
-        assert "model.elementary.schema_changes" in data["models"]
+        assert "model.dbt_utils.surrogate_key" not in data["models"]
+        assert "model.elementary.schema_changes" not in data["models"]
 
-    def test_package_models_have_is_package_true(self, tmp_path: Path) -> None:
-        """Package models should have is_package=True in the models dict."""
-        data = _load_fixtures_with_packages(tmp_path)
+    def test_package_models_included_when_exclude_packages_false(self, tmp_path: Path) -> None:
+        """Package models should appear with is_package=True when not excluded."""
+        data = _load_fixtures_with_packages(tmp_path, exclude_packages=False)
 
         assert data["models"]["model.dbt_utils.surrogate_key"]["is_package"] is True
         assert data["models"]["model.elementary.schema_changes"]["is_package"] is True
