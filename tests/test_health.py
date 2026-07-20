@@ -466,6 +466,44 @@ class TestHealthPackageExclusion:
         health = ctx.health
         assert health["coverage"]["models_tested"]["total"] == 2
 
+    def test_stage_excludes_ephemeral_from_testing(self) -> None:
+        """Ephemeral models should not count toward test coverage."""
+        from unittest.mock import MagicMock
+
+        from docglow.generator.pipeline import PipelineContext, stage_compute_health
+
+        ctx = MagicMock(spec=PipelineContext)
+        ctx.exclude_packages = True
+        ctx.models = {
+            "model.my_project.orders": {
+                **_make_model(
+                    uid="model.my_project.orders",
+                    name="orders",
+                    description="yes",
+                    test_results=[{"status": "pass"}],
+                    referenced_by=["x"],
+                ),
+                "is_package": False,
+            },
+            "model.my_project.helper_cte": {
+                **_make_model(
+                    uid="model.my_project.helper_cte",
+                    name="helper_cte",
+                    materialization="ephemeral",
+                ),
+                "is_package": False,
+            },
+        }
+        ctx.sources = {}
+        ctx.seeds = {}
+        ctx.snapshots = {}
+
+        stage_compute_health(ctx)
+
+        health = ctx.health
+        assert health["coverage"]["models_tested"]["total"] == 1
+        assert health["coverage"]["models_tested"]["covered"] == 1
+
 
 class TestHealthIntegration:
     """Test health with real fixture data via build_docglow_data."""

@@ -297,6 +297,8 @@ def stage_compute_health(ctx: PipelineContext) -> None:
         seeds = ctx.seeds
         snapshots = ctx.snapshots
 
+    models = {uid: m for uid, m in models.items() if m.get("materialization") != "ephemeral"}
+
     report = compute_health(models, ctx.sources, seeds, snapshots)
     ctx.health = health_to_dict(report)
 
