@@ -325,6 +325,18 @@ class TestHealthScore:
         assert "m1" in orphan_ids
         assert "m2" not in orphan_ids
 
+    def test_ephemeral_models_excluded_from_orphans(self) -> None:
+        """Ephemeral models compile to CTEs and produce no warehouse artifact,
+        so they should not be flagged as orphans."""
+        models = {
+            "m1": _make_model(referenced_by=[], materialization="ephemeral"),
+            "m2": _make_model(uid="m2", name="m2", referenced_by=[]),
+        }
+        report = compute_health(models, {}, {}, {})
+        orphan_ids = [o["unique_id"] for o in report.orphan_models]
+        assert "model.pkg.test_model" not in orphan_ids
+        assert "m2" in orphan_ids
+
     def test_freshness_score_no_monitored_sources(self) -> None:
         """When no sources have freshness monitoring, freshness is N/A (0.0)
         and its weight is redistributed to other dimensions."""
@@ -352,6 +364,107 @@ class TestHealthScore:
         }
         report = compute_health({}, sources, {}, {})
         assert 50 < report.score.freshness < 100
+
+
+class TestHealthPackageExclusion:
+    """Test that package models are excluded from health scoring."""
+
+    def test_package_models_excluded_from_testing_score(self) -> None:
+        """Package models should not count toward test coverage."""
+        project_model = _make_model(
+            uid="model.my_project.orders",
+            name="orders",
+            description="documented",
+            test_results=[{"status": "pass"}],
+            columns=[{"name": "id", "description": "pk", "tests": [{"test_name": "t"}]}],
+            referenced_by=["x"],
+        )
+        package_model = _make_model(
+            uid="model.dbt_utils.helper",
+            name="helper",
+        )
+        # With package model included, coverage drops
+        all_models = {
+            "model.my_project.orders": {**project_model, "is_package": False},
+            "model.dbt_utils.helper": {**package_model, "is_package": True},
+        }
+        report_with_pkg = compute_health(all_models, {}, {}, {})
+
+        # Without package model, coverage is 100%
+        project_only = {
+            "model.my_project.orders": {**project_model, "is_package": False},
+        }
+        report_without_pkg = compute_health(project_only, {}, {}, {})
+
+        assert report_without_pkg.score.testing > report_with_pkg.score.testing
+
+    def test_stage_filters_packages_when_enabled(self) -> None:
+        """stage_compute_health should filter out is_package models."""
+        from unittest.mock import MagicMock
+
+        from docglow.generator.pipeline import PipelineContext, stage_compute_health
+
+        ctx = MagicMock(spec=PipelineContext)
+        ctx.exclude_packages = True
+        ctx.models = {
+            "model.my_project.orders": {
+                **_make_model(
+                    uid="model.my_project.orders",
+                    name="orders",
+                    description="yes",
+                    test_results=[{"status": "pass"}],
+                    referenced_by=["x"],
+                ),
+                "is_package": False,
+            },
+            "model.dbt_utils.helper": {
+                **_make_model(uid="model.dbt_utils.helper", name="helper"),
+                "is_package": True,
+            },
+        }
+        ctx.sources = {}
+        ctx.seeds = {}
+        ctx.snapshots = {}
+
+        stage_compute_health(ctx)
+
+        health = ctx.health
+        # Only 1 model should be evaluated (the project model), not 2
+        assert health["coverage"]["models_tested"]["total"] == 1
+        assert health["coverage"]["models_tested"]["covered"] == 1
+
+    def test_stage_includes_packages_when_disabled(self) -> None:
+        """When exclude_packages is False, package models are included."""
+        from unittest.mock import MagicMock
+
+        from docglow.generator.pipeline import PipelineContext, stage_compute_health
+
+        ctx = MagicMock(spec=PipelineContext)
+        ctx.exclude_packages = False
+        ctx.models = {
+            "model.my_project.orders": {
+                **_make_model(
+                    uid="model.my_project.orders",
+                    name="orders",
+                    description="yes",
+                    test_results=[{"status": "pass"}],
+                    referenced_by=["x"],
+                ),
+                "is_package": False,
+            },
+            "model.dbt_utils.helper": {
+                **_make_model(uid="model.dbt_utils.helper", name="helper"),
+                "is_package": True,
+            },
+        }
+        ctx.sources = {}
+        ctx.seeds = {}
+        ctx.snapshots = {}
+
+        stage_compute_health(ctx)
+
+        health = ctx.health
+        assert health["coverage"]["models_tested"]["total"] == 2
 
 
 class TestHealthIntegration:

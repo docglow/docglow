@@ -78,6 +78,8 @@ def _find_orphans(
     orphans: list[dict[str, Any]] = []
 
     for uid, model in all_models.items():
+        if model.get("materialization") == "ephemeral":
+            continue
         referenced_by = model.get("referenced_by", [])
         if len(referenced_by) == 0:
             orphans.append(

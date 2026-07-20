@@ -288,7 +288,16 @@ def stage_compute_health(ctx: PipelineContext) -> None:
     """Compute project health scores."""
     from docglow.analyzer.health import compute_health, health_to_dict
 
-    report = compute_health(ctx.models, ctx.sources, ctx.seeds, ctx.snapshots)
+    if ctx.exclude_packages:
+        models = {uid: m for uid, m in ctx.models.items() if not m.get("is_package")}
+        seeds = {uid: s for uid, s in ctx.seeds.items() if not s.get("is_package")}
+        snapshots = {uid: s for uid, s in ctx.snapshots.items() if not s.get("is_package")}
+    else:
+        models = ctx.models
+        seeds = ctx.seeds
+        snapshots = ctx.snapshots
+
+    report = compute_health(models, ctx.sources, seeds, snapshots)
     ctx.health = health_to_dict(report)
 
 
