@@ -42,11 +42,15 @@ jobs:
       - name: Install docglow
         run: pip install .
 
-      - name: Prepare PostHog snippet
-        run: sed "s/POSTHOG_API_KEY/${{ secrets.POSTHOG_API_KEY }}/" examples/flowstate/posthog.html > /tmp/posthog.html
+      - name: Prepare head scripts
+        # PostHog first so window.posthog exists before the CTA tries to use it.
+        # Both are demo-site only — they are never bundled into the docglow package.
+        run: |
+          sed "s/POSTHOG_API_KEY/${{ secrets.POSTHOG_API_KEY }}/" examples/flowstate/posthog.html > /tmp/head.html
+          cat examples/flowstate/cloud-cta.html >> /tmp/head.html
 
       - name: Generate demo site
-        run: docglow generate --project-dir examples/flowstate --output-dir demo-output --static --enable-erd --head-script /tmp/posthog.html
+        run: docglow generate --project-dir examples/flowstate --output-dir demo-output --static --enable-erd --head-script /tmp/head.html
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
