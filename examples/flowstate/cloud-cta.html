@@ -1,0 +1,440 @@
+<!--
+  Docglow Cloud waitlist CTA — DEMO SITE ONLY.
+
+  Injected into the generated demo site via `docglow generate --head-script`
+  (see .github/workflows/demo-site.yml). This is deliberately NOT part of the
+  docglow package or the frontend bundle: self-hosted users must never get a
+  "join the waitlist" prompt in their own docs.
+
+  Self-contained on purpose — no build step, no dependencies. Everything is
+  prefixed `dgc-` to avoid colliding with the viewer's Tailwind classes.
+
+  Theme: the viewer toggles dark mode with a `dark` class on <html>
+  (frontend/src/stores/projectStore.ts), so styles key off `:root.dark`
+  rather than prefers-color-scheme, which would desync on manual toggle.
+-->
+<style>
+  .dgc-root {
+    --dgc-surface: #ffffff;
+    --dgc-raised: #f3f3f6;
+    --dgc-border: #dcdce4;
+    --dgc-text: #1a1a2e;
+    --dgc-text-dim: #555568;
+    --dgc-accent: #c87018;
+    --dgc-accent-hover: #b06010;
+    --dgc-accent-soft: #c8701830;
+    --dgc-on-accent: #ffffff;
+    --dgc-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    z-index: 99999;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  :root.dark .dgc-root {
+    --dgc-surface: #111118;
+    --dgc-raised: #1a1a24;
+    --dgc-border: #2a2a3a;
+    --dgc-text: #e8e8f0;
+    --dgc-text-dim: #9090a8;
+    --dgc-accent: #f0a848;
+    --dgc-accent-hover: #e89030;
+    --dgc-accent-soft: #f0a84830;
+    --dgc-on-accent: #0a0a0f;
+    --dgc-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+  }
+
+  .dgc-root *,
+  .dgc-root *::before,
+  .dgc-root *::after {
+    box-sizing: border-box;
+  }
+
+  /* ---- Collapsed pill ---- */
+  .dgc-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border: 1px solid var(--dgc-border);
+    border-radius: 999px;
+    background: var(--dgc-surface);
+    color: var(--dgc-text);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: var(--dgc-shadow);
+    transition: transform 0.15s ease, border-color 0.15s ease;
+  }
+
+  .dgc-pill:hover {
+    transform: translateY(-2px);
+    border-color: var(--dgc-accent);
+  }
+
+  .dgc-pill:focus-visible,
+  .dgc-panel button:focus-visible,
+  .dgc-panel input:focus-visible {
+    outline: 2px solid var(--dgc-accent);
+    outline-offset: 2px;
+  }
+
+  .dgc-spark {
+    color: var(--dgc-accent);
+  }
+
+  /* ---- Expanded panel ---- */
+  .dgc-panel {
+    width: 320px;
+    max-width: calc(100vw - 40px);
+    padding: 20px;
+    border: 1px solid var(--dgc-border);
+    border-radius: 12px;
+    background: var(--dgc-surface);
+    color: var(--dgc-text);
+    box-shadow: var(--dgc-shadow);
+    animation: dgc-rise 0.18s ease-out;
+  }
+
+  @keyframes dgc-rise {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .dgc-panel h2 {
+    margin: 0 0 8px;
+    padding-right: 24px;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.35;
+  }
+
+  .dgc-panel p {
+    margin: 0 0 16px;
+    color: var(--dgc-text-dim);
+  }
+
+  .dgc-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--dgc-text-dim);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .dgc-close:hover {
+    background: var(--dgc-raised);
+    color: var(--dgc-text);
+  }
+
+  .dgc-panel-wrap {
+    position: relative;
+  }
+
+  .dgc-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .dgc-field input[type="email"] {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--dgc-border);
+    border-radius: 8px;
+    background: var(--dgc-raised);
+    color: var(--dgc-text);
+    font: inherit;
+  }
+
+  .dgc-field input[type="email"]::placeholder {
+    color: var(--dgc-text-dim);
+  }
+
+  .dgc-submit {
+    padding: 10px 16px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--dgc-accent);
+    color: var(--dgc-on-accent);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .dgc-submit:hover:not(:disabled) {
+    background: var(--dgc-accent-hover);
+  }
+
+  .dgc-submit:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+
+  .dgc-note {
+    margin: 12px 0 0;
+    font-size: 12px;
+    color: var(--dgc-text-dim);
+  }
+
+  .dgc-note a {
+    color: var(--dgc-accent);
+  }
+
+  .dgc-error {
+    margin: 10px 0 0;
+    font-size: 13px;
+    color: #d64545;
+  }
+
+  :root.dark .dgc-error {
+    color: #ff8a8a;
+  }
+
+  .dgc-success {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .dgc-success-mark {
+    flex: 0 0 auto;
+    color: var(--dgc-accent);
+    font-size: 18px;
+    line-height: 1.4;
+  }
+
+  /* Honeypot — hidden from humans, tempting to bots. */
+  .dgc-gotcha {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+
+  @media (max-width: 640px) {
+    .dgc-root {
+      right: 12px;
+      bottom: 12px;
+      left: 12px;
+    }
+    .dgc-panel {
+      width: 100%;
+      max-width: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .dgc-pill,
+    .dgc-panel,
+    .dgc-submit {
+      transition: none;
+      animation: none;
+    }
+    .dgc-pill:hover {
+      transform: none;
+    }
+  }
+</style>
+
+<script>
+(function () {
+  'use strict';
+
+  var FORMSPREE = 'https://formspree.io/f/mvzvwkgl';
+  var CLOUD_URL = 'https://docglow.com/cloud?utm_source=demo&utm_medium=cta';
+  var STORAGE_DISMISSED = 'docglow.cta.dismissed';
+  var STORAGE_JOINED = 'docglow.cta.joined';
+
+  // localStorage throws in some privacy modes — never let that break the demo.
+  function readFlag(key) {
+    try { return window.localStorage.getItem(key) === '1'; } catch (e) { return false; }
+  }
+  function writeFlag(key) {
+    try { window.localStorage.setItem(key, '1'); } catch (e) { /* non-fatal */ }
+  }
+
+  // PostHog is injected by a separate head script and loads async.
+  function track(event, props) {
+    try {
+      if (window.posthog && typeof window.posthog.capture === 'function') {
+        window.posthog.capture(event, props || {});
+      }
+    } catch (e) { /* analytics must never break the page */ }
+  }
+
+  function init() {
+    if (readFlag(STORAGE_DISMISSED) || readFlag(STORAGE_JOINED)) return;
+
+    var root = document.createElement('div');
+    root.className = 'dgc-root';
+    document.body.appendChild(root);
+
+    var lastFocused = null;
+
+    function dismiss(reason) {
+      writeFlag(STORAGE_DISMISSED);
+      track('cloud_cta_dismissed', { reason: reason });
+      root.remove();
+      document.removeEventListener('keydown', onKeydown);
+    }
+
+    function onKeydown(e) {
+      if (e.key === 'Escape' && root.querySelector('.dgc-panel')) {
+        renderPill();
+        track('cloud_cta_collapsed', { reason: 'escape' });
+      }
+    }
+
+    function renderPill() {
+      root.innerHTML =
+        '<button type="button" class="dgc-pill">' +
+          '<span class="dgc-spark" aria-hidden="true">&#10022;</span>' +
+          '<span>Host this for your team</span>' +
+        '</button>';
+      root.querySelector('.dgc-pill').addEventListener('click', function () {
+        lastFocused = document.activeElement;
+        renderPanel();
+        track('cloud_cta_opened', {});
+      });
+    }
+
+    function renderPanel() {
+      root.innerHTML =
+        '<div class="dgc-panel-wrap">' +
+          '<div class="dgc-panel" role="dialog" aria-modal="false" aria-labelledby="dgc-title">' +
+            '<button type="button" class="dgc-close" aria-label="Close">&times;</button>' +
+            '<h2 id="dgc-title">Like what you\'re seeing?</h2>' +
+            '<p>This is open-source Docglow running on a sample project. ' +
+              'Docglow Cloud hosts it for your whole team (and company). Fully managed ' +
+              'with refreshes on every dbt run, questions answerable from Slack, ' +
+              'with column-level lineage.</p>' +
+            '<form class="dgc-field" novalidate>' +
+              '<label class="dgc-gotcha">Leave this empty' +
+                '<input type="text" name="_gotcha" tabindex="-1" autocomplete="off" />' +
+              '</label>' +
+              '<input type="email" name="email" placeholder="you@company.com" ' +
+                'aria-label="Work email" autocomplete="email" required />' +
+              '<button type="submit" class="dgc-submit">Join the waitlist</button>' +
+            '</form>' +
+            '<p class="dgc-note">No spam. <a href="' + CLOUD_URL + '" target="_blank" rel="noopener">' +
+              'What\'s in Cloud &rarr;</a></p>' +
+          '</div>' +
+        '</div>';
+
+      root.querySelector('.dgc-close').addEventListener('click', function () {
+        dismiss('close_button');
+        if (lastFocused && lastFocused.focus) lastFocused.focus();
+      });
+      root.querySelector('.dgc-note a').addEventListener('click', function () {
+        track('cloud_cta_learn_more_clicked', {});
+      });
+      root.querySelector('form').addEventListener('submit', onSubmit);
+
+      var input = root.querySelector('input[type="email"]');
+      if (input) input.focus();
+    }
+
+    function showError(form, message) {
+      var existing = form.parentNode.querySelector('.dgc-error');
+      if (existing) existing.remove();
+      var p = document.createElement('p');
+      p.className = 'dgc-error';
+      p.setAttribute('role', 'alert');
+      p.textContent = message;
+      form.parentNode.insertBefore(p, form.nextSibling);
+    }
+
+    function onSubmit(e) {
+      e.preventDefault();
+      var form = e.currentTarget;
+      var input = form.querySelector('input[type="email"]');
+      var button = form.querySelector('.dgc-submit');
+      var email = (input.value || '').trim();
+
+      if (!email || !input.checkValidity()) {
+        showError(form, 'Please enter a valid email address.');
+        input.focus();
+        return;
+      }
+      // Honeypot filled means a bot. Fake success rather than tipping it off.
+      if (form.querySelector('input[name="_gotcha"]').value) {
+        renderSuccess();
+        return;
+      }
+
+      button.disabled = true;
+      button.textContent = 'Joining…';
+      track('cloud_cta_submitted', {});
+
+      var body = new FormData();
+      body.append('email', email);
+      body.append('source', 'demo-site');
+      body.append('_subject', 'Docglow Cloud waitlist — demo site');
+
+      fetch(FORMSPREE, {
+        method: 'POST',
+        headers: { Accept: 'application/json' },
+        body: body
+      })
+        .then(function (res) {
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          writeFlag(STORAGE_JOINED);
+          track('cloud_cta_signup_succeeded', {});
+          renderSuccess();
+        })
+        .catch(function (err) {
+          track('cloud_cta_signup_failed', { message: String(err && err.message) });
+          button.disabled = false;
+          button.textContent = 'Join the waitlist';
+          showError(form, 'Something went wrong. Please try again, or email hello@docglow.com.');
+        });
+    }
+
+    function renderSuccess() {
+      root.innerHTML =
+        '<div class="dgc-panel-wrap">' +
+          '<div class="dgc-panel" role="status">' +
+            '<button type="button" class="dgc-close" aria-label="Close">&times;</button>' +
+            '<div class="dgc-success">' +
+              '<span class="dgc-success-mark" aria-hidden="true">&#10003;</span>' +
+              '<div>' +
+                '<h2>You\'re on the list.</h2>' +
+                '<p style="margin-bottom:0">We\'ll email you the moment Docglow Cloud opens up.</p>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      root.querySelector('.dgc-close').addEventListener('click', function () {
+        root.remove();
+        document.removeEventListener('keydown', onKeydown);
+      });
+    }
+
+    document.addEventListener('keydown', onKeydown);
+    renderPill();
+    track('cloud_cta_shown', {});
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
