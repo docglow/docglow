@@ -353,6 +353,25 @@ class TestHealthScore:
         report = compute_health({}, sources, {}, {})
         assert 50 < report.score.freshness < 100
 
+    def test_freshness_included_flag_distinguishes_zero_from_excluded(self) -> None:
+        """A freshness of 0.0 is ambiguous on its own — it means both "nothing
+        is monitored, so the dimension was dropped" and "everything monitored is
+        stale". Consumers need the flag to tell those apart."""
+        excluded = compute_health({}, {}, {}, {})
+        assert excluded.score.freshness == 0.0
+        assert excluded.score.freshness_included is False
+
+        all_stale = compute_health({}, {"s1": _make_source(freshness_status="error")}, {}, {})
+        assert all_stale.score.freshness == 0.0
+        assert all_stale.score.freshness_included is True
+
+    def test_freshness_included_serialized(self) -> None:
+        report = compute_health({}, {}, {}, {})
+        assert health_to_dict(report)["score"]["freshness_included"] is False
+
+        monitored = compute_health({}, {"s1": _make_source(freshness_status="pass")}, {}, {})
+        assert health_to_dict(monitored)["score"]["freshness_included"] is True
+
 
 class TestHealthIntegration:
     """Test health with real fixture data via build_docglow_data."""

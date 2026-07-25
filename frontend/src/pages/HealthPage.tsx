@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useProjectStore } from '../stores/projectStore'
 import { formatPercent } from '../utils/formatting'
+import { freshnessIncluded } from '../utils/healthBreakdown'
 import type { CoverageMetric } from '../types'
 
 type Tab = 'overview' | 'documentation' | 'testing' | 'complexity' | 'naming' | 'orphans'
@@ -34,6 +35,20 @@ function ScoreBar({ label, score }: { label: string; score: number }) {
         />
       </div>
       <span className="text-sm font-medium w-10 text-right">{score.toFixed(0)}</span>
+    </div>
+  )
+}
+
+/**
+ * A dimension that was left out of the weighted score. Rendering it as a zeroed
+ * bar implies the project scored nothing on it, when in fact it did not count.
+ */
+function ExcludedBar({ label, reason }: { label: string; reason: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="text-sm w-36 shrink-0 text-[var(--text-muted)]">{label}</span>
+      <div className="flex-1 text-xs text-[var(--text-muted)] italic">{reason}</div>
+      <span className="text-sm font-medium w-10 text-right text-[var(--text-muted)]">—</span>
     </div>
   )
 }
@@ -92,7 +107,9 @@ export function HealthPage() {
           <div className="flex-1 space-y-1.5">
             <ScoreBar label="Documentation" score={score.documentation} />
             <ScoreBar label="Testing" score={score.testing} />
-            <ScoreBar label="Freshness" score={score.freshness} />
+            {freshnessIncluded(health)
+              ? <ScoreBar label="Freshness" score={score.freshness} />
+              : <ExcludedBar label="Freshness" reason="No monitored sources — excluded from score" />}
             <ScoreBar label="Complexity" score={score.complexity} />
             <ScoreBar label="Naming" score={score.naming} />
             <ScoreBar label="Orphan Detection" score={score.orphans} />

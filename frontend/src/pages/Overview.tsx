@@ -2,7 +2,14 @@ import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useProjectStore } from '../stores/projectStore'
 import { useTagFilterStore } from '../stores/tagFilterStore'
-import { formatNumber, formatPercent } from '../utils/formatting'
+import { formatNumber } from '../utils/formatting'
+import { biggestGap, scoredDimensions } from '../utils/healthBreakdown'
+
+function scoreColor(score: number): string {
+  if (score >= 80) return 'text-success'
+  if (score >= 60) return 'text-warning'
+  return 'text-danger'
+}
 
 export function Overview() {
   const { data } = useProjectStore()
@@ -30,6 +37,8 @@ export function Overview() {
   const passingTests = Object.values(data.models).reduce(
     (sum, m) => sum + m.test_results.filter(t => t.status === 'pass').length, 0
   )
+
+  const gap = biggestGap(data.health)
 
   const stats = [
     { label: 'Models', value: modelCount, color: 'text-primary' },
@@ -67,7 +76,7 @@ export function Overview() {
                    cursor-pointer hover:border-primary/30 transition-colors"
         onClick={() => navigate('/health')}
       >
-        <div className="flex items-center justify-between">
+        <div className="flex items-start justify-between gap-6">
           <div>
             <h2 className="text-sm font-medium text-[var(--text-muted)] mb-1">Project Health</h2>
             <div className="flex items-baseline gap-2">
@@ -83,27 +92,26 @@ export function Overview() {
               </span>
             </div>
           </div>
-          <div className="flex gap-6 text-xs text-[var(--text-muted)]">
-            <div>
-              <div className="font-medium text-[var(--text)]">
-                {formatPercent(data.health.coverage.models_documented.rate)}
+          {/* The dimensions the grade is actually made of. Showing model-level
+              coverage here instead reads as a contradiction — 100% documented
+              next to a B — because column coverage is what moves the score. */}
+          <div className="flex gap-5 text-xs text-[var(--text-muted)] pt-1">
+            {scoredDimensions(data.health).map(dim => (
+              <div key={dim.key} className="text-right">
+                <div className={`font-medium ${scoreColor(dim.score)}`}>
+                  {dim.score.toFixed(0)}
+                </div>
+                <div>{dim.label}</div>
               </div>
-              <div>Documented</div>
-            </div>
-            <div>
-              <div className="font-medium text-[var(--text)]">
-                {formatPercent(data.health.coverage.models_tested.rate)}
-              </div>
-              <div>Tested</div>
-            </div>
-            <div>
-              <div className="font-medium text-[var(--text)]">
-                {data.health.complexity.high_count}
-              </div>
-              <div>High Complexity</div>
-            </div>
+            ))}
           </div>
         </div>
+        {gap && (
+          <p className="mt-3 pt-3 border-t border-[var(--border)] text-xs text-[var(--text-muted)]">
+            <span className="text-[var(--text)] font-medium">{gap.label}</span>
+            {' is the biggest gap — '}{gap.detail}.
+          </p>
+        )}
       </div>
 
       <div className="flex items-baseline gap-2 mb-3">

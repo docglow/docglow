@@ -16,11 +16,15 @@ class HealthScore:
     overall: float  # 0-100
     documentation: float  # 0-100
     testing: float  # 0-100
-    freshness: float  # 0-100
+    freshness: float  # 0-100; meaningless when freshness_included is False
     complexity: float  # 0-100
     naming: float  # 0-100
     orphans: float  # 0-100
     grade: str  # A, B, C, D, F
+    # False when no source has freshness monitoring configured. The dimension is
+    # then left out of the weighted score entirely, and `freshness` above is a
+    # placeholder 0.0 that must not be presented as a real score.
+    freshness_included: bool = True
 
 
 @dataclass(frozen=True)
@@ -168,6 +172,7 @@ def compute_health(
         naming=round(naming_score, 1),
         orphans=round(orphan_score, 1),
         grade=_grade(overall),
+        freshness_included=freshness_result is not None,
     )
 
     return HealthReport(
@@ -191,6 +196,7 @@ def health_to_dict(report: HealthReport) -> dict[str, Any]:
             "naming": report.score.naming,
             "orphans": report.score.orphans,
             "grade": report.score.grade,
+            "freshness_included": report.score.freshness_included,
         },
         "coverage": {
             "models_documented": {
