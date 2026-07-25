@@ -3,12 +3,31 @@ version: 2
 models:
   - name: studio_class_utilization
     description: >
-      Per-studio, per-class-type utilization: total bookings, attendance,
-      no-shows, and attendance rate. Powers the studio performance dashboard.
+      Per-studio, per-class-type utilization: total bookings, attendance, no-shows, and
+      attendance rate. Powers the studio performance dashboard.
     columns:
       - name: studio_id
         description: "Studio the metrics roll up to."
+        tests:
+          - unique
+          - not_null
       - name: class_type
         description: "Class modality the metrics are grouped by."
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["yoga", "hiit", "cycle", "pilates", "barre"]
+              config:
+                severity: warn
       - name: attendance_rate
         description: "Attended bookings / total bookings."
+      - name: studio_name
+        description: "Display name of the studio."
+      - name: region
+        description: "Sales region the studio belongs to."
+      - name: total_bookings
+        description: "Bookings in the grouping."
+      - name: attended
+        description: "Bookings where the member checked in."
+      - name: no_shows
+        description: "Bookings where the member never checked in."

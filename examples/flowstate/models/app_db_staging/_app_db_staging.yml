@@ -1,0 +1,276 @@
+version: 2
+
+models:
+  - name: stg_app_db__bookings
+    description: >
+      One row per member reservation for a scheduled class, including whether the member
+      checked in, cancelled, or failed to show.
+    columns:
+      - name: booking_id
+        description: "Natural key for the booking."
+        tests:
+          - unique
+          - not_null
+      - name: schedule_id
+        description: "Foreign key to the scheduled class instance."
+        tests:
+          - not_null
+      - name: member_id
+        description: "Foreign key to the member."
+        tests:
+          - not_null
+      - name: booking_status
+        description: "Status of the booking (booked, attended, cancelled, no-show)."
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["booked", "attended", "cancelled", "no_show"]
+              config:
+                severity: warn
+      - name: booked_at
+        description: "Timestamp when the booking was made."
+      - name: checked_in_at
+        description: "Timestamp when the member checked in. Null if they never arrived."
+      - name: cancelled_at
+        description: "Timestamp when the record was cancelled. Null if still active."
+      - name: is_no_show
+        description: "True when the member booked but never checked in."
+        tests:
+          - not_null
+
+  - name: stg_app_db__class_schedules
+    description: >
+      One row per scheduled instance of a class: a class offering placed on the calendar
+      at a date and time with an instructor and a room.
+    columns:
+      - name: schedule_id
+        description: "Natural key for the scheduled class instance."
+        tests:
+          - unique
+          - not_null
+      - name: class_id
+        description: "Foreign key to the class offering."
+        tests:
+          - not_null
+      - name: studio_id
+        description: "Foreign key to the studio that owns this record."
+        tests:
+          - not_null
+      - name: instructor_id
+        description: "Foreign key to the instructor."
+        tests:
+          - not_null
+      - name: start_at
+        description: "Scheduled start time of the class."
+      - name: end_at
+        description: "Scheduled end time of the class."
+      - name: room
+        description: "Studio room the class is scheduled in."
+      - name: booked_count
+        description: "Bookings taken against the scheduled class."
+      - name: capacity
+        description: "Maximum number of members the class can hold."
+
+  - name: stg_app_db__classes
+    description: >
+      One row per class offering configured by a studio, such as Vinyasa Flow or HIIT.
+      Describes the template, not a specific session.
+    columns:
+      - name: class_id
+        description: "Natural key for the class offering."
+        tests:
+          - unique
+          - not_null
+      - name: studio_id
+        description: "Foreign key to the studio that owns this record."
+        tests:
+          - not_null
+      - name: class_name
+        description: "Display name of the class offering."
+      - name: class_type
+        description: "Category of class (yoga, HIIT, cycle, pilates, barre)."
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["yoga", "hiit", "cycle", "pilates", "barre"]
+              config:
+                severity: warn
+      - name: duration_minutes
+        description: "Scheduled length of the class, in minutes."
+      - name: capacity
+        description: "Maximum number of members the class can hold."
+      - name: is_active
+        description: "True when the record is currently active."
+        tests:
+          - not_null
+
+  - name: stg_app_db__instructors
+    description: >
+      One row per instructor, including the studio they teach at and their primary class
+      discipline.
+    columns:
+      - name: instructor_id
+        description: "Natural key for the instructor."
+        tests:
+          - unique
+          - not_null
+      - name: studio_id
+        description: "Foreign key to the studio that owns this record."
+        tests:
+          - not_null
+      - name: first_name
+        description: "Given name."
+      - name: last_name
+        description: "Family name."
+      - name: email
+        description: "Email address."
+      - name: specialty
+        description: "Class discipline the instructor primarily teaches."
+      - name: hired_date
+        description: "Date the instructor was hired."
+      - name: is_active
+        description: "True when the record is currently active."
+        tests:
+          - not_null
+      - name: created_at
+        description: "Timestamp when the record was created in the source system."
+      - name: updated_at
+        description: "Timestamp of the most recent update in the source system."
+
+  - name: stg_app_db__members
+    description: >
+      One row per end client who books classes at a studio. Names and contact details
+      are passed through from the application database unchanged.
+    columns:
+      - name: member_id
+        description: "Natural key for the member."
+        tests:
+          - unique
+          - not_null
+      - name: studio_id
+        description: "Foreign key to the studio that owns this record."
+        tests:
+          - not_null
+      - name: first_name
+        description: "Given name."
+      - name: last_name
+        description: "Family name."
+      - name: email
+        description: "Email address."
+      - name: phone
+        description: "Contact phone number."
+      - name: date_of_birth
+        description: "Date of birth, used for age-restricted class eligibility."
+      - name: joined_date
+        description: "Date the member joined the studio."
+      - name: status
+        description: "Current status of the record in the source system."
+      - name: created_at
+        description: "Timestamp when the record was created in the source system."
+      - name: updated_at
+        description: "Timestamp of the most recent update in the source system."
+
+  - name: stg_app_db__membership_plans
+    description: >
+      Catalog of membership plan tiers a studio offers — unlimited, class pack, and
+      drop-in — with pricing and included class credits.
+    columns:
+      - name: plan_id
+        description: "Natural key for the membership plan."
+        tests:
+          - unique
+          - not_null
+      - name: studio_id
+        description: "Foreign key to the studio that owns this record."
+        tests:
+          - not_null
+      - name: plan_name
+        description: "Display name of the membership plan."
+      - name: plan_tier
+        description: "Plan tier (unlimited, class pack, or drop-in)."
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["unlimited", "class_pack", "drop_in"]
+              config:
+                severity: warn
+      - name: billing_interval
+        description: "How often the plan bills (monthly or annual)."
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["monthly", "annual"]
+              config:
+                severity: warn
+      - name: monthly_price_usd
+        description: "Monthly price of the plan, in USD."
+      - name: included_class_credits
+        description: "Class credits included in the plan each billing period."
+      - name: is_active
+        description: "True when the record is currently active."
+        tests:
+          - not_null
+
+  - name: stg_app_db__memberships
+    description: >
+      One row per membership a member has held, current or historical, with the plan
+      they subscribed to and its lifecycle timestamps.
+    columns:
+      - name: membership_id
+        description: "Natural key for the membership record."
+        tests:
+          - unique
+          - not_null
+      - name: member_id
+        description: "Foreign key to the member."
+        tests:
+          - not_null
+      - name: plan_id
+        description: "Foreign key to the membership plan."
+        tests:
+          - not_null
+      - name: status
+        description: "Current status of the record in the source system."
+      - name: started_at
+        description: "Timestamp when the record became active."
+      - name: ended_at
+        description: "Timestamp when the record ended."
+      - name: auto_renew
+        description: "True when the membership renews automatically."
+      - name: monthly_price_usd
+        description: "Monthly price of the plan, in USD."
+      - name: created_at
+        description: "Timestamp when the record was created in the source system."
+      - name: updated_at
+        description: "Timestamp of the most recent update in the source system."
+
+  - name: stg_app_db__studios
+    description: >
+      One row per wellness studio. Cleaned from the application database, with region
+      and time zone standardized for downstream reporting.
+    columns:
+      - name: studio_id
+        description: "Natural key for the studio."
+        tests:
+          - unique
+          - not_null
+      - name: studio_name
+        description: "Display name of the studio."
+      - name: region
+        description: "Sales region the studio belongs to."
+      - name: city
+        description: "City the studio operates in."
+      - name: state_code
+        description: "Two-letter state code."
+      - name: timezone
+        description: "IANA time zone the studio schedules classes in."
+      - name: opened_date
+        description: "Date the studio opened for business."
+      - name: is_active
+        description: "True when the record is currently active."
+        tests:
+          - not_null
+      - name: created_at
+        description: "Timestamp when the record was created in the source system."
+      - name: updated_at
+        description: "Timestamp of the most recent update in the source system."

@@ -8,17 +8,171 @@ sources:
     tables:
       - name: studios
         description: "One row per wellness studio (a FlowState customer's location)."
+        columns:
+          - name: studio_id
+            description: "Natural key for the studio."
+          - name: studio_name
+            description: "Display name of the studio."
+          - name: region
+            description: "Sales region the studio belongs to."
+          - name: city
+            description: "City the studio operates in."
+          - name: state_code
+            description: "Two-letter state code."
+          - name: timezone
+            description: "IANA time zone the studio schedules classes in."
+          - name: opened_date
+            description: "Date the studio opened for business."
+          - name: is_active
+            description: "True when the record is currently active."
+          - name: created_at
+            description: "Timestamp when the record was created in the source system."
+          - name: updated_at
+            description: "Timestamp of the most recent update in the source system."
       - name: members
         description: "End clients who book classes at a studio."
+        columns:
+          - name: member_id
+            description: "Natural key for the member."
+          - name: studio_id
+            description: "Foreign key to the studio that owns this record."
+          - name: first_name
+            description: "Given name."
+          - name: last_name
+            description: "Family name."
+          - name: email
+            description: "Email address."
+          - name: phone
+            description: "Contact phone number."
+          - name: date_of_birth
+            description: "Date of birth, used for age-restricted class eligibility."
+          - name: joined_date
+            description: "Date the member joined the studio."
+          - name: status
+            description: "Current status of the record in the source system."
+          - name: created_at
+            description: "Timestamp when the record was created in the source system."
+          - name: updated_at
+            description: "Timestamp of the most recent update in the source system."
       - name: classes
         description: "Class offerings configured by a studio (e.g. Vinyasa Flow, HIIT)."
+        columns:
+          - name: class_id
+            description: "Natural key for the class offering."
+          - name: studio_id
+            description: "Foreign key to the studio that owns this record."
+          - name: class_name
+            description: "Display name of the class offering."
+          - name: class_type
+            description: "Category of class (yoga, HIIT, cycle, pilates, barre)."
+          - name: duration_minutes
+            description: "Scheduled length of the class, in minutes."
+          - name: capacity
+            description: "Maximum number of members the class can hold."
+          - name: is_active
+            description: "True when the record is currently active."
       - name: class_schedules
         description: "Scheduled instances of a class at a date/time with an instructor."
+        columns:
+          - name: schedule_id
+            description: "Natural key for the scheduled class instance."
+          - name: class_id
+            description: "Foreign key to the class offering."
+          - name: studio_id
+            description: "Foreign key to the studio that owns this record."
+          - name: instructor_id
+            description: "Foreign key to the instructor."
+          - name: start_at
+            description: "Scheduled start time of the class."
+          - name: end_at
+            description: "Scheduled end time of the class."
+          - name: room
+            description: "Studio room the class is scheduled in."
+          - name: booked_count
+            description: "Bookings taken against the scheduled class."
+          - name: capacity
+            description: "Maximum number of members the class can hold."
       - name: bookings
         description: "A member's reservation for a scheduled class."
+        columns:
+          - name: booking_id
+            description: "Natural key for the booking."
+          - name: schedule_id
+            description: "Foreign key to the scheduled class instance."
+          - name: member_id
+            description: "Foreign key to the member."
+          - name: booking_status
+            description: "Status of the booking (booked, attended, cancelled, no-show)."
+          - name: booked_at
+            description: "Timestamp when the booking was made."
+          - name: checked_in_at
+            description: "Timestamp when the member checked in. Null if they never arrived."
+          - name: cancelled_at
+            description: "Timestamp when the record was cancelled. Null if still active."
+          - name: is_no_show
+            description: "True when the member booked but never checked in."
       - name: memberships
         description: "A member's active or historical membership plan."
+        columns:
+          - name: membership_id
+            description: "Natural key for the membership record."
+          - name: member_id
+            description: "Foreign key to the member."
+          - name: plan_id
+            description: "Foreign key to the membership plan."
+          - name: status
+            description: "Current status of the record in the source system."
+          - name: started_at
+            description: "Timestamp when the record became active."
+          - name: ended_at
+            description: "Timestamp when the record ended."
+          - name: auto_renew
+            description: "True when the membership renews automatically."
+          - name: monthly_price_usd
+            description: "Monthly price of the plan, in USD."
+          - name: created_at
+            description: "Timestamp when the record was created in the source system."
+          - name: updated_at
+            description: "Timestamp of the most recent update in the source system."
       - name: membership_plans
         description: "Catalog of membership plan tiers a studio offers (unlimited, class-pack, drop-in)."
+        columns:
+          - name: plan_id
+            description: "Natural key for the membership plan."
+          - name: studio_id
+            description: "Foreign key to the studio that owns this record."
+          - name: plan_name
+            description: "Display name of the membership plan."
+          - name: plan_tier
+            description: "Plan tier (unlimited, class pack, or drop-in)."
+          - name: billing_interval
+            description: "How often the plan bills (monthly or annual)."
+          - name: monthly_price_usd
+            description: "Monthly price of the plan, in USD."
+          - name: included_class_credits
+            description: "Class credits included in the plan each billing period."
+          - name: is_active
+            description: "True when the record is currently active."
       - name: instructors
         description: "Instructors who teach classes at a studio."
+        columns:
+          - name: instructor_id
+            description: "Natural key for the instructor."
+          - name: studio_id
+            description: "Foreign key to the studio that owns this record."
+          - name: first_name
+            description: "Given name."
+          - name: last_name
+            description: "Family name."
+          - name: email
+            description: "Email address."
+          - name: specialty
+            description: "Class discipline the instructor primarily teaches."
+          - name: hired_date
+            description: "Date the instructor was hired."
+          - name: is_active
+            description: "True when the record is currently active."
+          - name: created_at
+            description: "Timestamp when the record was created in the source system."
+          - name: updated_at
+            description: "Timestamp of the most recent update in the source system."

@@ -2,19 +2,173 @@ version: 2
 
 sources:
   - name: salesforce
-    description: "FlowState's B2B sales CRM (Salesforce), ingested via Fivetran. Tracks the pipeline of selling the FlowState platform to studio owners."
+    description: >
+      FlowState's B2B sales CRM (Salesforce), ingested via Fivetran. Tracks the pipeline
+      of selling the FlowState platform to studio owners.
     database: RAW
     schema: salesforce
     tables:
       - name: accounts
         description: "Studio-owner businesses being sold to (prospects and customers)."
+        columns:
+          - name: account_id
+            description: "Natural key for the account."
+          - name: account_name
+            description: "Display name of the account."
+          - name: industry
+            description: "Industry classification of the account."
+          - name: studio_count
+            description: "Studios operated by the account."
+          - name: billing_city
+            description: "City on the billing address."
+          - name: billing_state_code
+            description: "Two-letter state code on the billing address."
+          - name: billing_country
+            description: "Country on the billing address."
+          - name: annual_revenue_usd
+            description: "Self-reported annual revenue of the account, in USD."
+          - name: employee_count
+            description: "Employees at the account, as reported by the data provider."
+          - name: account_owner_id
+            description: "User ID of the account owner."
+          - name: account_type
+            description: "Classification of the account in the chart of accounts."
+          - name: is_customer
+            description: "True when the account has at least one won opportunity."
+          - name: created_at
+            description: "Timestamp when the record was created in the source system."
+          - name: updated_at
+            description: "Timestamp of the most recent update in the source system."
       - name: contacts
         description: "Individual people associated with an account."
+        columns:
+          - name: contact_id
+            description: "Natural key for the CRM contact."
+          - name: account_id
+            description: "Foreign key to the account."
+          - name: first_name
+            description: "Given name."
+          - name: last_name
+            description: "Family name."
+          - name: email
+            description: "Email address."
+          - name: phone
+            description: "Contact phone number."
+          - name: title
+            description: "Job title."
+          - name: contact_role
+            description: "Role this contact plays in the buying process."
+          - name: is_primary_contact
+            description: "True when this is the primary contact on the account."
+          - name: lead_source
+            description: "Channel the lead originated from."
+          - name: created_at
+            description: "Timestamp when the record was created in the source system."
+          - name: updated_at
+            description: "Timestamp of the most recent update in the source system."
       - name: leads
         description: "Unqualified inbound or outbound prospects not yet tied to an account."
+        columns:
+          - name: lead_id
+            description: "Natural key for the lead."
+          - name: first_name
+            description: "Given name."
+          - name: last_name
+            description: "Family name."
+          - name: email
+            description: "Email address."
+          - name: company_name
+            description: "Company the lead belongs to."
+          - name: lead_source
+            description: "Channel the lead originated from."
+          - name: lead_status
+            description: "Stage of the lead in the qualification process."
+          - name: industry
+            description: "Industry classification of the account."
+          - name: estimated_studio_count
+            description: "Studio count self-reported by the lead."
+          - name: owner_id
+            description: "User ID of the record owner."
+          - name: is_converted
+            description: "True when the lead converted to an opportunity."
+          - name: converted_account_id
+            description: "Account created when the lead converted."
+          - name: converted_opportunity_id
+            description: "Opportunity created when the lead converted."
+          - name: created_at
+            description: "Timestamp when the record was created in the source system."
+          - name: converted_at
+            description: "Timestamp when the lead converted to an opportunity."
       - name: opportunities
         description: "Sales deals to sell the FlowState platform, with stage and ARR."
+        columns:
+          - name: opportunity_id
+            description: "Natural key for the sales opportunity."
+          - name: opportunity_name
+            description: "Display name of the sales opportunity."
+          - name: account_id
+            description: "Foreign key to the account."
+          - name: owner_id
+            description: "User ID of the record owner."
+          - name: stage_name
+            description: "Current sales stage of the opportunity."
+          - name: amount_arr_usd
+            description: "Annual recurring revenue attached to the opportunity, in USD."
+          - name: probability
+            description: "Win probability assigned to the sales stage, as a fraction."
+          - name: lead_source
+            description: "Channel the lead originated from."
+          - name: forecast_category
+            description: "Forecast category the opportunity rolls up to."
+          - name: is_won
+            description: "True when the opportunity closed won."
+          - name: is_closed
+            description: "True when the opportunity is no longer open."
+          - name: created_at
+            description: "Timestamp when the record was created in the source system."
+          - name: close_date
+            description: "Expected or actual close date of the opportunity."
       - name: opportunity_history
         description: "Stage and amount change log for opportunities over time."
+        columns:
+          - name: opportunity_history_id
+            description: "Natural key for the opportunity history row."
+          - name: opportunity_id
+            description: "Foreign key to the sales opportunity."
+          - name: from_stage_name
+            description: "Sales stage the opportunity moved out of."
+          - name: to_stage_name
+            description: "Sales stage the opportunity moved into."
+          - name: amount_arr_usd
+            description: "Annual recurring revenue attached to the opportunity, in USD."
+          - name: probability
+            description: "Win probability assigned to the sales stage, as a fraction."
+          - name: changed_by_user_id
+            description: "User who made the stage change."
+          - name: is_stage_change
+            description: "True when the history row represents an actual stage change."
+          - name: created_at
+            description: "Timestamp when the record was created in the source system."
       - name: users
         description: "FlowState sales reps and managers who own leads and opportunities."
+        columns:
+          - name: user_id
+            description: "Natural key for the application user."
+          - name: full_name
+            description: "Full name as recorded in the source system."
+          - name: email
+            description: "Email address."
+          - name: role_name
+            description: "Display name of the sales role."
+          - name: sales_team
+            description: "Sales team the owner belongs to."
+          - name: manager_id
+            description: "Employee ID of this person's manager."
+          - name: region
+            description: "Sales region the studio belongs to."
+          - name: quota_arr_usd
+            description: "Annual ARR quota assigned to the sales role, in USD."
+          - name: is_active
+            description: "True when the record is currently active."
+          - name: created_at
+            description: "Timestamp when the record was created in the source system."

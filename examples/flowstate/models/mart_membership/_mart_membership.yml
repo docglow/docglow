@@ -1,0 +1,86 @@
+version: 2
+
+models:
+  - name: membership_change_events
+    description: >
+      One row per MRR movement — new, reactivation, or churn — with the signed MRR delta
+      it produced. Powers the revenue and growth dashboard.
+    columns:
+      - name: subscription_id
+        description: "Natural key for the billing subscription."
+        tests:
+          - unique
+          - not_null
+      - name: member_id
+        description: "Foreign key to the member."
+        tests:
+          - not_null
+      - name: studio_id
+        description: "Foreign key to the studio that owns this record."
+        tests:
+          - not_null
+      - name: plan_tier
+        description: "Plan tier (unlimited, class pack, or drop-in)."
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["unlimited", "class_pack", "drop_in"]
+              config:
+                severity: warn
+      - name: started_at
+        description: "Timestamp when the record became active."
+      - name: cancelled_at
+        description: "Timestamp when the record was cancelled. Null if still active."
+      - name: mrr_usd
+        description: "Monthly recurring revenue attributed to the subscription, in USD."
+        tests:
+          - not_null
+      - name: change_event_type
+        description: "Type of MRR movement (new, expansion, contraction, or churn)."
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["new", "reactivation", "expansion", "contraction", "churn"]
+              config:
+                severity: warn
+      - name: mrr_delta_usd
+        description: "Change in MRR produced by this event, in USD. Negative on churn."
+        tests:
+          - not_null
+
+  - name: membership_mrr_by_studio
+    description: "Active subscriptions, MRR, and annual run rate rolled up by studio and plan tier."
+    columns:
+      - name: studio_id
+        description: "Natural key for the studio."
+        tests:
+          - unique
+          - not_null
+      - name: studio_name
+        description: "Display name of the studio."
+      - name: region
+        description: "Sales region the studio belongs to."
+      - name: plan_tier
+        description: "Plan tier (unlimited, class pack, or drop-in)."
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["unlimited", "class_pack", "drop_in"]
+              config:
+                severity: warn
+      - name: active_subscriptions
+        description: "Subscriptions in an active state."
+      - name: active_members
+        description: "Distinct members with activity in the period."
+      - name: total_mrr_usd
+        description: "Sum of monthly recurring revenue for the grouping, in USD."
+        tests:
+          - not_null
+      - name: avg_mrr_per_subscription_usd
+        description: "Mean MRR per active subscription, in USD."
+        tests:
+          - not_null
+      - name: annual_run_rate_usd
+        description: "Annualized run rate, calculated as MRR times twelve."
+        tests:
+          - not_null

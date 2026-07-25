@@ -1,0 +1,703 @@
+version: 2
+
+models:
+  - name: int_billing_collections
+    description: >
+      Billing transactions — payments, refunds, and credit notes — resolved to the
+      invoice and member they apply to, for collections and dunning analysis.
+    columns:
+      - name: transaction_id
+        description: "Natural key for the billing transaction."
+        tests:
+          - unique
+          - not_null
+      - name: invoice_id
+        description: "Foreign key to the invoice."
+        tests:
+          - not_null
+      - name: subscription_id
+        description: "Foreign key to the billing subscription."
+        tests:
+          - not_null
+      - name: member_id
+        description: "Foreign key to the member."
+        tests:
+          - not_null
+      - name: member_name
+        description: "Member's full name, concatenated from first and last name."
+      - name: studio_id
+        description: "Foreign key to the studio that owns this record."
+        tests:
+          - not_null
+      - name: transaction_type
+        description: "Type of billing transaction (payment, refund, or credit)."
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["payment", "refund", "credit"]
+              config:
+                severity: warn
+      - name: transaction_status
+        description: "Outcome of the billing transaction."
+      - name: transaction_amount_usd
+        description: "Amount of the billing transaction, in USD."
+      - name: payment_method
+        description: "Payment instrument used for the transaction."
+      - name: gateway
+        description: "Payment gateway that processed the transaction."
+      - name: processed_at
+        description: "Timestamp when the transaction was processed by the gateway."
+      - name: credit_note_id
+        description: "Identifier of the credit note applied to the transaction."
+      - name: amount_refunded_usd
+        description: "Amount refunded, in USD."
+      - name: credit_reason_code
+        description: "Machine-readable reason the credit note was issued."
+
+  - name: int_billing_invoices
+    description: >
+      Invoices with their subscription and member attached, split into amounts paid and
+      outstanding, and stamped with the fiscal month they land in.
+    columns:
+      - name: invoice_id
+        description: "Natural key for the invoice."
+        tests:
+          - unique
+          - not_null
+      - name: subscription_id
+        description: "Foreign key to the billing subscription."
+        tests:
+          - not_null
+      - name: member_id
+        description: "Foreign key to the member."
+        tests:
+          - not_null
+      - name: member_name
+        description: "Member's full name, concatenated from first and last name."
+      - name: invoice_status
+        description: "Status of the invoice (paid, posted, payment due, or voided)."
+      - name: total_usd
+        description: "Invoice total, in USD."
+      - name: amount_paid_usd
+        description: "Amount paid against the invoice, in USD."
+      - name: amount_due_usd
+        description: "Amount still outstanding on the invoice, in USD."
+      - name: currency
+        description: "ISO 4217 currency code the amount is denominated in."
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["USD", "CAD", "GBP", "EUR"]
+              config:
+                severity: warn
+      - name: issued_at
+        description: "Timestamp when the invoice was issued."
+      - name: issued_date
+        description: "Calendar day the invoice was issued."
+      - name: fiscal_month
+        description: "Fiscal month the invoice is recognized in."
+      - name: due_at
+        description: "Timestamp when payment on the invoice becomes due."
+      - name: paid_at
+        description: "Timestamp when the invoice was paid in full. Null if unpaid."
+
+  - name: int_billing_subscriptions
+    description: >
+      One row per Chargebee subscription with the member, studio, and plan it belongs
+      to, plus the MRR it contributes. The basis for all MRR reporting.
+    columns:
+      - name: subscription_id
+        description: "Natural key for the billing subscription."
+        tests:
+          - unique
+          - not_null
+      - name: member_id
+        description: "Foreign key to the member."
+        tests:
+          - not_null
+      - name: member_name
+        description: "Member's full name, concatenated from first and last name."
+      - name: studio_id
+        description: "Foreign key to the studio that owns this record."
+        tests:
+          - not_null
+      - name: studio_name
+        description: "Display name of the studio."
+      - name: region
+        description: "Sales region the studio belongs to."
+      - name: plan_id
+        description: "Foreign key to the membership plan."
+        tests:
+          - not_null
+      - name: plan_name
+        description: "Display name of the membership plan."
+      - name: plan_tier
+        description: "Plan tier (unlimited, class pack, or drop-in)."
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["unlimited", "class_pack", "drop_in"]
+              config:
+                severity: warn
+      - name: plan_price_usd
+        description: "List price of the plan in USD."
+      - name: subscription_status
+        description: "Status of the subscription (active, cancelled, or in trial)."
+      - name: billing_period
+        description: "Length of the billing period, in billing period units."
+      - name: billing_period_unit
+        description: "Unit the billing period is measured in (month or year)."
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["month", "year"]
+              config:
+                severity: warn
+      - name: mrr_usd
+        description: "Monthly recurring revenue attributed to the subscription, in USD."
+      - name: started_at
+        description: "Timestamp when the record became active."
+      - name: activated_at
+        description: "Timestamp when the subscription first became billable."
+      - name: cancelled_at
+        description: "Timestamp when the record was cancelled. Null if still active."
+
+  - name: int_bookings
+    description: >
+      Bookings enriched with the class, schedule, studio, and member context needed
+      downstream, so mart models do not each re-join the staging layer.
+    columns:
+      - name: booking_id
+        description: "Natural key for the booking."
+        tests:
+          - unique
+          - not_null
+      - name: schedule_id
+        description: "Foreign key to the scheduled class instance."
+        tests:
+          - not_null
+      - name: class_id
+        description: "Foreign key to the class offering."
+        tests:
+          - not_null
+      - name: class_name
+        description: "Display name of the class offering."
+      - name: class_type
+        description: "Category of class (yoga, HIIT, cycle, pilates, barre)."
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["yoga", "hiit", "cycle", "pilates", "barre"]
+              config:
+                severity: warn
+      - name: studio_id
+        description: "Foreign key to the studio that owns this record."
+        tests:
+          - not_null
+      - name: studio_name
+        description: "Display name of the studio."
+      - name: region
+        description: "Sales region the studio belongs to."
+      - name: member_id
+        description: "Foreign key to the member."
+        tests:
+          - not_null
+      - name: member_email
+        description: "Member's email address."
+      - name: instructor_id
+        description: "Foreign key to the instructor."
+        tests:
+          - not_null
+      - name: class_start_at
+        description: "Scheduled start time of the class."
+      - name: class_end_at
+        description: "Scheduled end time of the class."
+      - name: booking_status
+        description: "Status of the booking (booked, attended, cancelled, no-show)."
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["booked", "attended", "cancelled", "no_show"]
+              config:
+                severity: warn
+      - name: booked_at
+        description: "Timestamp when the booking was made."
+      - name: checked_in_at
+        description: "Timestamp when the member checked in. Null if they never arrived."
+      - name: is_no_show
+        description: "True when the member booked but never checked in."
+        tests:
+          - not_null
+
+  - name: int_marketing_ad_performance
+    description: >
+      Daily ad delivery metrics normalized to a shared schema across ad platforms, so
+      channel comparisons do not depend on platform-specific fields.
+    columns:
+      - name: channel
+        description: "Marketing or support channel the record is attributed to."
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["google", "facebook", "linkedin", "organic"]
+              config:
+                severity: warn
+      - name: campaign_id
+        description: "Foreign key to the advertising campaign."
+        tests:
+          - not_null
+      - name: campaign_name
+        description: "Display name of the campaign."
+      - name: date_day
+        description: "Calendar day the metrics are aggregated to."
+      - name: impressions
+        description: "Ad impressions served."
+      - name: clicks
+        description: "Clicks on the ad."
+      - name: spend_usd
+        description: "Advertising spend, in USD."
+      - name: leads
+        description: "Leads attributed to the ad."
+
+  - name: int_marketing_daily_spend
+    description: >
+      Paid marketing spend and delivery rolled up to one row per campaign per day,
+      unioned across Google Ads and Facebook Ads.
+    columns:
+      - name: date_day
+        description: "Calendar day the metrics are aggregated to."
+      - name: day_of_week
+        description: "Day-of-week name for the calendar day."
+      - name: month_name
+        description: "Month name for the calendar day."
+      - name: channel
+        description: "Marketing or support channel the record is attributed to."
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["google", "facebook", "linkedin", "organic"]
+              config:
+                severity: warn
+      - name: campaign_id
+        description: "Foreign key to the advertising campaign."
+        tests:
+          - not_null
+      - name: campaign_name
+        description: "Display name of the campaign."
+      - name: impressions
+        description: "Ad impressions served."
+      - name: clicks
+        description: "Clicks on the ad."
+      - name: spend_usd
+        description: "Advertising spend, in USD."
+      - name: leads
+        description: "Leads attributed to the ad."
+
+  - name: int_marketing_email_engagement
+    description: >
+      One row per email campaign with engagement rolled up from per-recipient events:
+      opens, clicks, bounces, unsubscribes, and their unique counts.
+    columns:
+      - name: email_campaign_id
+        description: "Natural key for the email marketing campaign."
+        tests:
+          - unique
+          - not_null
+      - name: campaign_name
+        description: "Display name of the campaign."
+      - name: subject_line
+        description: "Subject line of the email campaign."
+      - name: email_type
+        description: "Type of email sent (newsletter, product, or lifecycle)."
+      - name: send_date
+        description: "Date the email campaign was sent."
+      - name: num_recipients
+        description: "Recipients the email campaign was sent to."
+      - name: total_opens
+        description: "Email opens, including repeat opens."
+      - name: total_clicks
+        description: "Email link clicks, including repeat clicks."
+      - name: total_bounces
+        description: "Emails that bounced."
+      - name: total_unsubscribes
+        description: "Recipients who unsubscribed."
+      - name: unique_openers
+        description: "Distinct recipients who opened the email."
+      - name: unique_clickers
+        description: "Distinct recipients who clicked a link."
+
+  - name: int_ops_headcount_by_department
+    description: >
+      Headcount rolled up to one row per department, splitting active from terminated
+      employees and bounding the department's hiring history.
+    columns:
+      - name: department
+        description: "Department the employee belongs to."
+      - name: cost_center
+        description: "Cost center the department charges to."
+      - name: org_group
+        description: "Top-level organizational group."
+      - name: total_employees
+        description: "Employees in the grouping, active or terminated."
+      - name: active_employees
+        description: "Employees currently employed."
+      - name: terminated_employees
+        description: "Employees who have left."
+      - name: earliest_hire_at
+        description: "Hire date of the longest-tenured employee in the grouping."
+      - name: latest_hire_at
+        description: "Hire date of the most recent employee in the grouping."
+
+  - name: int_ops_monthly_pnl
+    description: >
+      General-ledger entries rolled up to one row per account per accounting month,
+      restricted to profit-and-loss accounts.
+    columns:
+      - name: accounting_month
+        description: "Accounting period the entries roll up to."
+      - name: account_id
+        description: "Foreign key to the account."
+        tests:
+          - not_null
+      - name: account_name
+        description: "Display name of the account."
+      - name: account_type
+        description: "Classification of the account in the chart of accounts."
+      - name: statement_category
+        description: "Financial statement category the account rolls up to."
+      - name: total_debits_usd
+        description: "Sum of debits posted in the period, in USD."
+      - name: total_credits_usd
+        description: "Sum of credits posted in the period, in USD."
+      - name: net_amount_usd
+        description: "Debits less credits for the period, in USD."
+      - name: entry_count
+        description: "General-ledger entries in the period."
+
+  - name: int_ops_support_tickets
+    description: >
+      Zendesk tickets with the requesting member, the assigned agent, resolution time,
+      and the satisfaction rating left by the requester.
+    columns:
+      - name: ticket_id
+        description: "Natural key for the support ticket."
+        tests:
+          - unique
+          - not_null
+      - name: requester_member_id
+        description: "Member who opened the support ticket."
+        tests:
+          - not_null
+      - name: assignee_id
+        description: "User ID of the person the record is assigned to."
+      - name: assignee_name
+        description: "Full name of the assignee."
+      - name: assignee_role
+        description: "Support role of the assignee (agent, lead, or manager)."
+      - name: status
+        description: "Current status of the record in the source system."
+      - name: priority
+        description: "Support priority assigned to the ticket."
+      - name: channel
+        description: "Marketing or support channel the record is attributed to."
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["google", "facebook", "linkedin", "organic"]
+              config:
+                severity: warn
+      - name: ticket_type
+        description: "Type of support request."
+      - name: created_at
+        description: "Timestamp when the record was created in the source system."
+      - name: solved_at
+        description: "Timestamp when the support ticket was resolved."
+      - name: resolution_hours
+        description: "Hours between ticket creation and resolution."
+      - name: satisfaction_score
+        description: "Raw satisfaction score submitted by the requester."
+      - name: csat_rating
+        description: "Customer satisfaction rating (good or bad)."
+      - name: csat_comment
+        description: "Free-text comment left with the satisfaction rating."
+
+  - name: int_payments
+    description: >
+      Stripe charges joined to the member and studio they belong to, normalized to USD
+      and given a consistent charge status.
+    columns:
+      - name: charge_id
+        description: "Natural key for the payment charge."
+        tests:
+          - unique
+          - not_null
+      - name: member_id
+        description: "Foreign key to the member."
+        tests:
+          - not_null
+      - name: studio_id
+        description: "Foreign key to the studio that owns this record."
+        tests:
+          - not_null
+      - name: amount_usd
+        description: "Transaction amount in USD."
+      - name: currency
+        description: "ISO 4217 currency code the amount is denominated in."
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["USD", "CAD", "GBP", "EUR"]
+              config:
+                severity: warn
+      - name: charge_status
+        description: "Outcome of the payment charge."
+      - name: charged_at
+        description: "Timestamp when the charge was submitted to the gateway."
+      - name: refunded
+        description: "True when the charge was refunded."
+
+  - name: int_product_daily_active_members
+    description: >
+      One row per member per active day, with session counts, event volume, and time
+      spent. The grain all engagement reporting builds on.
+    columns:
+      - name: activity_date
+        description: "Calendar day the activity is attributed to."
+      - name: member_id
+        description: "Foreign key to the member."
+        tests:
+          - not_null
+      - name: member_region
+        description: "Sales region of the member's home studio."
+      - name: member_status
+        description: "Membership status of the member at the time of the event."
+      - name: session_count
+        description: "Product sessions in the grouping."
+      - name: total_events
+        description: "Product events in the grouping."
+      - name: total_duration_seconds
+        description: "Summed session duration, in seconds."
+      - name: last_platform
+        description: "Most recent platform the member was active on."
+
+  - name: int_product_event_stream
+    description: >
+      Segment track events with the member and their membership status attached,
+      categorized into product areas and reduced to one row per event.
+    columns:
+      - name: event_id
+        description: "Natural key for the product event."
+        tests:
+          - unique
+          - not_null
+      - name: member_id
+        description: "Foreign key to the member."
+        tests:
+          - not_null
+      - name: member_region
+        description: "Sales region of the member's home studio."
+      - name: member_status
+        description: "Membership status of the member at the time of the event."
+      - name: event_name
+        description: "Name of the product event."
+      - name: event_category
+        description: "Product area the event belongs to."
+      - name: occurred_at
+        description: "Timestamp when the event occurred on the client."
+      - name: event_date
+        description: "Calendar day the event occurred."
+      - name: device_type
+        description: "Device class the event was recorded on."
+      - name: platform
+        description: "Client platform the event was recorded on (iOS, Android, or web)."
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["ios", "android", "web"]
+              config:
+                severity: warn
+
+  - name: int_product_feature_adoption
+    description: >
+      One row per member per feature area, capturing how much they use it and when they
+      first and last did.
+    columns:
+      - name: feature_area
+        description: "Product feature area the events roll up to."
+      - name: member_id
+        description: "Foreign key to the member."
+        tests:
+          - not_null
+      - name: member_region
+        description: "Sales region of the member's home studio."
+      - name: member_status
+        description: "Membership status of the member at the time of the event."
+      - name: event_count
+        description: "Product events in the grouping."
+      - name: distinct_actions
+        description: "Distinct event names the member triggered."
+      - name: first_used_at
+        description: "Timestamp of the member's first use of the feature."
+      - name: last_used_at
+        description: "Timestamp of the member's most recent use of the feature."
+
+  - name: int_sales_lead_funnel
+    description: >
+      One row per lead with its owner and, where the lead converted, the account and
+      opportunity it became. The basis for funnel conversion analysis.
+    columns:
+      - name: lead_id
+        description: "Natural key for the lead."
+        tests:
+          - unique
+          - not_null
+      - name: first_name
+        description: "Given name."
+      - name: last_name
+        description: "Family name."
+      - name: email
+        description: "Email address."
+      - name: company_name
+        description: "Company the lead belongs to."
+      - name: lead_source
+        description: "Channel the lead originated from."
+      - name: lead_status
+        description: "Stage of the lead in the qualification process."
+      - name: industry
+        description: "Industry classification of the account."
+      - name: estimated_studio_count
+        description: "Studio count self-reported by the lead."
+      - name: owner_id
+        description: "User ID of the record owner."
+        tests:
+          - not_null
+      - name: owner_name
+        description: "Full name of the record owner."
+      - name: sales_team
+        description: "Sales team the owner belongs to."
+      - name: is_converted
+        description: "True when the lead converted to an opportunity."
+        tests:
+          - not_null
+      - name: converted_account_id
+        description: "Account created when the lead converted."
+      - name: converted_opportunity_id
+        description: "Opportunity created when the lead converted."
+      - name: converted_stage_name
+        description: "Sales stage of the opportunity the lead converted into."
+      - name: converted_amount_arr_usd
+        description: "ARR on the opportunity the lead converted into, in USD."
+      - name: converted_is_won
+        description: "True when the converted opportunity closed won."
+      - name: created_at
+        description: "Timestamp when the record was created in the source system."
+      - name: converted_at
+        description: "Timestamp when the lead converted to an opportunity."
+
+  - name: int_sales_opportunities_enriched
+    description: >
+      Salesforce opportunities joined to their account and owner, with probability-
+      weighted ARR and the region the opportunity is credited to.
+    columns:
+      - name: opportunity_id
+        description: "Natural key for the sales opportunity."
+        tests:
+          - unique
+          - not_null
+      - name: opportunity_name
+        description: "Display name of the sales opportunity."
+      - name: account_id
+        description: "Foreign key to the account."
+        tests:
+          - not_null
+      - name: account_name
+        description: "Display name of the account."
+      - name: industry
+        description: "Industry classification of the account."
+      - name: studio_count
+        description: "Studios operated by the account."
+      - name: account_state_code
+        description: "Two-letter state code on the account's billing address."
+      - name: owner_id
+        description: "User ID of the record owner."
+        tests:
+          - not_null
+      - name: owner_name
+        description: "Full name of the record owner."
+      - name: sales_team
+        description: "Sales team the owner belongs to."
+      - name: owner_region
+        description: "Sales region assigned to the record owner."
+      - name: stage_name
+        description: "Current sales stage of the opportunity."
+      - name: amount_arr_usd
+        description: "Annual recurring revenue attached to the opportunity, in USD."
+      - name: probability
+        description: "Win probability assigned to the sales stage, as a fraction."
+      - name: weighted_arr_usd
+        description: "ARR multiplied by the opportunity's win probability, in USD."
+      - name: lead_source
+        description: "Channel the lead originated from."
+      - name: forecast_category
+        description: "Forecast category the opportunity rolls up to."
+      - name: is_won
+        description: "True when the opportunity closed won."
+        tests:
+          - not_null
+      - name: is_closed
+        description: "True when the opportunity is no longer open."
+        tests:
+          - not_null
+      - name: created_at
+        description: "Timestamp when the record was created in the source system."
+      - name: close_date
+        description: "Expected or actual close date of the opportunity."
+
+  - name: int_sales_stage_transitions
+    description: >
+      One row per opportunity stage change, with the stage moved from and to. Used to
+      measure stage velocity and pipeline movement over time.
+    columns:
+      - name: opportunity_history_id
+        description: "Natural key for the opportunity history row."
+        tests:
+          - unique
+          - not_null
+      - name: opportunity_id
+        description: "Foreign key to the sales opportunity."
+        tests:
+          - not_null
+      - name: opportunity_name
+        description: "Display name of the sales opportunity."
+      - name: account_id
+        description: "Foreign key to the account."
+        tests:
+          - not_null
+      - name: from_stage_name
+        description: "Sales stage the opportunity moved out of."
+      - name: to_stage_name
+        description: "Sales stage the opportunity moved into."
+      - name: amount_arr_usd
+        description: "Annual recurring revenue attached to the opportunity, in USD."
+      - name: probability
+        description: "Win probability assigned to the sales stage, as a fraction."
+      - name: changed_by_user_id
+        description: "User who made the stage change."
+        tests:
+          - not_null
+      - name: changed_by_name
+        description: "Full name of the user who made the stage change."
+      - name: is_stage_change
+        description: "True when the history row represents an actual stage change."
+        tests:
+          - not_null
+      - name: is_won
+        description: "True when the opportunity closed won."
+        tests:
+          - not_null
+      - name: is_closed
+        description: "True when the opportunity is no longer open."
+        tests:
+          - not_null
+      - name: transition_at
+        description: "Timestamp of the opportunity stage change."

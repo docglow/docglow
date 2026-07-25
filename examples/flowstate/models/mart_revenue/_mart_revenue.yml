@@ -3,12 +3,22 @@ version: 2
 models:
   - name: daily_revenue
     description: >
-      Daily net revenue by studio, with the count of paying members.
-      Powers the studio performance dashboard.
+      Daily net revenue by studio, with the count of paying members. Powers the studio
+      performance dashboard.
     columns:
       - name: revenue_date
         description: "Day the revenue was recognized (truncated charge timestamp)."
       - name: net_revenue_usd
         description: "Sum of recognized net revenue for the studio/day."
+        tests:
+          - not_null
       - name: paying_members
         description: "Distinct members with at least one successful charge that day."
+      - name: studio_id
+        description: "Foreign key to the studio that owns this record."
+        tests:
+          - not_null
+      - name: studio_name
+        description: "Display name of the studio."
+      - name: region
+        description: "Sales region the studio belongs to."

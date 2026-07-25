@@ -8,3 +8,18 @@ sources:
     tables:
       - name: charges
         description: "Individual payment charges against a member's card."
+        columns:
+          - name: charge_id
+            description: "Natural key for the payment charge."
+          - name: customer_email
+            description: "Email address on the billing account."
+          - name: amount
+            description: "Transaction amount in the charge currency."
+          - name: currency
+            description: "ISO 4217 currency code the amount is denominated in."
+          - name: status
+            description: "Current status of the record in the source system."
+          - name: created_at
+            description: "Timestamp when the record was created in the source system."
+          - name: refunded
+            description: "True when the charge was refunded."

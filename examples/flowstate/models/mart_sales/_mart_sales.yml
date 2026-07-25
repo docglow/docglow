@@ -1,27 +1,10 @@
 version: 2
 
 models:
-  - name: sales_pipeline
-    description: >
-      Sales pipeline rolled up by rep and stage, showing open / won / lost
-      opportunity counts and ARR (including probability-weighted open ARR).
-      Powers the sales leadership pipeline dashboard.
-    columns:
-      - name: owner_name
-        description: "Sales rep who owns the opportunities in this row."
-      - name: stage_name
-        description: "Pipeline stage the opportunities are in."
-      - name: open_arr_usd
-        description: "Sum of ARR for opportunities still open (not closed)."
-      - name: won_arr_usd
-        description: "Sum of ARR for opportunities closed won."
-      - name: weighted_open_arr_usd
-        description: "Open ARR multiplied by stage win probability."
-
   - name: opportunity_funnel
     description: >
-      Stage-by-stage funnel of opportunities with deal counts, ARR, average
-      win probability, and won/lost outcomes for conversion analysis.
+      Stage-by-stage funnel of opportunities with deal counts, ARR, average win
+      probability, and won/lost outcomes for conversion analysis.
     columns:
       - name: stage_name
         description: "Pipeline stage being summarized."
@@ -29,5 +12,62 @@ models:
         description: "Number of opportunities currently in or passing through the stage."
       - name: total_arr_usd
         description: "Total ARR of opportunities in the stage."
+        tests:
+          - not_null
       - name: weighted_arr_usd
         description: "Total ARR weighted by win probability."
+        tests:
+          - not_null
+      - name: forecast_category
+        description: "Forecast category the opportunity rolls up to."
+      - name: account_count
+        description: "Distinct accounts in the grouping."
+      - name: avg_arr_usd
+        description: "Mean ARR per opportunity in the grouping, in USD."
+        tests:
+          - not_null
+      - name: avg_probability
+        description: "Mean win probability across the grouping."
+      - name: won_count
+        description: "Opportunities that closed won."
+      - name: lost_count
+        description: "Opportunities that closed lost."
+
+  - name: sales_pipeline
+    description: >
+      Sales pipeline rolled up by rep and stage, showing open / won / lost opportunity
+      counts and ARR (including probability-weighted open ARR). Powers the sales
+      leadership pipeline dashboard.
+    columns:
+      - name: owner_name
+        description: "Sales rep who owns the opportunities in this row."
+      - name: stage_name
+        description: "Pipeline stage the opportunities are in."
+      - name: open_arr_usd
+        description: "Sum of ARR for opportunities still open (not closed)."
+        tests:
+          - not_null
+      - name: won_arr_usd
+        description: "Sum of ARR for opportunities closed won."
+        tests:
+          - not_null
+      - name: weighted_open_arr_usd
+        description: "Open ARR multiplied by stage win probability."
+        tests:
+          - not_null
+      - name: sales_team
+        description: "Sales team the owner belongs to."
+      - name: owner_region
+        description: "Sales region assigned to the record owner."
+      - name: opportunity_count
+        description: "Distinct opportunities in the grouping."
+      - name: open_count
+        description: "Opportunities still open."
+      - name: won_count
+        description: "Opportunities that closed won."
+      - name: lost_count
+        description: "Opportunities that closed lost."
+      - name: total_arr_usd
+        description: "Sum of annual recurring revenue in the grouping, in USD."
+        tests:
+          - not_null
