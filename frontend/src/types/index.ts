@@ -119,6 +119,35 @@ declare module "@docglow/shared-types" {
   interface HealthScore {
     readonly freshness_included?: boolean;
   }
+
+  // Added in 0.8.6 (DOC-299). The effective scoring rules, so the Health page
+  // can explain a score using the project's own thresholds and naming rules
+  // rather than hardcoded defaults. Remove once shared-types is republished.
+  interface HealthData {
+    readonly config?: HealthConfigData;
+  }
+
+  interface NamingData {
+    readonly total_models?: number;
+  }
+}
+
+export interface ComplexityThresholds {
+  readonly high_sql_lines: number;
+  readonly high_join_count: number;
+  readonly high_cte_count: number;
+  readonly high_subquery_count: number;
+}
+
+export interface NamingRule {
+  readonly layer: string;
+  readonly patterns: string[];
+}
+
+export interface HealthConfigData {
+  readonly weights: Record<string, number>;
+  readonly complexity_thresholds: ComplexityThresholds;
+  readonly naming_rules: NamingRule[];
 }
 
 export type LineageBadgeAbbreviation = 'smart' | 'truncate' | 'middle' | 'none';

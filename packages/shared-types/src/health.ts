@@ -9,6 +9,31 @@ export interface HealthData {
   readonly complexity: ComplexityData;
   readonly naming: NamingData;
   readonly orphans: OrphanModel[];
+  /**
+   * The rules these scores were produced under. Complexity thresholds and
+   * naming rules are overridable per project in docglow.yml, so anything that
+   * explains a score must read them from here rather than assume defaults.
+   * Optional for payloads generated before this field existed.
+   */
+  readonly config?: HealthConfigData;
+}
+
+export interface HealthConfigData {
+  readonly weights: Record<string, number>;
+  readonly complexity_thresholds: ComplexityThresholds;
+  readonly naming_rules: NamingRule[];
+}
+
+export interface ComplexityThresholds {
+  readonly high_sql_lines: number;
+  readonly high_join_count: number;
+  readonly high_cte_count: number;
+  readonly high_subquery_count: number;
+}
+
+export interface NamingRule {
+  readonly layer: string;
+  readonly patterns: string[];
 }
 
 export interface HealthScore {
@@ -77,6 +102,12 @@ export interface NamingData {
   readonly compliant_count: number;
   readonly compliance_rate: number;
   readonly violations: NamingViolation[];
+  /**
+   * Every model considered, including those whose folder matched no configured
+   * layer and were therefore never checked. `total_checked` alone hides that a
+   * score may come from a fraction of the project.
+   */
+  readonly total_models?: number;
 }
 
 export interface NamingViolation {
