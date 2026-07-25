@@ -15,11 +15,19 @@ export interface HealthScore {
   readonly overall: number;
   readonly documentation: number;
   readonly testing: number;
+  /** Meaningless when `freshness_included` is false — do not render as a score. */
   readonly freshness: number;
   readonly complexity: number;
   readonly naming: number;
   readonly orphans: number;
   readonly grade: string;
+  /**
+   * False when no source has freshness monitoring configured, in which case the
+   * dimension is excluded from the weighted score and `freshness` is a
+   * placeholder 0. Optional so payloads generated before this field existed
+   * still parse; treat `undefined` as true.
+   */
+  readonly freshness_included?: boolean;
 }
 
 export interface CoverageMetric {

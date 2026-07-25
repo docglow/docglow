@@ -1,11 +1,34 @@
 version: 2
 
 models:
+  - name: feature_usage
+    description: >
+      Feature adoption by feature area and region: adopting members, adoption rate
+      against the member base, and event volume. Powers the feature adoption funnel and
+      product roadmap prioritization.
+    columns:
+      - name: feature_area
+        description: "Grouped product feature area (scheduling, check_in, membership, fitness_tracking)."
+      - name: adopting_members
+        description: "Distinct members who used the feature area."
+      - name: adoption_rate
+        description: "Adopting members divided by the total member base."
+      - name: member_region
+        description: "Sales region of the member's home studio."
+      - name: total_members
+        description: "Distinct members in the grouping."
+      - name: total_feature_events
+        description: "Product events attributed to the feature area."
+      - name: avg_distinct_actions_per_member
+        description: "Mean distinct event names per member."
+      - name: most_recent_use_at
+        description: "Timestamp of the most recent use of the feature by any member."
+
   - name: member_engagement
     description: >
-      Daily member engagement by region: active members (DAU), session and
-      event volume, and average session length. Powers the product engagement
-      dashboard and weekly/monthly active member trends.
+      Daily member engagement by region: active members (DAU), session and event volume,
+      and average session length. Powers the product engagement dashboard and
+      weekly/monthly active member trends.
     columns:
       - name: activity_date
         description: "Calendar date the engagement metrics are measured for."
@@ -15,16 +38,11 @@ models:
         description: "Distinct members with at least one session on the date."
       - name: events_per_active_member
         description: "Total events divided by distinct active members."
-
-  - name: feature_usage
-    description: >
-      Feature adoption by feature area and region: adopting members, adoption
-      rate against the member base, and event volume. Powers the feature
-      adoption funnel and product roadmap prioritization.
-    columns:
-      - name: feature_area
-        description: "Grouped product feature area (scheduling, check_in, membership, fitness_tracking)."
-      - name: adopting_members
-        description: "Distinct members who used the feature area."
-      - name: adoption_rate
-        description: "Adopting members divided by the total member base."
+      - name: active_members
+        description: "Distinct members with activity in the period."
+      - name: total_sessions
+        description: "Product sessions in the grouping."
+      - name: total_events
+        description: "Product events in the grouping."
+      - name: avg_session_seconds_per_member
+        description: "Mean session duration per member, in seconds."

@@ -110,6 +110,15 @@ declare module "@docglow/shared-types" {
     readonly label: string;
     readonly maturity: string;
   }
+
+  // Added in 0.8.6 (DOC-296). False when no source has freshness monitoring, in
+  // which case the dimension is excluded from the weighted score and
+  // `freshness` is a placeholder 0. Optional so payloads generated before this
+  // field existed still parse; treat `undefined` as true. Remove once
+  // shared-types is republished.
+  interface HealthScore {
+    readonly freshness_included?: boolean;
+  }
 }
 
 export type LineageBadgeAbbreviation = 'smart' | 'truncate' | 'middle' | 'none';

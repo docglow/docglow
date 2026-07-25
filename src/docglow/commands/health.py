@@ -79,7 +79,9 @@ def health(
                 f"| **Overall** | **{score['overall']:.0f}/100 ({score['grade']})** |",
                 f"| Documentation | {score['documentation']:.0f} |",
                 f"| Testing | {score['testing']:.0f} |",
-                f"| Freshness | {score['freshness']:.0f} |",
+                f"| Freshness | {score['freshness']:.0f} |"
+                if score.get("freshness_included", True)
+                else "| Freshness | n/a (no monitored sources) |",
                 f"| Complexity | {score['complexity']:.0f} |",
                 f"| Naming | {score['naming']:.0f} |",
                 f"| Orphans | {score['orphans']:.0f} |",
@@ -151,10 +153,11 @@ def health(
             f"Models: {cov['models_tested']['covered']}/{cov['models_tested']['total']}  "
             f"Columns: {cov['columns_tested']['covered']}/{cov['columns_tested']['total']}",
         )
+        freshness_on = score.get("freshness_included", True)
         table.add_row(
             "Source Freshness",
-            f"{score['freshness']:.0f}",
-            "No monitored sources" if score["freshness"] == 100.0 else "",
+            f"{score['freshness']:.0f}" if freshness_on else "—",
+            "" if freshness_on else "No monitored sources — excluded from score",
         )
         table.add_row(
             "Model Complexity",

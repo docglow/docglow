@@ -8,13 +8,159 @@ sources:
     tables:
       - name: subscriptions
         description: "Recurring membership subscriptions, one row per subscription with status and MRR."
+        columns:
+          - name: subscription_id
+            description: "Natural key for the billing subscription."
+          - name: member_id
+            description: "Foreign key to the member."
+          - name: plan_id
+            description: "Foreign key to the membership plan."
+          - name: status
+            description: "Current status of the record in the source system."
+          - name: started_at
+            description: "Timestamp when the record became active."
+          - name: activated_at
+            description: "Timestamp when the subscription first became billable."
+          - name: cancelled_at
+            description: "Timestamp when the record was cancelled. Null if still active."
+          - name: mrr_usd
+            description: "Monthly recurring revenue attributed to the subscription, in USD."
+          - name: billing_period
+            description: "Length of the billing period, in billing period units."
+          - name: billing_period_unit
+            description: "Unit the billing period is measured in (month or year)."
+          - name: auto_collection
+            description: "Whether the subscription is charged automatically or invoiced."
+          - name: created_at
+            description: "Timestamp when the record was created in the source system."
       - name: subscription_plans
         description: "Catalog of membership plans with pricing, tier, and billing cadence."
+        columns:
+          - name: plan_id
+            description: "Natural key for the membership plan."
+          - name: plan_name
+            description: "Display name of the membership plan."
+          - name: plan_tier
+            description: "Plan tier (unlimited, class pack, or drop-in)."
+          - name: status
+            description: "Current status of the record in the source system."
+          - name: price_usd
+            description: "Price of the plan, in USD."
+          - name: billing_period
+            description: "Length of the billing period, in billing period units."
+          - name: billing_period_unit
+            description: "Unit the billing period is measured in (month or year)."
+          - name: trial_period_days
+            description: "Length of the free trial, in days."
+          - name: is_metered
+            description: "True when the plan bills on usage rather than a flat fee."
+          - name: created_at
+            description: "Timestamp when the record was created in the source system."
+          - name: updated_at
+            description: "Timestamp of the most recent update in the source system."
       - name: invoices
         description: "Invoices generated per billing cycle against a subscription."
+        columns:
+          - name: invoice_id
+            description: "Natural key for the invoice."
+          - name: subscription_id
+            description: "Foreign key to the billing subscription."
+          - name: member_id
+            description: "Foreign key to the member."
+          - name: status
+            description: "Current status of the record in the source system."
+          - name: total_usd
+            description: "Invoice total, in USD."
+          - name: amount_paid_usd
+            description: "Amount paid against the invoice, in USD."
+          - name: amount_due_usd
+            description: "Amount still outstanding on the invoice, in USD."
+          - name: currency
+            description: "ISO 4217 currency code the amount is denominated in."
+          - name: issued_at
+            description: "Timestamp when the invoice was issued."
+          - name: due_at
+            description: "Timestamp when payment on the invoice becomes due."
+          - name: paid_at
+            description: "Timestamp when the invoice was paid in full. Null if unpaid."
+          - name: created_at
+            description: "Timestamp when the record was created in the source system."
       - name: invoice_line_items
         description: "Individual line items composing each invoice (plan charges, add-ons, taxes)."
+        columns:
+          - name: line_item_id
+            description: "Natural key for the invoice line item."
+          - name: invoice_id
+            description: "Foreign key to the invoice."
+          - name: subscription_id
+            description: "Foreign key to the billing subscription."
+          - name: plan_id
+            description: "Foreign key to the membership plan."
+          - name: description
+            description: "Free-text description of the line item."
+          - name: line_item_type
+            description: "Type of invoice line item (plan charge, add-on, or tax)."
+          - name: quantity
+            description: "Units billed on the line item."
+          - name: unit_amount_usd
+            description: "Price per unit on the line item, in USD."
+          - name: amount_usd
+            description: "Transaction amount in USD."
+          - name: is_taxed
+            description: "True when tax applies to the line item."
+          - name: created_at
+            description: "Timestamp when the record was created in the source system."
       - name: transactions
         description: "Payment and refund attempts processed through the billing gateway."
+        columns:
+          - name: transaction_id
+            description: "Natural key for the billing transaction."
+          - name: invoice_id
+            description: "Foreign key to the invoice."
+          - name: subscription_id
+            description: "Foreign key to the billing subscription."
+          - name: member_id
+            description: "Foreign key to the member."
+          - name: transaction_type
+            description: "Type of billing transaction (payment, refund, or credit)."
+          - name: status
+            description: "Current status of the record in the source system."
+          - name: amount_usd
+            description: "Transaction amount in USD."
+          - name: currency
+            description: "ISO 4217 currency code the amount is denominated in."
+          - name: payment_method
+            description: "Payment instrument used for the transaction."
+          - name: gateway
+            description: "Payment gateway that processed the transaction."
+          - name: processed_at
+            description: "Timestamp when the transaction was processed by the gateway."
+          - name: created_at
+            description: "Timestamp when the record was created in the source system."
       - name: credit_notes
         description: "Credit notes issued for refunds, adjustments, or write-offs against invoices."
+        columns:
+          - name: credit_note_id
+            description: "Natural key for the credit note."
+          - name: invoice_id
+            description: "Foreign key to the invoice."
+          - name: subscription_id
+            description: "Foreign key to the billing subscription."
+          - name: member_id
+            description: "Foreign key to the member."
+          - name: status
+            description: "Current status of the record in the source system."
+          - name: reason_code
+            description: "Machine-readable reason the credit was issued."
+          - name: total_usd
+            description: "Invoice total, in USD."
+          - name: amount_refunded_usd
+            description: "Amount refunded, in USD."
+          - name: amount_allocated_usd
+            description: "Amount of the credit applied to this transaction, in USD."
+          - name: currency
+            description: "ISO 4217 currency code the amount is denominated in."
+          - name: issued_at
+            description: "Timestamp when the invoice was issued."
+          - name: created_at
+            description: "Timestamp when the record was created in the source system."

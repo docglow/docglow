@@ -1,72 +1,120 @@
 version: 2
 
 models:
-  - name: stg_zendesk__tickets
-    description: "Staged Zendesk support tickets, one row per ticket with status, priority, channel, and resolution timestamps."
+  - name: stg_quickbooks__accounts
+    description: >
+      Staged QuickBooks chart of accounts, one row per account with type and statement
+      classification.
     columns:
-      - name: ticket_id
-        description: "Primary key. Unique identifier for the support ticket."
+      - name: account_id
+        description: "Primary key. Unique identifier for the account."
         tests:
           - unique
           - not_null
-      - name: requester_member_id
-        description: "Foreign key to the member who opened the ticket (ties to dim_member)."
-      - name: assignee_id
-        description: "Foreign key to the Zendesk user (agent) assigned to the ticket."
-      - name: status
-        description: "Current ticket status (new, open, pending, solved, closed)."
-      - name: priority
-        description: "Ticket priority level (low, normal, high, urgent)."
-      - name: channel
-        description: "Channel the ticket originated from (email, chat, phone, web_form)."
-      - name: solved_at
-        description: "Timestamp the ticket was marked solved; null if unresolved."
-      - name: satisfaction_score
-        description: "CSAT outcome recorded on the ticket (good, bad, offered, unoffered)."
+      - name: account_name
+        description: "Human-readable account name."
+      - name: account_type
+        description: "Account type (asset, liability, equity, revenue, expense)."
+      - name: statement_category
+        description: "Financial statement the account rolls up to (balance_sheet, profit_and_loss)."
+      - name: account_number
+        description: "Account number in the general ledger."
+      - name: is_active
+        description: "True when the record is currently active."
+        tests:
+          - not_null
 
-  - name: stg_zendesk__ticket_comments
-    description: "Staged Zendesk ticket comments, one row per public or internal comment posted on a ticket."
+  - name: stg_quickbooks__general_ledger
+    description: >
+      Staged QuickBooks general ledger, one row per journal posting line with
+      debit/credit and amount.
     columns:
-      - name: comment_id
-        description: "Primary key. Unique identifier for the comment."
+      - name: entry_id
+        description: "Primary key. Unique identifier for the ledger entry line."
         tests:
           - unique
           - not_null
-      - name: ticket_id
-        description: "Foreign key to the parent support ticket."
-      - name: author_id
-        description: "Foreign key to the Zendesk user who authored the comment."
-      - name: is_public
-        description: "Whether the comment is visible to the requester."
+      - name: account_id
+        description: "Foreign key to the chart-of-accounts account."
+        tests:
+          - not_null
+      - name: posted_at
+        description: "Date the entry was posted to the ledger."
+      - name: amount_usd
+        description: "Posting amount in USD (always positive; sign derived from debit_credit)."
+      - name: debit_credit
+        description: "Whether the line is a debit or credit posting."
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["debit", "credit"]
+              config:
+                severity: warn
+      - name: transaction_type
+        description: "Type of billing transaction (payment, refund, or credit)."
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["payment", "refund", "credit"]
+              config:
+                severity: warn
+      - name: memo
+        description: "Free-text memo on the ledger entry."
+      - name: department_id
+        description: "Foreign key to the department."
+        tests:
+          - not_null
 
-  - name: stg_zendesk__users
-    description: "Staged Zendesk users, one row per support agent or requester account."
+  - name: stg_quickbooks__invoices
+    description: "Staged QuickBooks accounts-receivable invoices issued to studios and partners."
     columns:
-      - name: user_id
-        description: "Primary key. Unique identifier for the Zendesk user."
+      - name: invoice_id
+        description: "Primary key. Unique identifier for the invoice."
         tests:
           - unique
           - not_null
-      - name: role
-        description: "User role (end-user, agent, admin)."
-      - name: organization_id
-        description: "Foreign key to the Zendesk organization the user belongs to."
+      - name: customer_id
+        description: "Foreign key to the billed customer (studio or partner)."
+        tests:
+          - not_null
+      - name: total_usd
+        description: "Total invoiced amount in USD."
+      - name: balance_usd
+        description: "Outstanding balance remaining on the invoice in USD."
+      - name: invoice_status
+        description: "Invoice status (draft, sent, paid, overdue, void)."
+      - name: issued_at
+        description: "Timestamp when the invoice was issued."
+      - name: due_at
+        description: "Timestamp when payment on the invoice becomes due."
+      - name: paid_at
+        description: "Timestamp when the invoice was paid in full. Null if unpaid."
 
-  - name: stg_zendesk__satisfaction_ratings
-    description: "Staged Zendesk CSAT survey responses, one row per rating submitted after a ticket is solved."
+  - name: stg_rippling__departments
+    description: >
+      Staged Rippling departments, one row per company department with cost center and
+      org grouping.
     columns:
-      - name: rating_id
-        description: "Primary key. Unique identifier for the satisfaction rating."
+      - name: department_id
+        description: "Primary key. Unique identifier for the department."
         tests:
           - unique
           - not_null
-      - name: ticket_id
-        description: "Foreign key to the ticket the rating was submitted against."
-      - name: score
-        description: "Rating value submitted by the requester (good, bad)."
+      - name: department_name
+        description: "Human-readable department name."
+      - name: cost_center
+        description: "Finance cost center code the department rolls up to."
+      - name: org_group
+        description: "Top-level organizational group."
+      - name: head_employee_id
+        description: "Employee ID of the department head."
+      - name: created_at
+        description: "Timestamp when the record was created in the source system."
 
   - name: stg_rippling__employees
-    description: "Staged Rippling employees, one row per FlowState employee with department, role, location, and employment lifecycle dates."
+    description: >
+      Staged Rippling employees, one row per FlowState employee with department, role,
+      location, and employment lifecycle dates.
     columns:
       - name: employee_id
         description: "Primary key. Unique identifier for the employee."
@@ -81,65 +129,145 @@ models:
         description: "Date the employee was hired."
       - name: terminated_at
         description: "Date the employee was terminated; null if currently employed."
+      - name: full_name
+        description: "Full name as recorded in the source system."
+      - name: work_email
+        description: "Company-issued email address."
+      - name: manager_id
+        description: "Employee ID of this person's manager."
+      - name: location
+        description: "Office location the employee is assigned to."
+      - name: employment_type
+        description: "Employment type (full time, part time, or contract)."
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["full_time", "part_time", "contract"]
+              config:
+                severity: warn
 
-  - name: stg_rippling__departments
-    description: "Staged Rippling departments, one row per company department with cost center and org grouping."
+  - name: stg_zendesk__satisfaction_ratings
+    description: >
+      Staged Zendesk CSAT survey responses, one row per rating submitted after a ticket
+      is solved.
     columns:
-      - name: department_id
-        description: "Primary key. Unique identifier for the department."
+      - name: rating_id
+        description: "Primary key. Unique identifier for the satisfaction rating."
         tests:
           - unique
           - not_null
-      - name: department_name
-        description: "Human-readable department name."
-      - name: cost_center
-        description: "Finance cost center code the department rolls up to."
+      - name: ticket_id
+        description: "Foreign key to the ticket the rating was submitted against."
+        tests:
+          - not_null
+      - name: score
+        description: "Rating value submitted by the requester (good, bad)."
+      - name: requester_member_id
+        description: "Member who opened the support ticket."
+        tests:
+          - not_null
+      - name: assignee_id
+        description: "User ID of the person the record is assigned to."
+      - name: comment
+        description: "Free-text comment left by the requester."
+      - name: created_at
+        description: "Timestamp when the record was created in the source system."
 
-  - name: stg_quickbooks__general_ledger
-    description: "Staged QuickBooks general ledger, one row per journal posting line with debit/credit and amount."
+  - name: stg_zendesk__ticket_comments
+    description: >
+      Staged Zendesk ticket comments, one row per public or internal comment posted on a
+      ticket.
     columns:
-      - name: entry_id
-        description: "Primary key. Unique identifier for the ledger entry line."
+      - name: comment_id
+        description: "Primary key. Unique identifier for the comment."
         tests:
           - unique
           - not_null
-      - name: account_id
-        description: "Foreign key to the chart-of-accounts account."
-      - name: posted_at
-        description: "Date the entry was posted to the ledger."
-      - name: amount_usd
-        description: "Posting amount in USD (always positive; sign derived from debit_credit)."
-      - name: debit_credit
-        description: "Whether the line is a debit or credit posting."
+      - name: ticket_id
+        description: "Foreign key to the parent support ticket."
+        tests:
+          - not_null
+      - name: author_id
+        description: "Foreign key to the Zendesk user who authored the comment."
+        tests:
+          - not_null
+      - name: is_public
+        description: "Whether the comment is visible to the requester."
+        tests:
+          - not_null
+      - name: body
+        description: "Full text of the comment."
+      - name: is_agent_comment
+        description: "True when the comment was written by a support agent."
+        tests:
+          - not_null
+      - name: created_at
+        description: "Timestamp when the record was created in the source system."
 
-  - name: stg_quickbooks__accounts
-    description: "Staged QuickBooks chart of accounts, one row per account with type and statement classification."
+  - name: stg_zendesk__tickets
+    description: >
+      Staged Zendesk support tickets, one row per ticket with status, priority, channel,
+      and resolution timestamps.
     columns:
-      - name: account_id
-        description: "Primary key. Unique identifier for the account."
+      - name: ticket_id
+        description: "Primary key. Unique identifier for the support ticket."
         tests:
           - unique
           - not_null
-      - name: account_name
-        description: "Human-readable account name."
-      - name: account_type
-        description: "Account type (asset, liability, equity, revenue, expense)."
-      - name: statement_category
-        description: "Financial statement the account rolls up to (balance_sheet, profit_and_loss)."
+      - name: requester_member_id
+        description: "Foreign key to the member who opened the ticket (ties to dim_member)."
+        tests:
+          - not_null
+      - name: assignee_id
+        description: "Foreign key to the Zendesk user (agent) assigned to the ticket."
+      - name: status
+        description: "Current ticket status (new, open, pending, solved, closed)."
+      - name: priority
+        description: "Ticket priority level (low, normal, high, urgent)."
+      - name: channel
+        description: "Channel the ticket originated from (email, chat, phone, web_form)."
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["google", "facebook", "linkedin", "organic"]
+              config:
+                severity: warn
+      - name: solved_at
+        description: "Timestamp the ticket was marked solved; null if unresolved."
+      - name: satisfaction_score
+        description: "CSAT outcome recorded on the ticket (good, bad, offered, unoffered)."
+      - name: subject
+        description: "Subject line of the support ticket."
+      - name: ticket_type
+        description: "Type of support request."
+      - name: created_at
+        description: "Timestamp when the record was created in the source system."
+      - name: updated_at
+        description: "Timestamp of the most recent update in the source system."
 
-  - name: stg_quickbooks__invoices
-    description: "Staged QuickBooks accounts-receivable invoices issued to studios and partners."
+  - name: stg_zendesk__users
+    description: "Staged Zendesk users, one row per support agent or requester account."
     columns:
-      - name: invoice_id
-        description: "Primary key. Unique identifier for the invoice."
+      - name: user_id
+        description: "Primary key. Unique identifier for the Zendesk user."
         tests:
           - unique
           - not_null
-      - name: customer_id
-        description: "Foreign key to the billed customer (studio or partner)."
-      - name: total_usd
-        description: "Total invoiced amount in USD."
-      - name: balance_usd
-        description: "Outstanding balance remaining on the invoice in USD."
-      - name: invoice_status
-        description: "Invoice status (draft, sent, paid, overdue, void)."
+      - name: role
+        description: "User role (end-user, agent, admin)."
+      - name: organization_id
+        description: "Foreign key to the Zendesk organization the user belongs to."
+        tests:
+          - not_null
+      - name: name
+        description: "Display name of the record."
+      - name: email
+        description: "Email address."
+      - name: time_zone
+        description: "IANA time zone configured for the organization."
+      - name: is_active
+        description: "True when the record is currently active."
+        tests:
+          - not_null
+      - name: created_at
+        description: "Timestamp when the record was created in the source system."

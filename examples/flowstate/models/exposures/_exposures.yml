@@ -70,3 +70,70 @@ exposures:
     owner:
       name: Product Analytics
       email: product@flowstate.io
+
+  - name: member_360_explore
+    label: "Member 360 Explore"
+    type: analysis
+    maturity: high
+    url: https://bi.flowstate.io/explores/member-360
+    description: >
+      Self-serve explore over the conformed member dimension and the check-in and
+      membership fact tables. Analysts build ad-hoc cohort and retention cuts here
+      rather than querying the marts directly.
+    depends_on:
+      - ref('dim_member')
+      - ref('dim_studio')
+      - ref('dim_instructor')
+      - ref('dim_membership_plan')
+      - ref('fact_checkin')
+      - ref('fact_membership')
+    owner:
+      name: Analytics Engineering
+      email: analytics@flowstate.io
+
+  - name: finance_close_workbook
+    label: "Monthly Close Workbook"
+    type: analysis
+    maturity: medium
+    url: https://drive.flowstate.io/finance/monthly-close
+    description: >
+      Spreadsheet the finance team refreshes during monthly close: P&L by account,
+      invoice aging, and collections status.
+    depends_on:
+      - ref('int_ops_monthly_pnl')
+      - ref('int_billing_invoices')
+      - ref('int_billing_collections')
+    owner:
+      name: Finance
+      email: finance@flowstate.io
+
+  - name: support_operations_dashboard
+    label: "Support Operations Dashboard"
+    type: dashboard
+    maturity: medium
+    url: https://bi.flowstate.io/dashboards/support-ops
+    description: >
+      Ticket volume, resolution time, and CSAT by agent, alongside headcount so the
+      support lead can staff against demand.
+    depends_on:
+      - ref('int_ops_support_tickets')
+      - ref('int_ops_headcount_by_department')
+    owner:
+      name: Customer Support
+      email: support@flowstate.io
+
+  - name: lifecycle_marketing_report
+    label: "Lifecycle Marketing Report"
+    type: dashboard
+    maturity: low
+    url: https://bi.flowstate.io/dashboards/lifecycle-marketing
+    description: >
+      Email engagement and lead funnel progression. Marked low maturity — the team
+      is still settling on attribution definitions.
+    depends_on:
+      - ref('int_marketing_email_engagement')
+      - ref('int_sales_lead_funnel')
+      - ref('int_sales_stage_transitions')
+    owner:
+      name: Growth Marketing
+      email: growth@flowstate.io

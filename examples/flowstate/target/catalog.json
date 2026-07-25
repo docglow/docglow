@@ -2,9 +2,9 @@
   "metadata": {
     "dbt_schema_version": "https://schemas.getdbt.com/dbt/catalog/v1.json",
     "dbt_version": "1.11.7",
-    "generated_at": "2026-06-14T16:12:43.019910+00:00",
+    "generated_at": "2026-07-25T02:33:50.758615+00:00",
     "invocation_id": "synthetic-catalog",
-    "invocation_started_at": "2026-06-14T16:12:43.019910+00:00",
+    "invocation_started_at": "2026-07-25T02:33:50.758615+00:00",
     "env": {}
   },
   "nodes": {
@@ -40,37 +40,37 @@
           "type": "VARCHAR",
           "index": 4,
           "name": "campaign_id",
-          "comment": null
+          "comment": "Foreign key to the advertising campaign."
         },
         "ad_name": {
           "type": "VARCHAR",
           "index": 5,
           "name": "ad_name",
-          "comment": null
+          "comment": "Display name of the ad creative."
         },
         "ad_status": {
           "type": "VARCHAR",
           "index": 6,
           "name": "ad_status",
-          "comment": null
+          "comment": "Delivery status of the ad creative."
         },
         "landing_page_url": {
           "type": "VARCHAR",
           "index": 7,
           "name": "landing_page_url",
-          "comment": null
+          "comment": "URL the ad directs traffic to."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 8,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         },
         "updated_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 9,
           "name": "updated_at",
-          "comment": null
+          "comment": "Timestamp of the most recent update in the source system."
         }
       },
       "stats": {
@@ -128,13 +128,13 @@
           "type": "VARCHAR",
           "index": 6,
           "name": "device_type",
-          "comment": null
+          "comment": "Device class the event was recorded on."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 7,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         }
       },
       "stats": {
@@ -186,37 +186,37 @@
           "type": "VARCHAR",
           "index": 5,
           "name": "first_name",
-          "comment": null
+          "comment": "Given name."
         },
         "last_name": {
           "type": "VARCHAR",
           "index": 6,
           "name": "last_name",
-          "comment": null
+          "comment": "Family name."
         },
         "company_name": {
           "type": "VARCHAR",
           "index": 7,
           "name": "company_name",
-          "comment": null
+          "comment": "Company the lead belongs to."
         },
         "became_lead_date": {
           "type": "DATE",
           "index": 8,
           "name": "became_lead_date",
-          "comment": null
+          "comment": "Date the contact first qualified as a marketing lead."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 9,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         },
         "updated_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 10,
           "name": "updated_at",
-          "comment": null
+          "comment": "Timestamp of the most recent update in the source system."
         }
       },
       "stats": {
@@ -262,31 +262,31 @@
           "type": "VARCHAR",
           "index": 4,
           "name": "ad_group_name",
-          "comment": null
+          "comment": "Display name of the ad group."
         },
         "ad_group_status": {
           "type": "VARCHAR",
           "index": 5,
           "name": "ad_group_status",
-          "comment": null
+          "comment": "Delivery status of the ad group."
         },
         "ad_group_type": {
           "type": "VARCHAR",
           "index": 6,
           "name": "ad_group_type",
-          "comment": null
+          "comment": "Ad group type configured on the campaign."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 7,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         },
         "updated_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 8,
           "name": "updated_at",
-          "comment": null
+          "comment": "Timestamp of the most recent update in the source system."
         }
       },
       "stats": {
@@ -344,19 +344,19 @@
           "type": "VARCHAR",
           "index": 6,
           "name": "impressions",
-          "comment": null
+          "comment": "Ad impressions served."
         },
         "clicks": {
           "type": "VARCHAR",
           "index": 7,
           "name": "clicks",
-          "comment": null
+          "comment": "Clicks on the ad."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 8,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         }
       },
       "stats": {
@@ -414,19 +414,19 @@
           "type": "VARCHAR",
           "index": 6,
           "name": "impressions",
-          "comment": null
+          "comment": "Ad impressions served."
         },
         "clicks": {
           "type": "VARCHAR",
           "index": 7,
           "name": "clicks",
-          "comment": null
+          "comment": "Clicks on the ad."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 8,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         }
       },
       "stats": {
@@ -478,37 +478,37 @@
           "type": "VARCHAR",
           "index": 5,
           "name": "advertising_channel_type",
-          "comment": null
+          "comment": "Advertising channel type reported by the ad platform."
         },
         "bidding_strategy": {
           "type": "VARCHAR",
           "index": 6,
           "name": "bidding_strategy",
-          "comment": null
+          "comment": "Bidding strategy configured on the campaign."
         },
         "start_date": {
           "type": "DATE",
           "index": 7,
           "name": "start_date",
-          "comment": null
+          "comment": "First day the campaign was scheduled to run."
         },
         "end_date": {
           "type": "DATE",
           "index": 8,
           "name": "end_date",
-          "comment": null
+          "comment": "Last day the campaign was scheduled to run."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 9,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         },
         "updated_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 10,
           "name": "updated_at",
-          "comment": null
+          "comment": "Timestamp of the most recent update in the source system."
         }
       },
       "stats": {
@@ -554,37 +554,37 @@
           "type": "VARCHAR",
           "index": 4,
           "name": "ad_set_name",
-          "comment": null
+          "comment": "Display name of the ad set."
         },
         "ad_set_status": {
           "type": "VARCHAR",
           "index": 5,
           "name": "ad_set_status",
-          "comment": null
+          "comment": "Delivery status of the ad set."
         },
         "daily_budget_usd": {
           "type": "VARCHAR",
           "index": 6,
           "name": "daily_budget_usd",
-          "comment": null
+          "comment": "Daily budget configured on the ad set, in USD."
         },
         "targeting_audience": {
           "type": "VARCHAR",
           "index": 7,
           "name": "targeting_audience",
-          "comment": null
+          "comment": "Audience segment the ad set targets."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 8,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         },
         "updated_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 9,
           "name": "updated_at",
-          "comment": null
+          "comment": "Timestamp of the most recent update in the source system."
         }
       },
       "stats": {
@@ -630,37 +630,37 @@
           "type": "VARCHAR",
           "index": 4,
           "name": "campaign_id",
-          "comment": null
+          "comment": "Foreign key to the advertising campaign."
         },
         "ad_type": {
           "type": "VARCHAR",
           "index": 5,
           "name": "ad_type",
-          "comment": null
+          "comment": "Ad format served by the platform."
         },
         "ad_status": {
           "type": "VARCHAR",
           "index": 6,
           "name": "ad_status",
-          "comment": null
+          "comment": "Delivery status of the ad creative."
         },
         "final_url": {
           "type": "VARCHAR",
           "index": 7,
           "name": "final_url",
-          "comment": null
+          "comment": "Destination URL configured on the ad."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 8,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         },
         "updated_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 9,
           "name": "updated_at",
-          "comment": null
+          "comment": "Timestamp of the most recent update in the source system."
         }
       },
       "stats": {
@@ -706,43 +706,43 @@
           "type": "VARCHAR",
           "index": 4,
           "name": "campaign_status",
-          "comment": null
+          "comment": "Delivery status of the advertising campaign."
         },
         "daily_budget_usd": {
           "type": "VARCHAR",
           "index": 5,
           "name": "daily_budget_usd",
-          "comment": null
+          "comment": "Daily budget configured on the ad set, in USD."
         },
         "buying_type": {
           "type": "VARCHAR",
           "index": 6,
           "name": "buying_type",
-          "comment": null
+          "comment": "How ad inventory was purchased (auction or reserved)."
         },
         "start_time": {
           "type": "TIMESTAMP_NTZ",
           "index": 7,
           "name": "start_time",
-          "comment": null
+          "comment": "Timestamp when the ad flight began."
         },
         "stop_time": {
           "type": "TIMESTAMP_NTZ",
           "index": 8,
           "name": "stop_time",
-          "comment": null
+          "comment": "Timestamp when the ad flight ended. Null if still running."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 9,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         },
         "updated_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 10,
           "name": "updated_at",
-          "comment": null
+          "comment": "Timestamp of the most recent update in the source system."
         }
       },
       "stats": {
@@ -794,31 +794,31 @@
           "type": "VARCHAR",
           "index": 5,
           "name": "from_name",
-          "comment": null
+          "comment": "Sender name shown on the outbound email."
         },
         "email_type": {
           "type": "VARCHAR",
           "index": 6,
           "name": "email_type",
-          "comment": null
+          "comment": "Type of email sent (newsletter, product, or lifecycle)."
         },
         "send_date": {
           "type": "DATE",
           "index": 7,
           "name": "send_date",
-          "comment": null
+          "comment": "Date the email campaign was sent."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 8,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         },
         "updated_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 9,
           "name": "updated_at",
-          "comment": null
+          "comment": "Timestamp of the most recent update in the source system."
         }
       },
       "stats": {
@@ -864,31 +864,31 @@
           "type": "VARCHAR",
           "index": 4,
           "name": "member_region",
-          "comment": null
+          "comment": "Sales region of the member's home studio."
         },
         "total_members": {
           "type": "VARCHAR",
           "index": 5,
           "name": "total_members",
-          "comment": null
+          "comment": "Distinct members in the grouping."
         },
         "total_feature_events": {
           "type": "VARCHAR",
           "index": 6,
           "name": "total_feature_events",
-          "comment": null
+          "comment": "Product events attributed to the feature area."
         },
         "avg_distinct_actions_per_member": {
           "type": "VARCHAR",
           "index": 7,
           "name": "avg_distinct_actions_per_member",
-          "comment": null
+          "comment": "Mean distinct event names per member."
         },
         "most_recent_use_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 8,
           "name": "most_recent_use_at",
-          "comment": null
+          "comment": "Timestamp of the most recent use of the feature by any member."
         }
       },
       "stats": {
@@ -940,25 +940,25 @@
           "type": "VARCHAR",
           "index": 5,
           "name": "active_members",
-          "comment": null
+          "comment": "Distinct members with activity in the period."
         },
         "total_sessions": {
           "type": "VARCHAR",
           "index": 6,
           "name": "total_sessions",
-          "comment": null
+          "comment": "Product sessions in the grouping."
         },
         "total_events": {
           "type": "VARCHAR",
           "index": 7,
           "name": "total_events",
-          "comment": null
+          "comment": "Product events in the grouping."
         },
         "avg_session_seconds_per_member": {
           "type": "VARCHAR",
           "index": 8,
           "name": "avg_session_seconds_per_member",
-          "comment": null
+          "comment": "Mean session duration per member, in seconds."
         }
       },
       "stats": {
@@ -978,7 +978,7 @@
         "schema": "mart_membership",
         "name": "membership_change_events",
         "database": "flowstate",
-        "comment": null,
+        "comment": "One row per MRR movement \u2014 new, reactivation, or churn \u2014 with the signed MRR delta it produced. Powers the revenue and growth dashboard.\n",
         "owner": null
       },
       "columns": {
@@ -986,55 +986,55 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "subscription_id",
-          "comment": null
+          "comment": "Natural key for the billing subscription."
         },
         "member_id": {
           "type": "VARCHAR",
           "index": 2,
           "name": "member_id",
-          "comment": null
+          "comment": "Foreign key to the member."
         },
         "studio_id": {
           "type": "VARCHAR",
           "index": 3,
           "name": "studio_id",
-          "comment": null
+          "comment": "Foreign key to the studio that owns this record."
         },
         "plan_tier": {
           "type": "VARCHAR",
           "index": 4,
           "name": "plan_tier",
-          "comment": null
+          "comment": "Plan tier (unlimited, class pack, or drop-in)."
         },
         "started_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 5,
           "name": "started_at",
-          "comment": null
+          "comment": "Timestamp when the record became active."
         },
         "cancelled_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 6,
           "name": "cancelled_at",
-          "comment": null
+          "comment": "Timestamp when the record was cancelled. Null if still active."
         },
         "mrr_usd": {
           "type": "VARCHAR",
           "index": 7,
           "name": "mrr_usd",
-          "comment": null
+          "comment": "Monthly recurring revenue attributed to the subscription, in USD."
         },
         "change_event_type": {
           "type": "VARCHAR",
           "index": 8,
           "name": "change_event_type",
-          "comment": null
+          "comment": "Type of MRR movement (new, expansion, contraction, or churn)."
         },
         "mrr_delta_usd": {
           "type": "VARCHAR",
           "index": 9,
           "name": "mrr_delta_usd",
-          "comment": null
+          "comment": "Change in MRR produced by this event, in USD. Negative on churn."
         }
       },
       "stats": {
@@ -1054,7 +1054,7 @@
         "schema": "mart_membership",
         "name": "membership_mrr_by_studio",
         "database": "flowstate",
-        "comment": null,
+        "comment": "Active subscriptions, MRR, and annual run rate rolled up by studio and plan tier.",
         "owner": null
       },
       "columns": {
@@ -1062,55 +1062,55 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "studio_id",
-          "comment": null
+          "comment": "Natural key for the studio."
         },
         "studio_name": {
           "type": "VARCHAR",
           "index": 2,
           "name": "studio_name",
-          "comment": null
+          "comment": "Display name of the studio."
         },
         "region": {
           "type": "VARCHAR",
           "index": 3,
           "name": "region",
-          "comment": null
+          "comment": "Sales region the studio belongs to."
         },
         "plan_tier": {
           "type": "VARCHAR",
           "index": 4,
           "name": "plan_tier",
-          "comment": null
+          "comment": "Plan tier (unlimited, class pack, or drop-in)."
         },
         "active_subscriptions": {
           "type": "VARCHAR",
           "index": 5,
           "name": "active_subscriptions",
-          "comment": null
+          "comment": "Subscriptions in an active state."
         },
         "active_members": {
           "type": "VARCHAR",
           "index": 6,
           "name": "active_members",
-          "comment": null
+          "comment": "Distinct members with activity in the period."
         },
         "total_mrr_usd": {
           "type": "VARCHAR",
           "index": 7,
           "name": "total_mrr_usd",
-          "comment": null
+          "comment": "Sum of monthly recurring revenue for the grouping, in USD."
         },
         "avg_mrr_per_subscription_usd": {
           "type": "VARCHAR",
           "index": 8,
           "name": "avg_mrr_per_subscription_usd",
-          "comment": null
+          "comment": "Mean MRR per active subscription, in USD."
         },
         "annual_run_rate_usd": {
           "type": "VARCHAR",
           "index": 9,
           "name": "annual_run_rate_usd",
-          "comment": null
+          "comment": "Annualized run rate, calculated as MRR times twelve."
         }
       },
       "stats": {
@@ -1130,7 +1130,7 @@
         "schema": "staging_app_db",
         "name": "stg_app_db__class_schedules",
         "database": "flowstate",
-        "comment": null,
+        "comment": "One row per scheduled instance of a class: a class offering placed on the calendar at a date and time with an instructor and a room.\n",
         "owner": null
       },
       "columns": {
@@ -1138,55 +1138,55 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "schedule_id",
-          "comment": null
+          "comment": "Natural key for the scheduled class instance."
         },
         "class_id": {
           "type": "VARCHAR",
           "index": 2,
           "name": "class_id",
-          "comment": null
+          "comment": "Foreign key to the class offering."
         },
         "studio_id": {
           "type": "VARCHAR",
           "index": 3,
           "name": "studio_id",
-          "comment": null
+          "comment": "Foreign key to the studio that owns this record."
         },
         "instructor_id": {
           "type": "VARCHAR",
           "index": 4,
           "name": "instructor_id",
-          "comment": null
+          "comment": "Foreign key to the instructor."
         },
         "start_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 5,
           "name": "start_at",
-          "comment": null
+          "comment": "Scheduled start time of the class."
         },
         "end_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 6,
           "name": "end_at",
-          "comment": null
+          "comment": "Scheduled end time of the class."
         },
         "room": {
           "type": "VARCHAR",
           "index": 7,
           "name": "room",
-          "comment": null
+          "comment": "Studio room the class is scheduled in."
         },
         "booked_count": {
           "type": "NUMBER",
           "index": 8,
           "name": "booked_count",
-          "comment": null
+          "comment": "Bookings taken against the scheduled class."
         },
         "capacity": {
           "type": "VARCHAR",
           "index": 9,
           "name": "capacity",
-          "comment": null
+          "comment": "Maximum number of members the class can hold."
         }
       },
       "stats": {
@@ -1206,7 +1206,7 @@
         "schema": "staging_app_db",
         "name": "stg_app_db__membership_plans",
         "database": "flowstate",
-        "comment": null,
+        "comment": "Catalog of membership plan tiers a studio offers \u2014 unlimited, class pack, and drop-in \u2014 with pricing and included class credits.\n",
         "owner": null
       },
       "columns": {
@@ -1214,49 +1214,49 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "plan_id",
-          "comment": null
+          "comment": "Natural key for the membership plan."
         },
         "studio_id": {
           "type": "VARCHAR",
           "index": 2,
           "name": "studio_id",
-          "comment": null
+          "comment": "Foreign key to the studio that owns this record."
         },
         "plan_name": {
           "type": "VARCHAR",
           "index": 3,
           "name": "plan_name",
-          "comment": null
+          "comment": "Display name of the membership plan."
         },
         "plan_tier": {
           "type": "VARCHAR",
           "index": 4,
           "name": "plan_tier",
-          "comment": null
+          "comment": "Plan tier (unlimited, class pack, or drop-in)."
         },
         "billing_interval": {
           "type": "VARCHAR",
           "index": 5,
           "name": "billing_interval",
-          "comment": null
+          "comment": "How often the plan bills (monthly or annual)."
         },
         "monthly_price_usd": {
           "type": "VARCHAR",
           "index": 6,
           "name": "monthly_price_usd",
-          "comment": null
+          "comment": "Monthly price of the plan, in USD."
         },
         "included_class_credits": {
           "type": "VARCHAR",
           "index": 7,
           "name": "included_class_credits",
-          "comment": null
+          "comment": "Class credits included in the plan each billing period."
         },
         "is_active": {
           "type": "BOOLEAN",
           "index": 8,
           "name": "is_active",
-          "comment": null
+          "comment": "True when the record is currently active."
         }
       },
       "stats": {
@@ -1276,7 +1276,7 @@
         "schema": "staging_app_db",
         "name": "stg_app_db__classes",
         "database": "flowstate",
-        "comment": null,
+        "comment": "One row per class offering configured by a studio, such as Vinyasa Flow or HIIT. Describes the template, not a specific session.\n",
         "owner": null
       },
       "columns": {
@@ -1284,43 +1284,43 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "class_id",
-          "comment": null
+          "comment": "Natural key for the class offering."
         },
         "studio_id": {
           "type": "VARCHAR",
           "index": 2,
           "name": "studio_id",
-          "comment": null
+          "comment": "Foreign key to the studio that owns this record."
         },
         "class_name": {
           "type": "VARCHAR",
           "index": 3,
           "name": "class_name",
-          "comment": null
+          "comment": "Display name of the class offering."
         },
         "class_type": {
           "type": "VARCHAR",
           "index": 4,
           "name": "class_type",
-          "comment": null
+          "comment": "Category of class (yoga, HIIT, cycle, pilates, barre)."
         },
         "duration_minutes": {
           "type": "VARCHAR",
           "index": 5,
           "name": "duration_minutes",
-          "comment": null
+          "comment": "Scheduled length of the class, in minutes."
         },
         "capacity": {
           "type": "VARCHAR",
           "index": 6,
           "name": "capacity",
-          "comment": null
+          "comment": "Maximum number of members the class can hold."
         },
         "is_active": {
           "type": "BOOLEAN",
           "index": 7,
           "name": "is_active",
-          "comment": null
+          "comment": "True when the record is currently active."
         }
       },
       "stats": {
@@ -1340,7 +1340,7 @@
         "schema": "staging_app_db",
         "name": "stg_app_db__memberships",
         "database": "flowstate",
-        "comment": null,
+        "comment": "One row per membership a member has held, current or historical, with the plan they subscribed to and its lifecycle timestamps.\n",
         "owner": null
       },
       "columns": {
@@ -1348,61 +1348,61 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "membership_id",
-          "comment": null
+          "comment": "Natural key for the membership record."
         },
         "member_id": {
           "type": "VARCHAR",
           "index": 2,
           "name": "member_id",
-          "comment": null
+          "comment": "Foreign key to the member."
         },
         "plan_id": {
           "type": "VARCHAR",
           "index": 3,
           "name": "plan_id",
-          "comment": null
+          "comment": "Foreign key to the membership plan."
         },
         "status": {
           "type": "VARCHAR",
           "index": 4,
           "name": "status",
-          "comment": null
+          "comment": "Current status of the record in the source system."
         },
         "started_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 5,
           "name": "started_at",
-          "comment": null
+          "comment": "Timestamp when the record became active."
         },
         "ended_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 6,
           "name": "ended_at",
-          "comment": null
+          "comment": "Timestamp when the record ended."
         },
         "auto_renew": {
           "type": "VARCHAR",
           "index": 7,
           "name": "auto_renew",
-          "comment": null
+          "comment": "True when the membership renews automatically."
         },
         "monthly_price_usd": {
           "type": "VARCHAR",
           "index": 8,
           "name": "monthly_price_usd",
-          "comment": null
+          "comment": "Monthly price of the plan, in USD."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 9,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         },
         "updated_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 10,
           "name": "updated_at",
-          "comment": null
+          "comment": "Timestamp of the most recent update in the source system."
         }
       },
       "stats": {
@@ -1422,7 +1422,7 @@
         "schema": "staging_app_db",
         "name": "stg_app_db__studios",
         "database": "flowstate",
-        "comment": null,
+        "comment": "One row per wellness studio. Cleaned from the application database, with region and time zone standardized for downstream reporting.\n",
         "owner": null
       },
       "columns": {
@@ -1430,61 +1430,61 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "studio_id",
-          "comment": null
+          "comment": "Natural key for the studio."
         },
         "studio_name": {
           "type": "VARCHAR",
           "index": 2,
           "name": "studio_name",
-          "comment": null
+          "comment": "Display name of the studio."
         },
         "region": {
           "type": "VARCHAR",
           "index": 3,
           "name": "region",
-          "comment": null
+          "comment": "Sales region the studio belongs to."
         },
         "city": {
           "type": "VARCHAR",
           "index": 4,
           "name": "city",
-          "comment": null
+          "comment": "City the studio operates in."
         },
         "state_code": {
           "type": "VARCHAR",
           "index": 5,
           "name": "state_code",
-          "comment": null
+          "comment": "Two-letter state code."
         },
         "timezone": {
           "type": "VARCHAR",
           "index": 6,
           "name": "timezone",
-          "comment": null
+          "comment": "IANA time zone the studio schedules classes in."
         },
         "opened_date": {
           "type": "DATE",
           "index": 7,
           "name": "opened_date",
-          "comment": null
+          "comment": "Date the studio opened for business."
         },
         "is_active": {
           "type": "BOOLEAN",
           "index": 8,
           "name": "is_active",
-          "comment": null
+          "comment": "True when the record is currently active."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 9,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         },
         "updated_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 10,
           "name": "updated_at",
-          "comment": null
+          "comment": "Timestamp of the most recent update in the source system."
         }
       },
       "stats": {
@@ -1504,7 +1504,7 @@
         "schema": "staging_app_db",
         "name": "stg_app_db__bookings",
         "database": "flowstate",
-        "comment": null,
+        "comment": "One row per member reservation for a scheduled class, including whether the member checked in, cancelled, or failed to show.\n",
         "owner": null
       },
       "columns": {
@@ -1512,49 +1512,49 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "booking_id",
-          "comment": null
+          "comment": "Natural key for the booking."
         },
         "schedule_id": {
           "type": "VARCHAR",
           "index": 2,
           "name": "schedule_id",
-          "comment": null
+          "comment": "Foreign key to the scheduled class instance."
         },
         "member_id": {
           "type": "VARCHAR",
           "index": 3,
           "name": "member_id",
-          "comment": null
+          "comment": "Foreign key to the member."
         },
         "booking_status": {
           "type": "VARCHAR",
           "index": 4,
           "name": "booking_status",
-          "comment": null
+          "comment": "Status of the booking (booked, attended, cancelled, no-show)."
         },
         "booked_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 5,
           "name": "booked_at",
-          "comment": null
+          "comment": "Timestamp when the booking was made."
         },
         "checked_in_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 6,
           "name": "checked_in_at",
-          "comment": null
+          "comment": "Timestamp when the member checked in. Null if they never arrived."
         },
         "cancelled_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 7,
           "name": "cancelled_at",
-          "comment": null
+          "comment": "Timestamp when the record was cancelled. Null if still active."
         },
         "is_no_show": {
           "type": "BOOLEAN",
           "index": 8,
           "name": "is_no_show",
-          "comment": null
+          "comment": "True when the member booked but never checked in."
         }
       },
       "stats": {
@@ -1574,7 +1574,7 @@
         "schema": "staging_app_db",
         "name": "stg_app_db__members",
         "database": "flowstate",
-        "comment": null,
+        "comment": "One row per end client who books classes at a studio. Names and contact details are passed through from the application database unchanged.\n",
         "owner": null
       },
       "columns": {
@@ -1582,67 +1582,67 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "member_id",
-          "comment": null
+          "comment": "Natural key for the member."
         },
         "studio_id": {
           "type": "VARCHAR",
           "index": 2,
           "name": "studio_id",
-          "comment": null
+          "comment": "Foreign key to the studio that owns this record."
         },
         "first_name": {
           "type": "VARCHAR",
           "index": 3,
           "name": "first_name",
-          "comment": null
+          "comment": "Given name."
         },
         "last_name": {
           "type": "VARCHAR",
           "index": 4,
           "name": "last_name",
-          "comment": null
+          "comment": "Family name."
         },
         "email": {
           "type": "VARCHAR",
           "index": 5,
           "name": "email",
-          "comment": null
+          "comment": "Email address."
         },
         "phone": {
           "type": "VARCHAR",
           "index": 6,
           "name": "phone",
-          "comment": null
+          "comment": "Contact phone number."
         },
         "date_of_birth": {
           "type": "VARCHAR",
           "index": 7,
           "name": "date_of_birth",
-          "comment": null
+          "comment": "Date of birth, used for age-restricted class eligibility."
         },
         "joined_date": {
           "type": "DATE",
           "index": 8,
           "name": "joined_date",
-          "comment": null
+          "comment": "Date the member joined the studio."
         },
         "status": {
           "type": "VARCHAR",
           "index": 9,
           "name": "status",
-          "comment": null
+          "comment": "Current status of the record in the source system."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 10,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         },
         "updated_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 11,
           "name": "updated_at",
-          "comment": null
+          "comment": "Timestamp of the most recent update in the source system."
         }
       },
       "stats": {
@@ -1662,7 +1662,7 @@
         "schema": "staging_app_db",
         "name": "stg_app_db__instructors",
         "database": "flowstate",
-        "comment": null,
+        "comment": "One row per instructor, including the studio they teach at and their primary class discipline.\n",
         "owner": null
       },
       "columns": {
@@ -1670,61 +1670,61 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "instructor_id",
-          "comment": null
+          "comment": "Natural key for the instructor."
         },
         "studio_id": {
           "type": "VARCHAR",
           "index": 2,
           "name": "studio_id",
-          "comment": null
+          "comment": "Foreign key to the studio that owns this record."
         },
         "first_name": {
           "type": "VARCHAR",
           "index": 3,
           "name": "first_name",
-          "comment": null
+          "comment": "Given name."
         },
         "last_name": {
           "type": "VARCHAR",
           "index": 4,
           "name": "last_name",
-          "comment": null
+          "comment": "Family name."
         },
         "email": {
           "type": "VARCHAR",
           "index": 5,
           "name": "email",
-          "comment": null
+          "comment": "Email address."
         },
         "specialty": {
           "type": "VARCHAR",
           "index": 6,
           "name": "specialty",
-          "comment": null
+          "comment": "Class discipline the instructor primarily teaches."
         },
         "hired_date": {
           "type": "DATE",
           "index": 7,
           "name": "hired_date",
-          "comment": null
+          "comment": "Date the instructor was hired."
         },
         "is_active": {
           "type": "BOOLEAN",
           "index": 8,
           "name": "is_active",
-          "comment": null
+          "comment": "True when the record is currently active."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 9,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         },
         "updated_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 10,
           "name": "updated_at",
-          "comment": null
+          "comment": "Timestamp of the most recent update in the source system."
         }
       },
       "stats": {
@@ -1744,7 +1744,7 @@
         "schema": "staging_stripe",
         "name": "stg_stripe__charges",
         "database": "flowstate",
-        "comment": null,
+        "comment": "One row per Stripe charge. This is the legacy payment path, kept alongside Chargebee while billing migrates; amounts are in the charge currency.\n",
         "owner": null
       },
       "columns": {
@@ -1808,7 +1808,7 @@
         "schema": "staging_billing",
         "name": "stg_chargebee__subscriptions",
         "database": "flowstate",
-        "comment": "Staged Chargebee subscriptions, one row per membership subscription with status, lifecycle timestamps, and monthly recurring revenue.",
+        "comment": "Staged Chargebee subscriptions, one row per membership subscription with status, lifecycle timestamps, and monthly recurring revenue.\n",
         "owner": null
       },
       "columns": {
@@ -1846,43 +1846,43 @@
           "type": "TIMESTAMP_NTZ",
           "index": 6,
           "name": "started_at",
-          "comment": null
+          "comment": "Timestamp when the record became active."
         },
         "activated_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 7,
           "name": "activated_at",
-          "comment": null
+          "comment": "Timestamp when the subscription first became billable."
         },
         "cancelled_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 8,
           "name": "cancelled_at",
-          "comment": null
+          "comment": "Timestamp when the record was cancelled. Null if still active."
         },
         "billing_period": {
           "type": "VARCHAR",
           "index": 9,
           "name": "billing_period",
-          "comment": null
+          "comment": "Length of the billing period, in billing period units."
         },
         "billing_period_unit": {
           "type": "VARCHAR",
           "index": 10,
           "name": "billing_period_unit",
-          "comment": null
+          "comment": "Unit the billing period is measured in (month or year)."
         },
         "auto_collection": {
           "type": "VARCHAR",
           "index": 11,
           "name": "auto_collection",
-          "comment": null
+          "comment": "Whether the subscription is charged automatically or invoiced."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 12,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         }
       },
       "stats": {
@@ -1934,43 +1934,43 @@
           "type": "VARCHAR",
           "index": 5,
           "name": "subscription_id",
-          "comment": null
+          "comment": "Foreign key to the billing subscription."
         },
         "plan_id": {
           "type": "VARCHAR",
           "index": 6,
           "name": "plan_id",
-          "comment": null
+          "comment": "Foreign key to the membership plan."
         },
         "description": {
           "type": "VARCHAR",
           "index": 7,
           "name": "description",
-          "comment": null
+          "comment": "Free-text description of the line item."
         },
         "quantity": {
           "type": "VARCHAR",
           "index": 8,
           "name": "quantity",
-          "comment": null
+          "comment": "Units billed on the line item."
         },
         "unit_amount_usd": {
           "type": "VARCHAR",
           "index": 9,
           "name": "unit_amount_usd",
-          "comment": null
+          "comment": "Price per unit on the line item, in USD."
         },
         "is_taxed": {
           "type": "BOOLEAN",
           "index": 10,
           "name": "is_taxed",
-          "comment": null
+          "comment": "True when tax applies to the line item."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 11,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         }
       },
       "stats": {
@@ -1990,7 +1990,7 @@
         "schema": "staging_billing",
         "name": "stg_chargebee__subscription_plans",
         "database": "flowstate",
-        "comment": "Staged Chargebee plan catalog with pricing, tier, and billing cadence per membership plan.",
+        "comment": "Staged Chargebee plan catalog with pricing, tier, and billing cadence per membership plan.\n",
         "owner": null
       },
       "columns": {
@@ -2022,43 +2022,43 @@
           "type": "VARCHAR",
           "index": 5,
           "name": "status",
-          "comment": null
+          "comment": "Current status of the record in the source system."
         },
         "billing_period": {
           "type": "VARCHAR",
           "index": 6,
           "name": "billing_period",
-          "comment": null
+          "comment": "Length of the billing period, in billing period units."
         },
         "billing_period_unit": {
           "type": "VARCHAR",
           "index": 7,
           "name": "billing_period_unit",
-          "comment": null
+          "comment": "Unit the billing period is measured in (month or year)."
         },
         "trial_period_days": {
           "type": "VARCHAR",
           "index": 8,
           "name": "trial_period_days",
-          "comment": null
+          "comment": "Length of the free trial, in days."
         },
         "is_metered": {
           "type": "BOOLEAN",
           "index": 9,
           "name": "is_metered",
-          "comment": null
+          "comment": "True when the plan bills on usage rather than a flat fee."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 10,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         },
         "updated_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 11,
           "name": "updated_at",
-          "comment": null
+          "comment": "Timestamp of the most recent update in the source system."
         }
       },
       "stats": {
@@ -2078,7 +2078,7 @@
         "schema": "staging_billing",
         "name": "stg_chargebee__credit_notes",
         "database": "flowstate",
-        "comment": "Staged Chargebee credit notes, one row per refund or adjustment issued against an invoice.",
+        "comment": "Staged Chargebee credit notes, one row per refund or adjustment issued against an invoice.\n",
         "owner": null
       },
       "columns": {
@@ -2110,49 +2110,49 @@
           "type": "VARCHAR",
           "index": 5,
           "name": "subscription_id",
-          "comment": null
+          "comment": "Foreign key to the billing subscription."
         },
         "member_id": {
           "type": "VARCHAR",
           "index": 6,
           "name": "member_id",
-          "comment": null
+          "comment": "Foreign key to the member."
         },
         "status": {
           "type": "VARCHAR",
           "index": 7,
           "name": "status",
-          "comment": null
+          "comment": "Current status of the record in the source system."
         },
         "amount_refunded_usd": {
           "type": "VARCHAR",
           "index": 8,
           "name": "amount_refunded_usd",
-          "comment": null
+          "comment": "Amount refunded, in USD."
         },
         "amount_allocated_usd": {
           "type": "VARCHAR",
           "index": 9,
           "name": "amount_allocated_usd",
-          "comment": null
+          "comment": "Amount of the credit applied to this transaction, in USD."
         },
         "currency": {
           "type": "VARCHAR",
           "index": 10,
           "name": "currency",
-          "comment": null
+          "comment": "ISO 4217 currency code the amount is denominated in."
         },
         "issued_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 11,
           "name": "issued_at",
-          "comment": null
+          "comment": "Timestamp when the invoice was issued."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 12,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         }
       },
       "stats": {
@@ -2210,43 +2210,43 @@
           "type": "VARCHAR",
           "index": 6,
           "name": "status",
-          "comment": null
+          "comment": "Current status of the record in the source system."
         },
         "amount_due_usd": {
           "type": "VARCHAR",
           "index": 7,
           "name": "amount_due_usd",
-          "comment": null
+          "comment": "Amount still outstanding on the invoice, in USD."
         },
         "currency": {
           "type": "VARCHAR",
           "index": 8,
           "name": "currency",
-          "comment": null
+          "comment": "ISO 4217 currency code the amount is denominated in."
         },
         "issued_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 9,
           "name": "issued_at",
-          "comment": null
+          "comment": "Timestamp when the invoice was issued."
         },
         "due_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 10,
           "name": "due_at",
-          "comment": null
+          "comment": "Timestamp when payment on the invoice becomes due."
         },
         "paid_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 11,
           "name": "paid_at",
-          "comment": null
+          "comment": "Timestamp when the invoice was paid in full. Null if unpaid."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 12,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         }
       },
       "stats": {
@@ -2304,43 +2304,43 @@
           "type": "VARCHAR",
           "index": 6,
           "name": "subscription_id",
-          "comment": null
+          "comment": "Foreign key to the billing subscription."
         },
         "member_id": {
           "type": "VARCHAR",
           "index": 7,
           "name": "member_id",
-          "comment": null
+          "comment": "Foreign key to the member."
         },
         "currency": {
           "type": "VARCHAR",
           "index": 8,
           "name": "currency",
-          "comment": null
+          "comment": "ISO 4217 currency code the amount is denominated in."
         },
         "payment_method": {
           "type": "VARCHAR",
           "index": 9,
           "name": "payment_method",
-          "comment": null
+          "comment": "Payment instrument used for the transaction."
         },
         "gateway": {
           "type": "VARCHAR",
           "index": 10,
           "name": "gateway",
-          "comment": null
+          "comment": "Payment gateway that processed the transaction."
         },
         "processed_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 11,
           "name": "processed_at",
-          "comment": null
+          "comment": "Timestamp when the transaction was processed by the gateway."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 12,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         }
       },
       "stats": {
@@ -2398,43 +2398,43 @@
           "type": "VARCHAR",
           "index": 6,
           "name": "sales_team",
-          "comment": null
+          "comment": "Sales team the owner belongs to."
         },
         "owner_region": {
           "type": "VARCHAR",
           "index": 7,
           "name": "owner_region",
-          "comment": null
+          "comment": "Sales region assigned to the record owner."
         },
         "opportunity_count": {
           "type": "NUMBER",
           "index": 8,
           "name": "opportunity_count",
-          "comment": null
+          "comment": "Distinct opportunities in the grouping."
         },
         "open_count": {
           "type": "NUMBER",
           "index": 9,
           "name": "open_count",
-          "comment": null
+          "comment": "Opportunities still open."
         },
         "won_count": {
           "type": "NUMBER",
           "index": 10,
           "name": "won_count",
-          "comment": null
+          "comment": "Opportunities that closed won."
         },
         "lost_count": {
           "type": "NUMBER",
           "index": 11,
           "name": "lost_count",
-          "comment": null
+          "comment": "Opportunities that closed lost."
         },
         "total_arr_usd": {
           "type": "VARCHAR",
           "index": 12,
           "name": "total_arr_usd",
-          "comment": null
+          "comment": "Sum of annual recurring revenue in the grouping, in USD."
         }
       },
       "stats": {
@@ -2486,37 +2486,37 @@
           "type": "VARCHAR",
           "index": 5,
           "name": "forecast_category",
-          "comment": null
+          "comment": "Forecast category the opportunity rolls up to."
         },
         "account_count": {
           "type": "NUMBER",
           "index": 6,
           "name": "account_count",
-          "comment": null
+          "comment": "Distinct accounts in the grouping."
         },
         "avg_arr_usd": {
           "type": "VARCHAR",
           "index": 7,
           "name": "avg_arr_usd",
-          "comment": null
+          "comment": "Mean ARR per opportunity in the grouping, in USD."
         },
         "avg_probability": {
           "type": "VARCHAR",
           "index": 8,
           "name": "avg_probability",
-          "comment": null
+          "comment": "Mean win probability across the grouping."
         },
         "won_count": {
           "type": "NUMBER",
           "index": 9,
           "name": "won_count",
-          "comment": null
+          "comment": "Opportunities that closed won."
         },
         "lost_count": {
           "type": "NUMBER",
           "index": 10,
           "name": "lost_count",
-          "comment": null
+          "comment": "Opportunities that closed lost."
         }
       },
       "stats": {
@@ -2536,7 +2536,7 @@
         "schema": "staging_ops",
         "name": "stg_zendesk__ticket_comments",
         "database": "flowstate",
-        "comment": "Staged Zendesk ticket comments, one row per public or internal comment posted on a ticket.",
+        "comment": "Staged Zendesk ticket comments, one row per public or internal comment posted on a ticket.\n",
         "owner": null
       },
       "columns": {
@@ -2568,19 +2568,19 @@
           "type": "VARCHAR",
           "index": 5,
           "name": "body",
-          "comment": null
+          "comment": "Full text of the comment."
         },
         "is_agent_comment": {
           "type": "BOOLEAN",
           "index": 6,
           "name": "is_agent_comment",
-          "comment": null
+          "comment": "True when the comment was written by a support agent."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 7,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         }
       },
       "stats": {
@@ -2600,7 +2600,7 @@
         "schema": "staging_ops",
         "name": "stg_quickbooks__general_ledger",
         "database": "flowstate",
-        "comment": "Staged QuickBooks general ledger, one row per journal posting line with debit/credit and amount.",
+        "comment": "Staged QuickBooks general ledger, one row per journal posting line with debit/credit and amount.\n",
         "owner": null
       },
       "columns": {
@@ -2638,19 +2638,19 @@
           "type": "VARCHAR",
           "index": 6,
           "name": "transaction_type",
-          "comment": null
+          "comment": "Type of billing transaction (payment, refund, or credit)."
         },
         "memo": {
           "type": "VARCHAR",
           "index": 7,
           "name": "memo",
-          "comment": null
+          "comment": "Free-text memo on the ledger entry."
         },
         "department_id": {
           "type": "VARCHAR",
           "index": 8,
           "name": "department_id",
-          "comment": null
+          "comment": "Foreign key to the department."
         }
       },
       "stats": {
@@ -2696,31 +2696,31 @@
           "type": "VARCHAR",
           "index": 4,
           "name": "name",
-          "comment": null
+          "comment": "Display name of the record."
         },
         "email": {
           "type": "VARCHAR",
           "index": 5,
           "name": "email",
-          "comment": null
+          "comment": "Email address."
         },
         "time_zone": {
           "type": "VARCHAR",
           "index": 6,
           "name": "time_zone",
-          "comment": null
+          "comment": "IANA time zone configured for the organization."
         },
         "is_active": {
           "type": "BOOLEAN",
           "index": 7,
           "name": "is_active",
-          "comment": null
+          "comment": "True when the record is currently active."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 8,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         }
       },
       "stats": {
@@ -2740,7 +2740,7 @@
         "schema": "staging_ops",
         "name": "stg_zendesk__tickets",
         "database": "flowstate",
-        "comment": "Staged Zendesk support tickets, one row per ticket with status, priority, channel, and resolution timestamps.",
+        "comment": "Staged Zendesk support tickets, one row per ticket with status, priority, channel, and resolution timestamps.\n",
         "owner": null
       },
       "columns": {
@@ -2796,25 +2796,25 @@
           "type": "VARCHAR",
           "index": 9,
           "name": "subject",
-          "comment": null
+          "comment": "Subject line of the support ticket."
         },
         "ticket_type": {
           "type": "VARCHAR",
           "index": 10,
           "name": "ticket_type",
-          "comment": null
+          "comment": "Type of support request."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 11,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         },
         "updated_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 12,
           "name": "updated_at",
-          "comment": null
+          "comment": "Timestamp of the most recent update in the source system."
         }
       },
       "stats": {
@@ -2834,7 +2834,7 @@
         "schema": "staging_ops",
         "name": "stg_quickbooks__accounts",
         "database": "flowstate",
-        "comment": "Staged QuickBooks chart of accounts, one row per account with type and statement classification.",
+        "comment": "Staged QuickBooks chart of accounts, one row per account with type and statement classification.\n",
         "owner": null
       },
       "columns": {
@@ -2866,13 +2866,13 @@
           "type": "NUMBER",
           "index": 5,
           "name": "account_number",
-          "comment": null
+          "comment": "Account number in the general ledger."
         },
         "is_active": {
           "type": "BOOLEAN",
           "index": 6,
           "name": "is_active",
-          "comment": null
+          "comment": "True when the record is currently active."
         }
       },
       "stats": {
@@ -2892,7 +2892,7 @@
         "schema": "staging_ops",
         "name": "stg_zendesk__satisfaction_ratings",
         "database": "flowstate",
-        "comment": "Staged Zendesk CSAT survey responses, one row per rating submitted after a ticket is solved.",
+        "comment": "Staged Zendesk CSAT survey responses, one row per rating submitted after a ticket is solved.\n",
         "owner": null
       },
       "columns": {
@@ -2918,25 +2918,25 @@
           "type": "VARCHAR",
           "index": 4,
           "name": "requester_member_id",
-          "comment": null
+          "comment": "Member who opened the support ticket."
         },
         "assignee_id": {
           "type": "VARCHAR",
           "index": 5,
           "name": "assignee_id",
-          "comment": null
+          "comment": "User ID of the person the record is assigned to."
         },
         "comment": {
           "type": "VARCHAR",
           "index": 6,
           "name": "comment",
-          "comment": null
+          "comment": "Free-text comment left by the requester."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 7,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         }
       },
       "stats": {
@@ -2994,19 +2994,19 @@
           "type": "TIMESTAMP_NTZ",
           "index": 6,
           "name": "issued_at",
-          "comment": null
+          "comment": "Timestamp when the invoice was issued."
         },
         "due_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 7,
           "name": "due_at",
-          "comment": null
+          "comment": "Timestamp when payment on the invoice becomes due."
         },
         "paid_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 8,
           "name": "paid_at",
-          "comment": null
+          "comment": "Timestamp when the invoice was paid in full. Null if unpaid."
         }
       },
       "stats": {
@@ -3026,7 +3026,7 @@
         "schema": "staging_ops",
         "name": "stg_rippling__employees",
         "database": "flowstate",
-        "comment": "Staged Rippling employees, one row per FlowState employee with department, role, location, and employment lifecycle dates.",
+        "comment": "Staged Rippling employees, one row per FlowState employee with department, role, location, and employment lifecycle dates.\n",
         "owner": null
       },
       "columns": {
@@ -3064,31 +3064,31 @@
           "type": "VARCHAR",
           "index": 6,
           "name": "full_name",
-          "comment": null
+          "comment": "Full name as recorded in the source system."
         },
         "work_email": {
           "type": "VARCHAR",
           "index": 7,
           "name": "work_email",
-          "comment": null
+          "comment": "Company-issued email address."
         },
         "manager_id": {
           "type": "VARCHAR",
           "index": 8,
           "name": "manager_id",
-          "comment": null
+          "comment": "Employee ID of this person's manager."
         },
         "location": {
           "type": "VARCHAR",
           "index": 9,
           "name": "location",
-          "comment": null
+          "comment": "Office location the employee is assigned to."
         },
         "employment_type": {
           "type": "VARCHAR",
           "index": 10,
           "name": "employment_type",
-          "comment": null
+          "comment": "Employment type (full time, part time, or contract)."
         }
       },
       "stats": {
@@ -3108,7 +3108,7 @@
         "schema": "staging_ops",
         "name": "stg_rippling__departments",
         "database": "flowstate",
-        "comment": "Staged Rippling departments, one row per company department with cost center and org grouping.",
+        "comment": "Staged Rippling departments, one row per company department with cost center and org grouping.\n",
         "owner": null
       },
       "columns": {
@@ -3134,19 +3134,19 @@
           "type": "VARCHAR",
           "index": 4,
           "name": "org_group",
-          "comment": null
+          "comment": "Top-level organizational group."
         },
         "head_employee_id": {
           "type": "VARCHAR",
           "index": 5,
           "name": "head_employee_id",
-          "comment": null
+          "comment": "Employee ID of the department head."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 6,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         }
       },
       "stats": {
@@ -3166,69 +3166,69 @@
         "schema": "mart_marketing",
         "name": "campaign_performance",
         "database": "flowstate",
-        "comment": null,
+        "comment": "Per-campaign paid marketing performance across Google and Facebook: spend, clicks, leads, and derived efficiency metrics.\n",
         "owner": null
       },
       "columns": {
-        "channel": {
-          "type": "VARCHAR",
-          "index": 1,
-          "name": "channel",
-          "comment": null
-        },
         "campaign_id": {
           "type": "VARCHAR",
-          "index": 2,
+          "index": 1,
           "name": "campaign_id",
-          "comment": null
+          "comment": "Natural key for the advertising campaign."
+        },
+        "channel": {
+          "type": "VARCHAR",
+          "index": 2,
+          "name": "channel",
+          "comment": "Advertising channel the campaign ran on."
         },
         "campaign_name": {
           "type": "VARCHAR",
           "index": 3,
           "name": "campaign_name",
-          "comment": null
+          "comment": "Display name of the campaign."
         },
         "impressions": {
           "type": "VARCHAR",
           "index": 4,
           "name": "impressions",
-          "comment": null
+          "comment": "Ad impressions served."
         },
         "clicks": {
           "type": "VARCHAR",
           "index": 5,
           "name": "clicks",
-          "comment": null
+          "comment": "Clicks on the ad."
         },
         "spend_usd": {
           "type": "VARCHAR",
           "index": 6,
           "name": "spend_usd",
-          "comment": null
+          "comment": "Advertising spend, in USD."
         },
         "leads": {
           "type": "VARCHAR",
           "index": 7,
           "name": "leads",
-          "comment": null
+          "comment": "Leads attributed to the ad."
         },
         "cost_per_click_usd": {
           "type": "VARCHAR",
           "index": 8,
           "name": "cost_per_click_usd",
-          "comment": null
+          "comment": "Spend divided by clicks, in USD."
         },
         "cost_per_lead_usd": {
           "type": "VARCHAR",
           "index": 9,
           "name": "cost_per_lead_usd",
-          "comment": null
+          "comment": "Spend divided by leads, in USD."
         },
         "click_through_rate": {
           "type": "FLOAT",
           "index": 10,
           "name": "click_through_rate",
-          "comment": null
+          "comment": "Clicks divided by impressions."
         }
       },
       "stats": {
@@ -3248,7 +3248,7 @@
         "schema": "mart_marketing",
         "name": "channel_attribution",
         "database": "flowstate",
-        "comment": null,
+        "comment": "Channel-level rollup of marketing spend and acquisition efficiency, feeding the Marketing Performance dashboard.\n",
         "owner": null
       },
       "columns": {
@@ -3256,49 +3256,49 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "channel",
-          "comment": null
-        },
-        "impressions": {
-          "type": "VARCHAR",
-          "index": 2,
-          "name": "impressions",
-          "comment": null
-        },
-        "clicks": {
-          "type": "VARCHAR",
-          "index": 3,
-          "name": "clicks",
-          "comment": null
-        },
-        "spend_usd": {
-          "type": "VARCHAR",
-          "index": 4,
-          "name": "spend_usd",
-          "comment": null
-        },
-        "leads": {
-          "type": "VARCHAR",
-          "index": 5,
-          "name": "leads",
-          "comment": null
+          "comment": "Marketing channel."
         },
         "customer_acquisition_cost_usd": {
           "type": "VARCHAR",
-          "index": 6,
+          "index": 2,
           "name": "customer_acquisition_cost_usd",
-          "comment": null
+          "comment": "Blended customer acquisition cost for the channel."
+        },
+        "impressions": {
+          "type": "VARCHAR",
+          "index": 3,
+          "name": "impressions",
+          "comment": "Ad impressions served."
+        },
+        "clicks": {
+          "type": "VARCHAR",
+          "index": 4,
+          "name": "clicks",
+          "comment": "Clicks on the ad."
+        },
+        "spend_usd": {
+          "type": "VARCHAR",
+          "index": 5,
+          "name": "spend_usd",
+          "comment": "Advertising spend, in USD."
+        },
+        "leads": {
+          "type": "VARCHAR",
+          "index": 6,
+          "name": "leads",
+          "comment": "Leads attributed to the ad."
         },
         "click_through_rate": {
           "type": "FLOAT",
           "index": 7,
           "name": "click_through_rate",
-          "comment": null
+          "comment": "Clicks divided by impressions."
         },
         "lead_conversion_rate": {
           "type": "FLOAT",
           "index": 8,
           "name": "lead_conversion_rate",
-          "comment": null
+          "comment": "Leads divided by clicks."
         }
       },
       "stats": {
@@ -3318,7 +3318,7 @@
         "schema": "intermediate",
         "name": "int_sales_opportunities_enriched",
         "database": "flowstate",
-        "comment": null,
+        "comment": "Salesforce opportunities joined to their account and owner, with probability- weighted ARR and the region the opportunity is credited to.\n",
         "owner": null
       },
       "columns": {
@@ -3326,127 +3326,127 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "opportunity_id",
-          "comment": null
+          "comment": "Natural key for the sales opportunity."
         },
         "opportunity_name": {
           "type": "VARCHAR",
           "index": 2,
           "name": "opportunity_name",
-          "comment": null
+          "comment": "Display name of the sales opportunity."
         },
         "account_id": {
           "type": "VARCHAR",
           "index": 3,
           "name": "account_id",
-          "comment": null
+          "comment": "Foreign key to the account."
         },
         "account_name": {
           "type": "VARCHAR",
           "index": 4,
           "name": "account_name",
-          "comment": null
+          "comment": "Display name of the account."
         },
         "industry": {
           "type": "VARCHAR",
           "index": 5,
           "name": "industry",
-          "comment": null
+          "comment": "Industry classification of the account."
         },
         "studio_count": {
           "type": "NUMBER",
           "index": 6,
           "name": "studio_count",
-          "comment": null
+          "comment": "Studios operated by the account."
         },
         "account_state_code": {
           "type": "VARCHAR",
           "index": 7,
           "name": "account_state_code",
-          "comment": null
+          "comment": "Two-letter state code on the account's billing address."
         },
         "owner_id": {
           "type": "VARCHAR",
           "index": 8,
           "name": "owner_id",
-          "comment": null
+          "comment": "User ID of the record owner."
         },
         "owner_name": {
           "type": "VARCHAR",
           "index": 9,
           "name": "owner_name",
-          "comment": null
+          "comment": "Full name of the record owner."
         },
         "sales_team": {
           "type": "VARCHAR",
           "index": 10,
           "name": "sales_team",
-          "comment": null
+          "comment": "Sales team the owner belongs to."
         },
         "owner_region": {
           "type": "VARCHAR",
           "index": 11,
           "name": "owner_region",
-          "comment": null
+          "comment": "Sales region assigned to the record owner."
         },
         "stage_name": {
           "type": "VARCHAR",
           "index": 12,
           "name": "stage_name",
-          "comment": null
+          "comment": "Current sales stage of the opportunity."
         },
         "amount_arr_usd": {
           "type": "VARCHAR",
           "index": 13,
           "name": "amount_arr_usd",
-          "comment": null
+          "comment": "Annual recurring revenue attached to the opportunity, in USD."
         },
         "probability": {
           "type": "VARCHAR",
           "index": 14,
           "name": "probability",
-          "comment": null
+          "comment": "Win probability assigned to the sales stage, as a fraction."
         },
         "weighted_arr_usd": {
           "type": "VARCHAR",
           "index": 15,
           "name": "weighted_arr_usd",
-          "comment": null
+          "comment": "ARR multiplied by the opportunity's win probability, in USD."
         },
         "lead_source": {
           "type": "VARCHAR",
           "index": 16,
           "name": "lead_source",
-          "comment": null
+          "comment": "Channel the lead originated from."
         },
         "forecast_category": {
           "type": "VARCHAR",
           "index": 17,
           "name": "forecast_category",
-          "comment": null
+          "comment": "Forecast category the opportunity rolls up to."
         },
         "is_won": {
           "type": "BOOLEAN",
           "index": 18,
           "name": "is_won",
-          "comment": null
+          "comment": "True when the opportunity closed won."
         },
         "is_closed": {
           "type": "BOOLEAN",
           "index": 19,
           "name": "is_closed",
-          "comment": null
+          "comment": "True when the opportunity is no longer open."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 20,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         },
         "close_date": {
           "type": "DATE",
           "index": 21,
           "name": "close_date",
-          "comment": null
+          "comment": "Expected or actual close date of the opportunity."
         }
       },
       "stats": {
@@ -3466,7 +3466,7 @@
         "schema": "intermediate",
         "name": "int_marketing_daily_spend",
         "database": "flowstate",
-        "comment": null,
+        "comment": "Paid marketing spend and delivery rolled up to one row per campaign per day, unioned across Google Ads and Facebook Ads.\n",
         "owner": null
       },
       "columns": {
@@ -3474,61 +3474,61 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "date_day",
-          "comment": null
+          "comment": "Calendar day the metrics are aggregated to."
         },
         "day_of_week": {
           "type": "VARCHAR",
           "index": 2,
           "name": "day_of_week",
-          "comment": null
+          "comment": "Day-of-week name for the calendar day."
         },
         "month_name": {
           "type": "VARCHAR",
           "index": 3,
           "name": "month_name",
-          "comment": null
+          "comment": "Month name for the calendar day."
         },
         "channel": {
           "type": "VARCHAR",
           "index": 4,
           "name": "channel",
-          "comment": null
+          "comment": "Marketing or support channel the record is attributed to."
         },
         "campaign_id": {
           "type": "VARCHAR",
           "index": 5,
           "name": "campaign_id",
-          "comment": null
+          "comment": "Foreign key to the advertising campaign."
         },
         "campaign_name": {
           "type": "VARCHAR",
           "index": 6,
           "name": "campaign_name",
-          "comment": null
+          "comment": "Display name of the campaign."
         },
         "impressions": {
           "type": "VARCHAR",
           "index": 7,
           "name": "impressions",
-          "comment": null
+          "comment": "Ad impressions served."
         },
         "clicks": {
           "type": "VARCHAR",
           "index": 8,
           "name": "clicks",
-          "comment": null
+          "comment": "Clicks on the ad."
         },
         "spend_usd": {
           "type": "VARCHAR",
           "index": 9,
           "name": "spend_usd",
-          "comment": null
+          "comment": "Advertising spend, in USD."
         },
         "leads": {
           "type": "VARCHAR",
           "index": 10,
           "name": "leads",
-          "comment": null
+          "comment": "Leads attributed to the ad."
         }
       },
       "stats": {
@@ -3548,7 +3548,7 @@
         "schema": "intermediate",
         "name": "int_ops_support_tickets",
         "database": "flowstate",
-        "comment": null,
+        "comment": "Zendesk tickets with the requesting member, the assigned agent, resolution time, and the satisfaction rating left by the requester.\n",
         "owner": null
       },
       "columns": {
@@ -3556,91 +3556,91 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "ticket_id",
-          "comment": null
+          "comment": "Natural key for the support ticket."
         },
         "requester_member_id": {
           "type": "VARCHAR",
           "index": 2,
           "name": "requester_member_id",
-          "comment": null
+          "comment": "Member who opened the support ticket."
         },
         "assignee_id": {
           "type": "VARCHAR",
           "index": 3,
           "name": "assignee_id",
-          "comment": null
+          "comment": "User ID of the person the record is assigned to."
         },
         "assignee_name": {
           "type": "VARCHAR",
           "index": 4,
           "name": "assignee_name",
-          "comment": null
+          "comment": "Full name of the assignee."
         },
         "assignee_role": {
           "type": "VARCHAR",
           "index": 5,
           "name": "assignee_role",
-          "comment": null
+          "comment": "Support role of the assignee (agent, lead, or manager)."
         },
         "status": {
           "type": "VARCHAR",
           "index": 6,
           "name": "status",
-          "comment": null
+          "comment": "Current status of the record in the source system."
         },
         "priority": {
           "type": "VARCHAR",
           "index": 7,
           "name": "priority",
-          "comment": null
+          "comment": "Support priority assigned to the ticket."
         },
         "channel": {
           "type": "VARCHAR",
           "index": 8,
           "name": "channel",
-          "comment": null
+          "comment": "Marketing or support channel the record is attributed to."
         },
         "ticket_type": {
           "type": "VARCHAR",
           "index": 9,
           "name": "ticket_type",
-          "comment": null
+          "comment": "Type of support request."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 10,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         },
         "solved_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 11,
           "name": "solved_at",
-          "comment": null
+          "comment": "Timestamp when the support ticket was resolved."
         },
         "resolution_hours": {
           "type": "VARCHAR",
           "index": 12,
           "name": "resolution_hours",
-          "comment": null
+          "comment": "Hours between ticket creation and resolution."
         },
         "satisfaction_score": {
           "type": "FLOAT",
           "index": 13,
           "name": "satisfaction_score",
-          "comment": null
+          "comment": "Raw satisfaction score submitted by the requester."
         },
         "csat_rating": {
           "type": "VARCHAR",
           "index": 14,
           "name": "csat_rating",
-          "comment": null
+          "comment": "Customer satisfaction rating (good or bad)."
         },
         "csat_comment": {
           "type": "VARCHAR",
           "index": 15,
           "name": "csat_comment",
-          "comment": null
+          "comment": "Free-text comment left with the satisfaction rating."
         }
       },
       "stats": {
@@ -3660,7 +3660,7 @@
         "schema": "intermediate",
         "name": "int_marketing_email_engagement",
         "database": "flowstate",
-        "comment": null,
+        "comment": "One row per email campaign with engagement rolled up from per-recipient events: opens, clicks, bounces, unsubscribes, and their unique counts.\n",
         "owner": null
       },
       "columns": {
@@ -3668,73 +3668,73 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "email_campaign_id",
-          "comment": null
+          "comment": "Natural key for the email marketing campaign."
         },
         "campaign_name": {
           "type": "VARCHAR",
           "index": 2,
           "name": "campaign_name",
-          "comment": null
+          "comment": "Display name of the campaign."
         },
         "subject_line": {
           "type": "VARCHAR",
           "index": 3,
           "name": "subject_line",
-          "comment": null
+          "comment": "Subject line of the email campaign."
         },
         "email_type": {
           "type": "VARCHAR",
           "index": 4,
           "name": "email_type",
-          "comment": null
+          "comment": "Type of email sent (newsletter, product, or lifecycle)."
         },
         "send_date": {
           "type": "DATE",
           "index": 5,
           "name": "send_date",
-          "comment": null
+          "comment": "Date the email campaign was sent."
         },
         "num_recipients": {
           "type": "VARCHAR",
           "index": 6,
           "name": "num_recipients",
-          "comment": null
+          "comment": "Recipients the email campaign was sent to."
         },
         "total_opens": {
           "type": "VARCHAR",
           "index": 7,
           "name": "total_opens",
-          "comment": null
+          "comment": "Email opens, including repeat opens."
         },
         "total_clicks": {
           "type": "VARCHAR",
           "index": 8,
           "name": "total_clicks",
-          "comment": null
+          "comment": "Email link clicks, including repeat clicks."
         },
         "total_bounces": {
           "type": "VARCHAR",
           "index": 9,
           "name": "total_bounces",
-          "comment": null
+          "comment": "Emails that bounced."
         },
         "total_unsubscribes": {
           "type": "VARCHAR",
           "index": 10,
           "name": "total_unsubscribes",
-          "comment": null
+          "comment": "Recipients who unsubscribed."
         },
         "unique_openers": {
           "type": "VARCHAR",
           "index": 11,
           "name": "unique_openers",
-          "comment": null
+          "comment": "Distinct recipients who opened the email."
         },
         "unique_clickers": {
           "type": "VARCHAR",
           "index": 12,
           "name": "unique_clickers",
-          "comment": null
+          "comment": "Distinct recipients who clicked a link."
         }
       },
       "stats": {
@@ -3754,7 +3754,7 @@
         "schema": "intermediate",
         "name": "int_billing_subscriptions",
         "database": "flowstate",
-        "comment": null,
+        "comment": "One row per Chargebee subscription with the member, studio, and plan it belongs to, plus the MRR it contributes. The basis for all MRR reporting.\n",
         "owner": null
       },
       "columns": {
@@ -3762,103 +3762,103 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "subscription_id",
-          "comment": null
+          "comment": "Natural key for the billing subscription."
         },
         "member_id": {
           "type": "VARCHAR",
           "index": 2,
           "name": "member_id",
-          "comment": null
+          "comment": "Foreign key to the member."
         },
         "member_name": {
           "type": "VARCHAR",
           "index": 3,
           "name": "member_name",
-          "comment": null
+          "comment": "Member's full name, concatenated from first and last name."
         },
         "studio_id": {
           "type": "VARCHAR",
           "index": 4,
           "name": "studio_id",
-          "comment": null
+          "comment": "Foreign key to the studio that owns this record."
         },
         "studio_name": {
           "type": "VARCHAR",
           "index": 5,
           "name": "studio_name",
-          "comment": null
+          "comment": "Display name of the studio."
         },
         "region": {
           "type": "VARCHAR",
           "index": 6,
           "name": "region",
-          "comment": null
+          "comment": "Sales region the studio belongs to."
         },
         "plan_id": {
           "type": "VARCHAR",
           "index": 7,
           "name": "plan_id",
-          "comment": null
+          "comment": "Foreign key to the membership plan."
         },
         "plan_name": {
           "type": "VARCHAR",
           "index": 8,
           "name": "plan_name",
-          "comment": null
+          "comment": "Display name of the membership plan."
         },
         "plan_tier": {
           "type": "VARCHAR",
           "index": 9,
           "name": "plan_tier",
-          "comment": null
+          "comment": "Plan tier (unlimited, class pack, or drop-in)."
         },
         "plan_price_usd": {
           "type": "VARCHAR",
           "index": 10,
           "name": "plan_price_usd",
-          "comment": null
+          "comment": "List price of the plan in USD."
         },
         "subscription_status": {
           "type": "VARCHAR",
           "index": 11,
           "name": "subscription_status",
-          "comment": null
+          "comment": "Status of the subscription (active, cancelled, or in trial)."
         },
         "billing_period": {
           "type": "VARCHAR",
           "index": 12,
           "name": "billing_period",
-          "comment": null
+          "comment": "Length of the billing period, in billing period units."
         },
         "billing_period_unit": {
           "type": "VARCHAR",
           "index": 13,
           "name": "billing_period_unit",
-          "comment": null
+          "comment": "Unit the billing period is measured in (month or year)."
         },
         "mrr_usd": {
           "type": "VARCHAR",
           "index": 14,
           "name": "mrr_usd",
-          "comment": null
+          "comment": "Monthly recurring revenue attributed to the subscription, in USD."
         },
         "started_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 15,
           "name": "started_at",
-          "comment": null
+          "comment": "Timestamp when the record became active."
         },
         "activated_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 16,
           "name": "activated_at",
-          "comment": null
+          "comment": "Timestamp when the subscription first became billable."
         },
         "cancelled_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 17,
           "name": "cancelled_at",
-          "comment": null
+          "comment": "Timestamp when the record was cancelled. Null if still active."
         }
       },
       "stats": {
@@ -3878,7 +3878,7 @@
         "schema": "intermediate",
         "name": "int_billing_collections",
         "database": "flowstate",
-        "comment": null,
+        "comment": "Billing transactions \u2014 payments, refunds, and credit notes \u2014 resolved to the invoice and member they apply to, for collections and dunning analysis.\n",
         "owner": null
       },
       "columns": {
@@ -3886,91 +3886,91 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "transaction_id",
-          "comment": null
+          "comment": "Natural key for the billing transaction."
         },
         "invoice_id": {
           "type": "VARCHAR",
           "index": 2,
           "name": "invoice_id",
-          "comment": null
+          "comment": "Foreign key to the invoice."
         },
         "subscription_id": {
           "type": "VARCHAR",
           "index": 3,
           "name": "subscription_id",
-          "comment": null
+          "comment": "Foreign key to the billing subscription."
         },
         "member_id": {
           "type": "VARCHAR",
           "index": 4,
           "name": "member_id",
-          "comment": null
+          "comment": "Foreign key to the member."
         },
         "member_name": {
           "type": "VARCHAR",
           "index": 5,
           "name": "member_name",
-          "comment": null
+          "comment": "Member's full name, concatenated from first and last name."
         },
         "studio_id": {
           "type": "VARCHAR",
           "index": 6,
           "name": "studio_id",
-          "comment": null
+          "comment": "Foreign key to the studio that owns this record."
         },
         "transaction_type": {
           "type": "VARCHAR",
           "index": 7,
           "name": "transaction_type",
-          "comment": null
+          "comment": "Type of billing transaction (payment, refund, or credit)."
         },
         "transaction_status": {
           "type": "VARCHAR",
           "index": 8,
           "name": "transaction_status",
-          "comment": null
+          "comment": "Outcome of the billing transaction."
         },
         "transaction_amount_usd": {
           "type": "VARCHAR",
           "index": 9,
           "name": "transaction_amount_usd",
-          "comment": null
+          "comment": "Amount of the billing transaction, in USD."
         },
         "payment_method": {
           "type": "VARCHAR",
           "index": 10,
           "name": "payment_method",
-          "comment": null
+          "comment": "Payment instrument used for the transaction."
         },
         "gateway": {
           "type": "VARCHAR",
           "index": 11,
           "name": "gateway",
-          "comment": null
+          "comment": "Payment gateway that processed the transaction."
         },
         "processed_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 12,
           "name": "processed_at",
-          "comment": null
+          "comment": "Timestamp when the transaction was processed by the gateway."
         },
         "credit_note_id": {
           "type": "VARCHAR",
           "index": 13,
           "name": "credit_note_id",
-          "comment": null
+          "comment": "Identifier of the credit note applied to the transaction."
         },
         "amount_refunded_usd": {
           "type": "VARCHAR",
           "index": 14,
           "name": "amount_refunded_usd",
-          "comment": null
+          "comment": "Amount refunded, in USD."
         },
         "credit_reason_code": {
           "type": "VARCHAR",
           "index": 15,
           "name": "credit_reason_code",
-          "comment": null
+          "comment": "Machine-readable reason the credit note was issued."
         }
       },
       "stats": {
@@ -3990,7 +3990,7 @@
         "schema": "intermediate",
         "name": "int_bookings",
         "database": "flowstate",
-        "comment": null,
+        "comment": "Bookings enriched with the class, schedule, studio, and member context needed downstream, so mart models do not each re-join the staging layer.\n",
         "owner": null
       },
       "columns": {
@@ -3998,103 +3998,103 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "booking_id",
-          "comment": null
+          "comment": "Natural key for the booking."
         },
         "schedule_id": {
           "type": "VARCHAR",
           "index": 2,
           "name": "schedule_id",
-          "comment": null
+          "comment": "Foreign key to the scheduled class instance."
         },
         "class_id": {
           "type": "VARCHAR",
           "index": 3,
           "name": "class_id",
-          "comment": null
+          "comment": "Foreign key to the class offering."
         },
         "class_name": {
           "type": "VARCHAR",
           "index": 4,
           "name": "class_name",
-          "comment": null
+          "comment": "Display name of the class offering."
         },
         "class_type": {
           "type": "VARCHAR",
           "index": 5,
           "name": "class_type",
-          "comment": null
+          "comment": "Category of class (yoga, HIIT, cycle, pilates, barre)."
         },
         "studio_id": {
           "type": "VARCHAR",
           "index": 6,
           "name": "studio_id",
-          "comment": null
+          "comment": "Foreign key to the studio that owns this record."
         },
         "studio_name": {
           "type": "VARCHAR",
           "index": 7,
           "name": "studio_name",
-          "comment": null
+          "comment": "Display name of the studio."
         },
         "region": {
           "type": "VARCHAR",
           "index": 8,
           "name": "region",
-          "comment": null
+          "comment": "Sales region the studio belongs to."
         },
         "member_id": {
           "type": "VARCHAR",
           "index": 9,
           "name": "member_id",
-          "comment": null
+          "comment": "Foreign key to the member."
         },
         "member_email": {
           "type": "VARCHAR",
           "index": 10,
           "name": "member_email",
-          "comment": null
+          "comment": "Member's email address."
         },
         "instructor_id": {
           "type": "VARCHAR",
           "index": 11,
           "name": "instructor_id",
-          "comment": null
+          "comment": "Foreign key to the instructor."
         },
         "class_start_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 12,
           "name": "class_start_at",
-          "comment": null
+          "comment": "Scheduled start time of the class."
         },
         "class_end_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 13,
           "name": "class_end_at",
-          "comment": null
+          "comment": "Scheduled end time of the class."
         },
         "booking_status": {
           "type": "VARCHAR",
           "index": 14,
           "name": "booking_status",
-          "comment": null
+          "comment": "Status of the booking (booked, attended, cancelled, no-show)."
         },
         "booked_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 15,
           "name": "booked_at",
-          "comment": null
+          "comment": "Timestamp when the booking was made."
         },
         "checked_in_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 16,
           "name": "checked_in_at",
-          "comment": null
+          "comment": "Timestamp when the member checked in. Null if they never arrived."
         },
         "is_no_show": {
           "type": "BOOLEAN",
           "index": 17,
           "name": "is_no_show",
-          "comment": null
+          "comment": "True when the member booked but never checked in."
         }
       },
       "stats": {
@@ -4114,7 +4114,7 @@
         "schema": "intermediate",
         "name": "int_ops_headcount_by_department",
         "database": "flowstate",
-        "comment": null,
+        "comment": "Headcount rolled up to one row per department, splitting active from terminated employees and bounding the department's hiring history.\n",
         "owner": null
       },
       "columns": {
@@ -4122,49 +4122,49 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "department",
-          "comment": null
+          "comment": "Department the employee belongs to."
         },
         "cost_center": {
           "type": "VARCHAR",
           "index": 2,
           "name": "cost_center",
-          "comment": null
+          "comment": "Cost center the department charges to."
         },
         "org_group": {
           "type": "VARCHAR",
           "index": 3,
           "name": "org_group",
-          "comment": null
+          "comment": "Top-level organizational group."
         },
         "total_employees": {
           "type": "VARCHAR",
           "index": 4,
           "name": "total_employees",
-          "comment": null
+          "comment": "Employees in the grouping, active or terminated."
         },
         "active_employees": {
           "type": "VARCHAR",
           "index": 5,
           "name": "active_employees",
-          "comment": null
+          "comment": "Employees currently employed."
         },
         "terminated_employees": {
           "type": "VARCHAR",
           "index": 6,
           "name": "terminated_employees",
-          "comment": null
+          "comment": "Employees who have left."
         },
         "earliest_hire_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 7,
           "name": "earliest_hire_at",
-          "comment": null
+          "comment": "Hire date of the longest-tenured employee in the grouping."
         },
         "latest_hire_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 8,
           "name": "latest_hire_at",
-          "comment": null
+          "comment": "Hire date of the most recent employee in the grouping."
         }
       },
       "stats": {
@@ -4184,7 +4184,7 @@
         "schema": "intermediate",
         "name": "int_payments",
         "database": "flowstate",
-        "comment": null,
+        "comment": "Stripe charges joined to the member and studio they belong to, normalized to USD and given a consistent charge status.\n",
         "owner": null
       },
       "columns": {
@@ -4192,49 +4192,49 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "charge_id",
-          "comment": null
+          "comment": "Natural key for the payment charge."
         },
         "member_id": {
           "type": "VARCHAR",
           "index": 2,
           "name": "member_id",
-          "comment": null
+          "comment": "Foreign key to the member."
         },
         "studio_id": {
           "type": "VARCHAR",
           "index": 3,
           "name": "studio_id",
-          "comment": null
+          "comment": "Foreign key to the studio that owns this record."
         },
         "amount_usd": {
           "type": "VARCHAR",
           "index": 4,
           "name": "amount_usd",
-          "comment": null
+          "comment": "Transaction amount in USD."
         },
         "currency": {
           "type": "VARCHAR",
           "index": 5,
           "name": "currency",
-          "comment": null
+          "comment": "ISO 4217 currency code the amount is denominated in."
         },
         "charge_status": {
           "type": "VARCHAR",
           "index": 6,
           "name": "charge_status",
-          "comment": null
+          "comment": "Outcome of the payment charge."
         },
         "charged_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 7,
           "name": "charged_at",
-          "comment": null
+          "comment": "Timestamp when the charge was submitted to the gateway."
         },
         "refunded": {
           "type": "VARCHAR",
           "index": 8,
           "name": "refunded",
-          "comment": null
+          "comment": "True when the charge was refunded."
         }
       },
       "stats": {
@@ -4254,7 +4254,7 @@
         "schema": "intermediate",
         "name": "int_billing_invoices",
         "database": "flowstate",
-        "comment": null,
+        "comment": "Invoices with their subscription and member attached, split into amounts paid and outstanding, and stamped with the fiscal month they land in.\n",
         "owner": null
       },
       "columns": {
@@ -4262,85 +4262,85 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "invoice_id",
-          "comment": null
+          "comment": "Natural key for the invoice."
         },
         "subscription_id": {
           "type": "VARCHAR",
           "index": 2,
           "name": "subscription_id",
-          "comment": null
+          "comment": "Foreign key to the billing subscription."
         },
         "member_id": {
           "type": "VARCHAR",
           "index": 3,
           "name": "member_id",
-          "comment": null
+          "comment": "Foreign key to the member."
         },
         "member_name": {
           "type": "VARCHAR",
           "index": 4,
           "name": "member_name",
-          "comment": null
+          "comment": "Member's full name, concatenated from first and last name."
         },
         "invoice_status": {
           "type": "VARCHAR",
           "index": 5,
           "name": "invoice_status",
-          "comment": null
+          "comment": "Status of the invoice (paid, posted, payment due, or voided)."
         },
         "total_usd": {
           "type": "VARCHAR",
           "index": 6,
           "name": "total_usd",
-          "comment": null
+          "comment": "Invoice total, in USD."
         },
         "amount_paid_usd": {
           "type": "VARCHAR",
           "index": 7,
           "name": "amount_paid_usd",
-          "comment": null
+          "comment": "Amount paid against the invoice, in USD."
         },
         "amount_due_usd": {
           "type": "VARCHAR",
           "index": 8,
           "name": "amount_due_usd",
-          "comment": null
+          "comment": "Amount still outstanding on the invoice, in USD."
         },
         "currency": {
           "type": "VARCHAR",
           "index": 9,
           "name": "currency",
-          "comment": null
+          "comment": "ISO 4217 currency code the amount is denominated in."
         },
         "issued_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 10,
           "name": "issued_at",
-          "comment": null
+          "comment": "Timestamp when the invoice was issued."
         },
         "issued_date": {
           "type": "DATE",
           "index": 11,
           "name": "issued_date",
-          "comment": null
+          "comment": "Calendar day the invoice was issued."
         },
         "fiscal_month": {
           "type": "VARCHAR",
           "index": 12,
           "name": "fiscal_month",
-          "comment": null
+          "comment": "Fiscal month the invoice is recognized in."
         },
         "due_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 13,
           "name": "due_at",
-          "comment": null
+          "comment": "Timestamp when payment on the invoice becomes due."
         },
         "paid_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 14,
           "name": "paid_at",
-          "comment": null
+          "comment": "Timestamp when the invoice was paid in full. Null if unpaid."
         }
       },
       "stats": {
@@ -4360,7 +4360,7 @@
         "schema": "intermediate",
         "name": "int_sales_stage_transitions",
         "database": "flowstate",
-        "comment": null,
+        "comment": "One row per opportunity stage change, with the stage moved from and to. Used to measure stage velocity and pipeline movement over time.\n",
         "owner": null
       },
       "columns": {
@@ -4368,85 +4368,85 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "opportunity_history_id",
-          "comment": null
+          "comment": "Natural key for the opportunity history row."
         },
         "opportunity_id": {
           "type": "VARCHAR",
           "index": 2,
           "name": "opportunity_id",
-          "comment": null
+          "comment": "Foreign key to the sales opportunity."
         },
         "opportunity_name": {
           "type": "VARCHAR",
           "index": 3,
           "name": "opportunity_name",
-          "comment": null
+          "comment": "Display name of the sales opportunity."
         },
         "account_id": {
           "type": "VARCHAR",
           "index": 4,
           "name": "account_id",
-          "comment": null
+          "comment": "Foreign key to the account."
         },
         "from_stage_name": {
           "type": "VARCHAR",
           "index": 5,
           "name": "from_stage_name",
-          "comment": null
+          "comment": "Sales stage the opportunity moved out of."
         },
         "to_stage_name": {
           "type": "VARCHAR",
           "index": 6,
           "name": "to_stage_name",
-          "comment": null
+          "comment": "Sales stage the opportunity moved into."
         },
         "amount_arr_usd": {
           "type": "VARCHAR",
           "index": 7,
           "name": "amount_arr_usd",
-          "comment": null
+          "comment": "Annual recurring revenue attached to the opportunity, in USD."
         },
         "probability": {
           "type": "VARCHAR",
           "index": 8,
           "name": "probability",
-          "comment": null
+          "comment": "Win probability assigned to the sales stage, as a fraction."
         },
         "changed_by_user_id": {
           "type": "VARCHAR",
           "index": 9,
           "name": "changed_by_user_id",
-          "comment": null
+          "comment": "User who made the stage change."
         },
         "changed_by_name": {
           "type": "VARCHAR",
           "index": 10,
           "name": "changed_by_name",
-          "comment": null
+          "comment": "Full name of the user who made the stage change."
         },
         "is_stage_change": {
           "type": "BOOLEAN",
           "index": 11,
           "name": "is_stage_change",
-          "comment": null
+          "comment": "True when the history row represents an actual stage change."
         },
         "is_won": {
           "type": "BOOLEAN",
           "index": 12,
           "name": "is_won",
-          "comment": null
+          "comment": "True when the opportunity closed won."
         },
         "is_closed": {
           "type": "BOOLEAN",
           "index": 13,
           "name": "is_closed",
-          "comment": null
+          "comment": "True when the opportunity is no longer open."
         },
         "transition_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 14,
           "name": "transition_at",
-          "comment": null
+          "comment": "Timestamp of the opportunity stage change."
         }
       },
       "stats": {
@@ -4466,7 +4466,7 @@
         "schema": "intermediate",
         "name": "int_product_event_stream",
         "database": "flowstate",
-        "comment": null,
+        "comment": "Segment track events with the member and their membership status attached, categorized into product areas and reduced to one row per event.\n",
         "owner": null
       },
       "columns": {
@@ -4474,61 +4474,61 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "event_id",
-          "comment": null
+          "comment": "Natural key for the product event."
         },
         "member_id": {
           "type": "VARCHAR",
           "index": 2,
           "name": "member_id",
-          "comment": null
+          "comment": "Foreign key to the member."
         },
         "member_region": {
           "type": "VARCHAR",
           "index": 3,
           "name": "member_region",
-          "comment": null
+          "comment": "Sales region of the member's home studio."
         },
         "member_status": {
           "type": "VARCHAR",
           "index": 4,
           "name": "member_status",
-          "comment": null
+          "comment": "Membership status of the member at the time of the event."
         },
         "event_name": {
           "type": "VARCHAR",
           "index": 5,
           "name": "event_name",
-          "comment": null
+          "comment": "Name of the product event."
         },
         "event_category": {
           "type": "VARCHAR",
           "index": 6,
           "name": "event_category",
-          "comment": null
+          "comment": "Product area the event belongs to."
         },
         "occurred_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 7,
           "name": "occurred_at",
-          "comment": null
+          "comment": "Timestamp when the event occurred on the client."
         },
         "event_date": {
           "type": "DATE",
           "index": 8,
           "name": "event_date",
-          "comment": null
+          "comment": "Calendar day the event occurred."
         },
         "device_type": {
           "type": "VARCHAR",
           "index": 9,
           "name": "device_type",
-          "comment": null
+          "comment": "Device class the event was recorded on."
         },
         "platform": {
           "type": "VARCHAR",
           "index": 10,
           "name": "platform",
-          "comment": null
+          "comment": "Client platform the event was recorded on (iOS, Android, or web)."
         }
       },
       "stats": {
@@ -4548,7 +4548,7 @@
         "schema": "intermediate",
         "name": "int_product_daily_active_members",
         "database": "flowstate",
-        "comment": null,
+        "comment": "One row per member per active day, with session counts, event volume, and time spent. The grain all engagement reporting builds on.\n",
         "owner": null
       },
       "columns": {
@@ -4556,49 +4556,49 @@
           "type": "DATE",
           "index": 1,
           "name": "activity_date",
-          "comment": null
+          "comment": "Calendar day the activity is attributed to."
         },
         "member_id": {
           "type": "VARCHAR",
           "index": 2,
           "name": "member_id",
-          "comment": null
+          "comment": "Foreign key to the member."
         },
         "member_region": {
           "type": "VARCHAR",
           "index": 3,
           "name": "member_region",
-          "comment": null
+          "comment": "Sales region of the member's home studio."
         },
         "member_status": {
           "type": "VARCHAR",
           "index": 4,
           "name": "member_status",
-          "comment": null
+          "comment": "Membership status of the member at the time of the event."
         },
         "session_count": {
           "type": "NUMBER",
           "index": 5,
           "name": "session_count",
-          "comment": null
+          "comment": "Product sessions in the grouping."
         },
         "total_events": {
           "type": "VARCHAR",
           "index": 6,
           "name": "total_events",
-          "comment": null
+          "comment": "Product events in the grouping."
         },
         "total_duration_seconds": {
           "type": "VARCHAR",
           "index": 7,
           "name": "total_duration_seconds",
-          "comment": null
+          "comment": "Summed session duration, in seconds."
         },
         "last_platform": {
           "type": "VARCHAR",
           "index": 8,
           "name": "last_platform",
-          "comment": null
+          "comment": "Most recent platform the member was active on."
         }
       },
       "stats": {
@@ -4618,7 +4618,7 @@
         "schema": "intermediate",
         "name": "int_product_feature_adoption",
         "database": "flowstate",
-        "comment": null,
+        "comment": "One row per member per feature area, capturing how much they use it and when they first and last did.\n",
         "owner": null
       },
       "columns": {
@@ -4626,49 +4626,49 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "feature_area",
-          "comment": null
+          "comment": "Product feature area the events roll up to."
         },
         "member_id": {
           "type": "VARCHAR",
           "index": 2,
           "name": "member_id",
-          "comment": null
+          "comment": "Foreign key to the member."
         },
         "member_region": {
           "type": "VARCHAR",
           "index": 3,
           "name": "member_region",
-          "comment": null
+          "comment": "Sales region of the member's home studio."
         },
         "member_status": {
           "type": "VARCHAR",
           "index": 4,
           "name": "member_status",
-          "comment": null
+          "comment": "Membership status of the member at the time of the event."
         },
         "event_count": {
           "type": "NUMBER",
           "index": 5,
           "name": "event_count",
-          "comment": null
+          "comment": "Product events in the grouping."
         },
         "distinct_actions": {
           "type": "VARCHAR",
           "index": 6,
           "name": "distinct_actions",
-          "comment": null
+          "comment": "Distinct event names the member triggered."
         },
         "first_used_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 7,
           "name": "first_used_at",
-          "comment": null
+          "comment": "Timestamp of the member's first use of the feature."
         },
         "last_used_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 8,
           "name": "last_used_at",
-          "comment": null
+          "comment": "Timestamp of the member's most recent use of the feature."
         }
       },
       "stats": {
@@ -4688,7 +4688,7 @@
         "schema": "intermediate",
         "name": "int_marketing_ad_performance",
         "database": "flowstate",
-        "comment": null,
+        "comment": "Daily ad delivery metrics normalized to a shared schema across ad platforms, so channel comparisons do not depend on platform-specific fields.\n",
         "owner": null
       },
       "columns": {
@@ -4696,49 +4696,49 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "channel",
-          "comment": null
+          "comment": "Marketing or support channel the record is attributed to."
         },
         "campaign_id": {
           "type": "VARCHAR",
           "index": 2,
           "name": "campaign_id",
-          "comment": null
+          "comment": "Foreign key to the advertising campaign."
         },
         "campaign_name": {
           "type": "VARCHAR",
           "index": 3,
           "name": "campaign_name",
-          "comment": null
+          "comment": "Display name of the campaign."
         },
         "date_day": {
           "type": "VARCHAR",
           "index": 4,
           "name": "date_day",
-          "comment": null
+          "comment": "Calendar day the metrics are aggregated to."
         },
         "impressions": {
           "type": "VARCHAR",
           "index": 5,
           "name": "impressions",
-          "comment": null
+          "comment": "Ad impressions served."
         },
         "clicks": {
           "type": "VARCHAR",
           "index": 6,
           "name": "clicks",
-          "comment": null
+          "comment": "Clicks on the ad."
         },
         "spend_usd": {
           "type": "VARCHAR",
           "index": 7,
           "name": "spend_usd",
-          "comment": null
+          "comment": "Advertising spend, in USD."
         },
         "leads": {
           "type": "VARCHAR",
           "index": 8,
           "name": "leads",
-          "comment": null
+          "comment": "Leads attributed to the ad."
         }
       },
       "stats": {
@@ -4758,7 +4758,7 @@
         "schema": "intermediate",
         "name": "int_sales_lead_funnel",
         "database": "flowstate",
-        "comment": null,
+        "comment": "One row per lead with its owner and, where the lead converted, the account and opportunity it became. The basis for funnel conversion analysis.\n",
         "owner": null
       },
       "columns": {
@@ -4766,121 +4766,121 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "lead_id",
-          "comment": null
+          "comment": "Natural key for the lead."
         },
         "first_name": {
           "type": "VARCHAR",
           "index": 2,
           "name": "first_name",
-          "comment": null
+          "comment": "Given name."
         },
         "last_name": {
           "type": "VARCHAR",
           "index": 3,
           "name": "last_name",
-          "comment": null
+          "comment": "Family name."
         },
         "email": {
           "type": "VARCHAR",
           "index": 4,
           "name": "email",
-          "comment": null
+          "comment": "Email address."
         },
         "company_name": {
           "type": "VARCHAR",
           "index": 5,
           "name": "company_name",
-          "comment": null
+          "comment": "Company the lead belongs to."
         },
         "lead_source": {
           "type": "VARCHAR",
           "index": 6,
           "name": "lead_source",
-          "comment": null
+          "comment": "Channel the lead originated from."
         },
         "lead_status": {
           "type": "VARCHAR",
           "index": 7,
           "name": "lead_status",
-          "comment": null
+          "comment": "Stage of the lead in the qualification process."
         },
         "industry": {
           "type": "VARCHAR",
           "index": 8,
           "name": "industry",
-          "comment": null
+          "comment": "Industry classification of the account."
         },
         "estimated_studio_count": {
           "type": "NUMBER",
           "index": 9,
           "name": "estimated_studio_count",
-          "comment": null
+          "comment": "Studio count self-reported by the lead."
         },
         "owner_id": {
           "type": "VARCHAR",
           "index": 10,
           "name": "owner_id",
-          "comment": null
+          "comment": "User ID of the record owner."
         },
         "owner_name": {
           "type": "VARCHAR",
           "index": 11,
           "name": "owner_name",
-          "comment": null
+          "comment": "Full name of the record owner."
         },
         "sales_team": {
           "type": "VARCHAR",
           "index": 12,
           "name": "sales_team",
-          "comment": null
+          "comment": "Sales team the owner belongs to."
         },
         "is_converted": {
           "type": "BOOLEAN",
           "index": 13,
           "name": "is_converted",
-          "comment": null
+          "comment": "True when the lead converted to an opportunity."
         },
         "converted_account_id": {
           "type": "VARCHAR",
           "index": 14,
           "name": "converted_account_id",
-          "comment": null
+          "comment": "Account created when the lead converted."
         },
         "converted_opportunity_id": {
           "type": "VARCHAR",
           "index": 15,
           "name": "converted_opportunity_id",
-          "comment": null
+          "comment": "Opportunity created when the lead converted."
         },
         "converted_stage_name": {
           "type": "VARCHAR",
           "index": 16,
           "name": "converted_stage_name",
-          "comment": null
+          "comment": "Sales stage of the opportunity the lead converted into."
         },
         "converted_amount_arr_usd": {
           "type": "VARCHAR",
           "index": 17,
           "name": "converted_amount_arr_usd",
-          "comment": null
+          "comment": "ARR on the opportunity the lead converted into, in USD."
         },
         "converted_is_won": {
           "type": "VARCHAR",
           "index": 18,
           "name": "converted_is_won",
-          "comment": null
+          "comment": "True when the converted opportunity closed won."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 19,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         },
         "converted_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 20,
           "name": "converted_at",
-          "comment": null
+          "comment": "Timestamp when the lead converted to an opportunity."
         }
       },
       "stats": {
@@ -4900,7 +4900,7 @@
         "schema": "intermediate",
         "name": "int_ops_monthly_pnl",
         "database": "flowstate",
-        "comment": null,
+        "comment": "General-ledger entries rolled up to one row per account per accounting month, restricted to profit-and-loss accounts.\n",
         "owner": null
       },
       "columns": {
@@ -4908,55 +4908,55 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "accounting_month",
-          "comment": null
+          "comment": "Accounting period the entries roll up to."
         },
         "account_id": {
           "type": "VARCHAR",
           "index": 2,
           "name": "account_id",
-          "comment": null
+          "comment": "Foreign key to the account."
         },
         "account_name": {
           "type": "VARCHAR",
           "index": 3,
           "name": "account_name",
-          "comment": null
+          "comment": "Display name of the account."
         },
         "account_type": {
           "type": "VARCHAR",
           "index": 4,
           "name": "account_type",
-          "comment": null
+          "comment": "Classification of the account in the chart of accounts."
         },
         "statement_category": {
           "type": "VARCHAR",
           "index": 5,
           "name": "statement_category",
-          "comment": null
+          "comment": "Financial statement category the account rolls up to."
         },
         "total_debits_usd": {
           "type": "VARCHAR",
           "index": 6,
           "name": "total_debits_usd",
-          "comment": null
+          "comment": "Sum of debits posted in the period, in USD."
         },
         "total_credits_usd": {
           "type": "VARCHAR",
           "index": 7,
           "name": "total_credits_usd",
-          "comment": null
+          "comment": "Sum of credits posted in the period, in USD."
         },
         "net_amount_usd": {
           "type": "VARCHAR",
           "index": 8,
           "name": "net_amount_usd",
-          "comment": null
+          "comment": "Debits less credits for the period, in USD."
         },
         "entry_count": {
           "type": "NUMBER",
           "index": 9,
           "name": "entry_count",
-          "comment": null
+          "comment": "General-ledger entries in the period."
         }
       },
       "stats": {
@@ -5002,31 +5002,31 @@
           "type": "VARCHAR",
           "index": 4,
           "name": "studio_name",
-          "comment": null
+          "comment": "Display name of the studio."
         },
         "region": {
           "type": "VARCHAR",
           "index": 5,
           "name": "region",
-          "comment": null
+          "comment": "Sales region the studio belongs to."
         },
         "total_bookings": {
           "type": "VARCHAR",
           "index": 6,
           "name": "total_bookings",
-          "comment": null
+          "comment": "Bookings in the grouping."
         },
         "attended": {
           "type": "VARCHAR",
           "index": 7,
           "name": "attended",
-          "comment": null
+          "comment": "Bookings where the member checked in."
         },
         "no_shows": {
           "type": "VARCHAR",
           "index": 8,
           "name": "no_shows",
-          "comment": null
+          "comment": "Bookings where the member never checked in."
         }
       },
       "stats": {
@@ -5304,7 +5304,7 @@
         "schema": "staging_product",
         "name": "stg_segment__tracks",
         "database": "flowstate",
-        "comment": "Cleaned custom interaction events (booked_class, checked_in, etc.) with member, device, and platform context.",
+        "comment": "Cleaned custom interaction events (booked_class, checked_in, etc.) with member, device, and platform context.\n",
         "owner": null
       },
       "columns": {
@@ -5506,37 +5506,37 @@
           "type": "VARCHAR",
           "index": 4,
           "name": "studio_name",
-          "comment": null
+          "comment": "Display name of the studio."
         },
         "plan_name": {
           "type": "VARCHAR",
           "index": 5,
           "name": "plan_name",
-          "comment": null
+          "comment": "Display name of the membership plan."
         },
         "billing_interval": {
           "type": "VARCHAR",
           "index": 6,
           "name": "billing_interval",
-          "comment": null
+          "comment": "How often the plan bills (monthly or annual)."
         },
         "monthly_price_usd": {
           "type": "VARCHAR",
           "index": 7,
           "name": "monthly_price_usd",
-          "comment": null
+          "comment": "Monthly price of the plan, in USD."
         },
         "included_class_credits": {
           "type": "VARCHAR",
           "index": 8,
           "name": "included_class_credits",
-          "comment": null
+          "comment": "Class credits included in the plan each billing period."
         },
         "is_active": {
           "type": "BOOLEAN",
           "index": 9,
           "name": "is_active",
-          "comment": null
+          "comment": "True when the record is currently active."
         }
       },
       "stats": {
@@ -5600,25 +5600,25 @@
           "type": "VARCHAR",
           "index": 7,
           "name": "schedule_id",
-          "comment": null
+          "comment": "Foreign key to the scheduled class instance."
         },
         "class_start_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 8,
           "name": "class_start_at",
-          "comment": null
+          "comment": "Scheduled start time of the class."
         },
         "checked_in_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 9,
           "name": "checked_in_at",
-          "comment": null
+          "comment": "Timestamp when the member checked in. Null if they never arrived."
         },
         "checkin_date": {
           "type": "DATE",
           "index": 10,
           "name": "checkin_date",
-          "comment": null
+          "comment": "Calendar day the member checked in."
         }
       },
       "stats": {
@@ -5664,31 +5664,31 @@
           "type": "VARCHAR",
           "index": 4,
           "name": "studio_name",
-          "comment": null
+          "comment": "Display name of the studio."
         },
         "class_name": {
           "type": "VARCHAR",
           "index": 5,
           "name": "class_name",
-          "comment": null
+          "comment": "Display name of the class offering."
         },
         "duration_minutes": {
           "type": "VARCHAR",
           "index": 6,
           "name": "duration_minutes",
-          "comment": null
+          "comment": "Scheduled length of the class, in minutes."
         },
         "capacity": {
           "type": "VARCHAR",
           "index": 7,
           "name": "capacity",
-          "comment": null
+          "comment": "Maximum number of members the class can hold."
         },
         "is_active": {
           "type": "BOOLEAN",
           "index": 8,
           "name": "is_active",
-          "comment": null
+          "comment": "True when the record is currently active."
         }
       },
       "stats": {
@@ -5752,37 +5752,37 @@
           "type": "VARCHAR",
           "index": 7,
           "name": "plan_tier",
-          "comment": null
+          "comment": "Plan tier (unlimited, class pack, or drop-in)."
         },
         "status": {
           "type": "VARCHAR",
           "index": 8,
           "name": "status",
-          "comment": null
+          "comment": "Current status of the record in the source system."
         },
         "started_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 9,
           "name": "started_at",
-          "comment": null
+          "comment": "Timestamp when the record became active."
         },
         "ended_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 10,
           "name": "ended_at",
-          "comment": null
+          "comment": "Timestamp when the record ended."
         },
         "auto_renew": {
           "type": "VARCHAR",
           "index": 11,
           "name": "auto_renew",
-          "comment": null
+          "comment": "True when the membership renews automatically."
         },
         "monthly_price_usd": {
           "type": "VARCHAR",
           "index": 12,
           "name": "monthly_price_usd",
-          "comment": null
+          "comment": "Monthly price of the plan, in USD."
         }
       },
       "stats": {
@@ -5834,31 +5834,31 @@
           "type": "VARCHAR",
           "index": 5,
           "name": "amount_usd",
-          "comment": null
+          "comment": "Transaction amount in USD."
         },
         "currency": {
           "type": "VARCHAR",
           "index": 6,
           "name": "currency",
-          "comment": null
+          "comment": "ISO 4217 currency code the amount is denominated in."
         },
         "charge_status": {
           "type": "VARCHAR",
           "index": 7,
           "name": "charge_status",
-          "comment": null
+          "comment": "Outcome of the payment charge."
         },
         "charged_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 8,
           "name": "charged_at",
-          "comment": null
+          "comment": "Timestamp when the charge was submitted to the gateway."
         },
         "refunded": {
           "type": "VARCHAR",
           "index": 9,
           "name": "refunded",
-          "comment": null
+          "comment": "True when the charge was refunded."
         }
       },
       "stats": {
@@ -5878,7 +5878,7 @@
         "schema": "master_data",
         "name": "dim_member",
         "database": "flowstate",
-        "comment": "Conformed member dimension \u2014 one row per FlowState end client, enriched with their studio.",
+        "comment": "Conformed member dimension \u2014 one row per FlowState end client, enriched with their studio.\n",
         "owner": null
       },
       "columns": {
@@ -5916,31 +5916,31 @@
           "type": "VARCHAR",
           "index": 6,
           "name": "studio_name",
-          "comment": null
+          "comment": "Display name of the studio."
         },
         "region": {
           "type": "VARCHAR",
           "index": 7,
           "name": "region",
-          "comment": null
+          "comment": "Sales region the studio belongs to."
         },
         "first_name": {
           "type": "VARCHAR",
           "index": 8,
           "name": "first_name",
-          "comment": null
+          "comment": "Given name."
         },
         "last_name": {
           "type": "VARCHAR",
           "index": 9,
           "name": "last_name",
-          "comment": null
+          "comment": "Family name."
         },
         "joined_date": {
           "type": "DATE",
           "index": 10,
           "name": "joined_date",
-          "comment": null
+          "comment": "Date the member joined the studio."
         }
       },
       "stats": {
@@ -5980,49 +5980,49 @@
           "type": "VARCHAR",
           "index": 3,
           "name": "year",
-          "comment": null
+          "comment": "Calendar year."
         },
         "month_number": {
           "type": "NUMBER",
           "index": 4,
           "name": "month_number",
-          "comment": null
+          "comment": "Month number (1-12)."
         },
         "day_of_month": {
           "type": "VARCHAR",
           "index": 5,
           "name": "day_of_month",
-          "comment": null
+          "comment": "Day of the month (1-31)."
         },
         "day_of_week": {
           "type": "VARCHAR",
           "index": 6,
           "name": "day_of_week",
-          "comment": null
+          "comment": "Day-of-week name for the calendar day."
         },
         "year_month": {
           "type": "VARCHAR",
           "index": 7,
           "name": "year_month",
-          "comment": null
+          "comment": "Year and month as YYYY-MM."
         },
         "month_name": {
           "type": "VARCHAR",
           "index": 8,
           "name": "month_name",
-          "comment": null
+          "comment": "Month name for the calendar day."
         },
         "first_day_of_month": {
           "type": "VARCHAR",
           "index": 9,
           "name": "first_day_of_month",
-          "comment": null
+          "comment": "First calendar day of the month."
         },
         "first_day_of_quarter": {
           "type": "VARCHAR",
           "index": 10,
           "name": "first_day_of_quarter",
-          "comment": null
+          "comment": "First calendar day of the fiscal quarter."
         }
       },
       "stats": {
@@ -6068,43 +6068,43 @@
           "type": "VARCHAR",
           "index": 4,
           "name": "studio_name",
-          "comment": null
+          "comment": "Display name of the studio."
         },
         "region": {
           "type": "VARCHAR",
           "index": 5,
           "name": "region",
-          "comment": null
+          "comment": "Sales region the studio belongs to."
         },
         "first_name": {
           "type": "VARCHAR",
           "index": 6,
           "name": "first_name",
-          "comment": null
+          "comment": "Given name."
         },
         "last_name": {
           "type": "VARCHAR",
           "index": 7,
           "name": "last_name",
-          "comment": null
+          "comment": "Family name."
         },
         "email": {
           "type": "VARCHAR",
           "index": 8,
           "name": "email",
-          "comment": null
+          "comment": "Email address."
         },
         "hired_date": {
           "type": "DATE",
           "index": 9,
           "name": "hired_date",
-          "comment": null
+          "comment": "Date the instructor was hired."
         },
         "is_active": {
           "type": "BOOLEAN",
           "index": 10,
           "name": "is_active",
-          "comment": null
+          "comment": "True when the record is currently active."
         }
       },
       "stats": {
@@ -6150,31 +6150,31 @@
           "type": "VARCHAR",
           "index": 4,
           "name": "city",
-          "comment": null
+          "comment": "City the studio operates in."
         },
         "state_code": {
           "type": "VARCHAR",
           "index": 5,
           "name": "state_code",
-          "comment": null
+          "comment": "Two-letter state code."
         },
         "timezone": {
           "type": "VARCHAR",
           "index": 6,
           "name": "timezone",
-          "comment": null
+          "comment": "IANA time zone the studio schedules classes in."
         },
         "opened_date": {
           "type": "DATE",
           "index": 7,
           "name": "opened_date",
-          "comment": null
+          "comment": "Date the studio opened for business."
         },
         "is_active": {
           "type": "BOOLEAN",
           "index": 8,
           "name": "is_active",
-          "comment": null
+          "comment": "True when the record is currently active."
         }
       },
       "stats": {
@@ -6244,31 +6244,31 @@
           "type": "VARCHAR",
           "index": 8,
           "name": "schedule_id",
-          "comment": null
+          "comment": "Foreign key to the scheduled class instance."
         },
         "class_start_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 9,
           "name": "class_start_at",
-          "comment": null
+          "comment": "Scheduled start time of the class."
         },
         "booking_status": {
           "type": "VARCHAR",
           "index": 10,
           "name": "booking_status",
-          "comment": null
+          "comment": "Status of the booking (booked, attended, cancelled, no-show)."
         },
         "booked_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 11,
           "name": "booked_at",
-          "comment": null
+          "comment": "Timestamp when the booking was made."
         },
         "checked_in_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 12,
           "name": "checked_in_at",
-          "comment": null
+          "comment": "Timestamp when the member checked in. Null if they never arrived."
         }
       },
       "stats": {
@@ -6314,19 +6314,19 @@
           "type": "VARCHAR",
           "index": 4,
           "name": "studio_id",
-          "comment": null
+          "comment": "Foreign key to the studio that owns this record."
         },
         "studio_name": {
           "type": "VARCHAR",
           "index": 5,
           "name": "studio_name",
-          "comment": null
+          "comment": "Display name of the studio."
         },
         "region": {
           "type": "VARCHAR",
           "index": 6,
           "name": "region",
-          "comment": null
+          "comment": "Sales region the studio belongs to."
         }
       },
       "stats": {
@@ -6384,61 +6384,61 @@
           "type": "VARCHAR",
           "index": 6,
           "name": "first_name",
-          "comment": null
+          "comment": "Given name."
         },
         "last_name": {
           "type": "VARCHAR",
           "index": 7,
           "name": "last_name",
-          "comment": null
+          "comment": "Family name."
         },
         "email": {
           "type": "VARCHAR",
           "index": 8,
           "name": "email",
-          "comment": null
+          "comment": "Email address."
         },
         "company_name": {
           "type": "VARCHAR",
           "index": 9,
           "name": "company_name",
-          "comment": null
+          "comment": "Company the lead belongs to."
         },
         "industry": {
           "type": "VARCHAR",
           "index": 10,
           "name": "industry",
-          "comment": null
+          "comment": "Industry classification of the account."
         },
         "estimated_studio_count": {
           "type": "NUMBER",
           "index": 11,
           "name": "estimated_studio_count",
-          "comment": null
+          "comment": "Studio count self-reported by the lead."
         },
         "converted_account_id": {
           "type": "VARCHAR",
           "index": 12,
           "name": "converted_account_id",
-          "comment": null
+          "comment": "Account created when the lead converted."
         },
         "converted_opportunity_id": {
           "type": "VARCHAR",
           "index": 13,
           "name": "converted_opportunity_id",
-          "comment": null
+          "comment": "Opportunity created when the lead converted."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 14,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         },
         "converted_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 15,
           "name": "converted_at",
-          "comment": null
+          "comment": "Timestamp when the lead converted to an opportunity."
         }
       },
       "stats": {
@@ -6490,37 +6490,37 @@
           "type": "VARCHAR",
           "index": 5,
           "name": "email",
-          "comment": null
+          "comment": "Email address."
         },
         "sales_team": {
           "type": "VARCHAR",
           "index": 6,
           "name": "sales_team",
-          "comment": null
+          "comment": "Sales team the owner belongs to."
         },
         "manager_id": {
           "type": "VARCHAR",
           "index": 7,
           "name": "manager_id",
-          "comment": null
+          "comment": "Employee ID of this person's manager."
         },
         "region": {
           "type": "VARCHAR",
           "index": 8,
           "name": "region",
-          "comment": null
+          "comment": "Sales region the studio belongs to."
         },
         "is_active": {
           "type": "BOOLEAN",
           "index": 9,
           "name": "is_active",
-          "comment": null
+          "comment": "True when the record is currently active."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 10,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         }
       },
       "stats": {
@@ -6572,31 +6572,31 @@
           "type": "VARCHAR",
           "index": 5,
           "name": "from_stage_name",
-          "comment": null
+          "comment": "Sales stage the opportunity moved out of."
         },
         "amount_arr_usd": {
           "type": "VARCHAR",
           "index": 6,
           "name": "amount_arr_usd",
-          "comment": null
+          "comment": "Annual recurring revenue attached to the opportunity, in USD."
         },
         "probability": {
           "type": "VARCHAR",
           "index": 7,
           "name": "probability",
-          "comment": null
+          "comment": "Win probability assigned to the sales stage, as a fraction."
         },
         "changed_by_user_id": {
           "type": "VARCHAR",
           "index": 8,
           "name": "changed_by_user_id",
-          "comment": null
+          "comment": "User who made the stage change."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 9,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         }
       },
       "stats": {
@@ -6654,55 +6654,55 @@
           "type": "VARCHAR",
           "index": 6,
           "name": "industry",
-          "comment": null
+          "comment": "Industry classification of the account."
         },
         "billing_city": {
           "type": "VARCHAR",
           "index": 7,
           "name": "billing_city",
-          "comment": null
+          "comment": "City on the billing address."
         },
         "billing_state_code": {
           "type": "VARCHAR",
           "index": 8,
           "name": "billing_state_code",
-          "comment": null
+          "comment": "Two-letter state code on the billing address."
         },
         "billing_country": {
           "type": "VARCHAR",
           "index": 9,
           "name": "billing_country",
-          "comment": null
+          "comment": "Country on the billing address."
         },
         "annual_revenue_usd": {
           "type": "VARCHAR",
           "index": 10,
           "name": "annual_revenue_usd",
-          "comment": null
+          "comment": "Self-reported annual revenue of the account, in USD."
         },
         "employee_count": {
           "type": "NUMBER",
           "index": 11,
           "name": "employee_count",
-          "comment": null
+          "comment": "Employees at the account, as reported by the data provider."
         },
         "account_type": {
           "type": "VARCHAR",
           "index": 12,
           "name": "account_type",
-          "comment": null
+          "comment": "Classification of the account in the chart of accounts."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 13,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         },
         "updated_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 14,
           "name": "updated_at",
-          "comment": null
+          "comment": "Timestamp of the most recent update in the source system."
         }
       },
       "stats": {
@@ -6772,37 +6772,37 @@
           "type": "VARCHAR",
           "index": 8,
           "name": "opportunity_name",
-          "comment": null
+          "comment": "Display name of the sales opportunity."
         },
         "probability": {
           "type": "VARCHAR",
           "index": 9,
           "name": "probability",
-          "comment": null
+          "comment": "Win probability assigned to the sales stage, as a fraction."
         },
         "lead_source": {
           "type": "VARCHAR",
           "index": 10,
           "name": "lead_source",
-          "comment": null
+          "comment": "Channel the lead originated from."
         },
         "forecast_category": {
           "type": "VARCHAR",
           "index": 11,
           "name": "forecast_category",
-          "comment": null
+          "comment": "Forecast category the opportunity rolls up to."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 12,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         },
         "close_date": {
           "type": "DATE",
           "index": 13,
           "name": "close_date",
-          "comment": null
+          "comment": "Expected or actual close date of the opportunity."
         }
       },
       "stats": {
@@ -6854,49 +6854,49 @@
           "type": "VARCHAR",
           "index": 5,
           "name": "first_name",
-          "comment": null
+          "comment": "Given name."
         },
         "last_name": {
           "type": "VARCHAR",
           "index": 6,
           "name": "last_name",
-          "comment": null
+          "comment": "Family name."
         },
         "phone": {
           "type": "VARCHAR",
           "index": 7,
           "name": "phone",
-          "comment": null
+          "comment": "Contact phone number."
         },
         "title": {
           "type": "VARCHAR",
           "index": 8,
           "name": "title",
-          "comment": null
+          "comment": "Job title."
         },
         "contact_role": {
           "type": "VARCHAR",
           "index": 9,
           "name": "contact_role",
-          "comment": null
+          "comment": "Role this contact plays in the buying process."
         },
         "lead_source": {
           "type": "VARCHAR",
           "index": 10,
           "name": "lead_source",
-          "comment": null
+          "comment": "Channel the lead originated from."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 11,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         },
         "updated_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 12,
           "name": "updated_at",
-          "comment": null
+          "comment": "Timestamp of the most recent update in the source system."
         }
       },
       "stats": {
@@ -7750,61 +7750,61 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "studio_id",
-          "comment": null
+          "comment": "Natural key for the studio."
         },
         "studio_name": {
           "type": "VARCHAR",
           "index": 2,
           "name": "studio_name",
-          "comment": null
+          "comment": "Display name of the studio."
         },
         "region": {
           "type": "VARCHAR",
           "index": 3,
           "name": "region",
-          "comment": null
+          "comment": "Sales region the studio belongs to."
         },
         "city": {
           "type": "VARCHAR",
           "index": 4,
           "name": "city",
-          "comment": null
+          "comment": "City the studio operates in."
         },
         "state_code": {
           "type": "VARCHAR",
           "index": 5,
           "name": "state_code",
-          "comment": null
+          "comment": "Two-letter state code."
         },
         "timezone": {
           "type": "VARCHAR",
           "index": 6,
           "name": "timezone",
-          "comment": null
+          "comment": "IANA time zone the studio schedules classes in."
         },
         "opened_date": {
           "type": "DATE",
           "index": 7,
           "name": "opened_date",
-          "comment": null
+          "comment": "Date the studio opened for business."
         },
         "is_active": {
           "type": "BOOLEAN",
           "index": 8,
           "name": "is_active",
-          "comment": null
+          "comment": "True when the record is currently active."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 9,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         },
         "updated_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 10,
           "name": "updated_at",
-          "comment": null
+          "comment": "Timestamp of the most recent update in the source system."
         }
       },
       "stats": {
@@ -7832,67 +7832,67 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "member_id",
-          "comment": null
+          "comment": "Natural key for the member."
         },
         "studio_id": {
           "type": "VARCHAR",
           "index": 2,
           "name": "studio_id",
-          "comment": null
+          "comment": "Foreign key to the studio that owns this record."
         },
         "first_name": {
           "type": "VARCHAR",
           "index": 3,
           "name": "first_name",
-          "comment": null
+          "comment": "Given name."
         },
         "last_name": {
           "type": "VARCHAR",
           "index": 4,
           "name": "last_name",
-          "comment": null
+          "comment": "Family name."
         },
         "email": {
           "type": "VARCHAR",
           "index": 5,
           "name": "email",
-          "comment": null
+          "comment": "Email address."
         },
         "phone": {
           "type": "VARCHAR",
           "index": 6,
           "name": "phone",
-          "comment": null
+          "comment": "Contact phone number."
         },
         "date_of_birth": {
           "type": "VARCHAR",
           "index": 7,
           "name": "date_of_birth",
-          "comment": null
+          "comment": "Date of birth, used for age-restricted class eligibility."
         },
         "joined_date": {
           "type": "DATE",
           "index": 8,
           "name": "joined_date",
-          "comment": null
+          "comment": "Date the member joined the studio."
         },
         "status": {
           "type": "VARCHAR",
           "index": 9,
           "name": "status",
-          "comment": null
+          "comment": "Current status of the record in the source system."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 10,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         },
         "updated_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 11,
           "name": "updated_at",
-          "comment": null
+          "comment": "Timestamp of the most recent update in the source system."
         }
       },
       "stats": {
@@ -7920,43 +7920,43 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "class_id",
-          "comment": null
+          "comment": "Natural key for the class offering."
         },
         "studio_id": {
           "type": "VARCHAR",
           "index": 2,
           "name": "studio_id",
-          "comment": null
+          "comment": "Foreign key to the studio that owns this record."
         },
         "class_name": {
           "type": "VARCHAR",
           "index": 3,
           "name": "class_name",
-          "comment": null
+          "comment": "Display name of the class offering."
         },
         "class_type": {
           "type": "VARCHAR",
           "index": 4,
           "name": "class_type",
-          "comment": null
+          "comment": "Category of class (yoga, HIIT, cycle, pilates, barre)."
         },
         "duration_minutes": {
           "type": "VARCHAR",
           "index": 5,
           "name": "duration_minutes",
-          "comment": null
+          "comment": "Scheduled length of the class, in minutes."
         },
         "capacity": {
           "type": "VARCHAR",
           "index": 6,
           "name": "capacity",
-          "comment": null
+          "comment": "Maximum number of members the class can hold."
         },
         "is_active": {
           "type": "BOOLEAN",
           "index": 7,
           "name": "is_active",
-          "comment": null
+          "comment": "True when the record is currently active."
         }
       },
       "stats": {
@@ -7984,55 +7984,55 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "schedule_id",
-          "comment": null
+          "comment": "Natural key for the scheduled class instance."
         },
         "class_id": {
           "type": "VARCHAR",
           "index": 2,
           "name": "class_id",
-          "comment": null
+          "comment": "Foreign key to the class offering."
         },
         "studio_id": {
           "type": "VARCHAR",
           "index": 3,
           "name": "studio_id",
-          "comment": null
+          "comment": "Foreign key to the studio that owns this record."
         },
         "instructor_id": {
           "type": "VARCHAR",
           "index": 4,
           "name": "instructor_id",
-          "comment": null
+          "comment": "Foreign key to the instructor."
         },
         "start_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 5,
           "name": "start_at",
-          "comment": null
+          "comment": "Scheduled start time of the class."
         },
         "end_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 6,
           "name": "end_at",
-          "comment": null
+          "comment": "Scheduled end time of the class."
         },
         "room": {
           "type": "VARCHAR",
           "index": 7,
           "name": "room",
-          "comment": null
+          "comment": "Studio room the class is scheduled in."
         },
         "booked_count": {
           "type": "NUMBER",
           "index": 8,
           "name": "booked_count",
-          "comment": null
+          "comment": "Bookings taken against the scheduled class."
         },
         "capacity": {
           "type": "VARCHAR",
           "index": 9,
           "name": "capacity",
-          "comment": null
+          "comment": "Maximum number of members the class can hold."
         }
       },
       "stats": {
@@ -8060,49 +8060,49 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "booking_id",
-          "comment": null
+          "comment": "Natural key for the booking."
         },
         "schedule_id": {
           "type": "VARCHAR",
           "index": 2,
           "name": "schedule_id",
-          "comment": null
+          "comment": "Foreign key to the scheduled class instance."
         },
         "member_id": {
           "type": "VARCHAR",
           "index": 3,
           "name": "member_id",
-          "comment": null
+          "comment": "Foreign key to the member."
         },
         "booking_status": {
           "type": "VARCHAR",
           "index": 4,
           "name": "booking_status",
-          "comment": null
+          "comment": "Status of the booking (booked, attended, cancelled, no-show)."
         },
         "booked_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 5,
           "name": "booked_at",
-          "comment": null
+          "comment": "Timestamp when the booking was made."
         },
         "checked_in_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 6,
           "name": "checked_in_at",
-          "comment": null
+          "comment": "Timestamp when the member checked in. Null if they never arrived."
         },
         "cancelled_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 7,
           "name": "cancelled_at",
-          "comment": null
+          "comment": "Timestamp when the record was cancelled. Null if still active."
         },
         "is_no_show": {
           "type": "BOOLEAN",
           "index": 8,
           "name": "is_no_show",
-          "comment": null
+          "comment": "True when the member booked but never checked in."
         }
       },
       "stats": {
@@ -8130,61 +8130,61 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "membership_id",
-          "comment": null
+          "comment": "Natural key for the membership record."
         },
         "member_id": {
           "type": "VARCHAR",
           "index": 2,
           "name": "member_id",
-          "comment": null
+          "comment": "Foreign key to the member."
         },
         "plan_id": {
           "type": "VARCHAR",
           "index": 3,
           "name": "plan_id",
-          "comment": null
+          "comment": "Foreign key to the membership plan."
         },
         "status": {
           "type": "VARCHAR",
           "index": 4,
           "name": "status",
-          "comment": null
+          "comment": "Current status of the record in the source system."
         },
         "started_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 5,
           "name": "started_at",
-          "comment": null
+          "comment": "Timestamp when the record became active."
         },
         "ended_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 6,
           "name": "ended_at",
-          "comment": null
+          "comment": "Timestamp when the record ended."
         },
         "auto_renew": {
           "type": "VARCHAR",
           "index": 7,
           "name": "auto_renew",
-          "comment": null
+          "comment": "True when the membership renews automatically."
         },
         "monthly_price_usd": {
           "type": "VARCHAR",
           "index": 8,
           "name": "monthly_price_usd",
-          "comment": null
+          "comment": "Monthly price of the plan, in USD."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 9,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         },
         "updated_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 10,
           "name": "updated_at",
-          "comment": null
+          "comment": "Timestamp of the most recent update in the source system."
         }
       },
       "stats": {
@@ -8212,49 +8212,49 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "plan_id",
-          "comment": null
+          "comment": "Natural key for the membership plan."
         },
         "studio_id": {
           "type": "VARCHAR",
           "index": 2,
           "name": "studio_id",
-          "comment": null
+          "comment": "Foreign key to the studio that owns this record."
         },
         "plan_name": {
           "type": "VARCHAR",
           "index": 3,
           "name": "plan_name",
-          "comment": null
+          "comment": "Display name of the membership plan."
         },
         "plan_tier": {
           "type": "VARCHAR",
           "index": 4,
           "name": "plan_tier",
-          "comment": null
+          "comment": "Plan tier (unlimited, class pack, or drop-in)."
         },
         "billing_interval": {
           "type": "VARCHAR",
           "index": 5,
           "name": "billing_interval",
-          "comment": null
+          "comment": "How often the plan bills (monthly or annual)."
         },
         "monthly_price_usd": {
           "type": "VARCHAR",
           "index": 6,
           "name": "monthly_price_usd",
-          "comment": null
+          "comment": "Monthly price of the plan, in USD."
         },
         "included_class_credits": {
           "type": "VARCHAR",
           "index": 7,
           "name": "included_class_credits",
-          "comment": null
+          "comment": "Class credits included in the plan each billing period."
         },
         "is_active": {
           "type": "BOOLEAN",
           "index": 8,
           "name": "is_active",
-          "comment": null
+          "comment": "True when the record is currently active."
         }
       },
       "stats": {
@@ -8282,61 +8282,61 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "instructor_id",
-          "comment": null
+          "comment": "Natural key for the instructor."
         },
         "studio_id": {
           "type": "VARCHAR",
           "index": 2,
           "name": "studio_id",
-          "comment": null
+          "comment": "Foreign key to the studio that owns this record."
         },
         "first_name": {
           "type": "VARCHAR",
           "index": 3,
           "name": "first_name",
-          "comment": null
+          "comment": "Given name."
         },
         "last_name": {
           "type": "VARCHAR",
           "index": 4,
           "name": "last_name",
-          "comment": null
+          "comment": "Family name."
         },
         "email": {
           "type": "VARCHAR",
           "index": 5,
           "name": "email",
-          "comment": null
+          "comment": "Email address."
         },
         "specialty": {
           "type": "VARCHAR",
           "index": 6,
           "name": "specialty",
-          "comment": null
+          "comment": "Class discipline the instructor primarily teaches."
         },
         "hired_date": {
           "type": "DATE",
           "index": 7,
           "name": "hired_date",
-          "comment": null
+          "comment": "Date the instructor was hired."
         },
         "is_active": {
           "type": "BOOLEAN",
           "index": 8,
           "name": "is_active",
-          "comment": null
+          "comment": "True when the record is currently active."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 9,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         },
         "updated_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 10,
           "name": "updated_at",
-          "comment": null
+          "comment": "Timestamp of the most recent update in the source system."
         }
       },
       "stats": {
@@ -8364,43 +8364,43 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "charge_id",
-          "comment": null
+          "comment": "Natural key for the payment charge."
         },
         "customer_email": {
           "type": "VARCHAR",
           "index": 2,
           "name": "customer_email",
-          "comment": null
+          "comment": "Email address on the billing account."
         },
         "amount": {
           "type": "NUMBER(38,2)",
           "index": 3,
           "name": "amount",
-          "comment": null
+          "comment": "Transaction amount in the charge currency."
         },
         "currency": {
           "type": "VARCHAR",
           "index": 4,
           "name": "currency",
-          "comment": null
+          "comment": "ISO 4217 currency code the amount is denominated in."
         },
         "status": {
           "type": "VARCHAR",
           "index": 5,
           "name": "status",
-          "comment": null
+          "comment": "Current status of the record in the source system."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 6,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         },
         "refunded": {
           "type": "VARCHAR",
           "index": 7,
           "name": "refunded",
-          "comment": null
+          "comment": "True when the charge was refunded."
         }
       },
       "stats": {
@@ -8428,73 +8428,73 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "subscription_id",
-          "comment": null
+          "comment": "Natural key for the billing subscription."
         },
         "member_id": {
           "type": "VARCHAR",
           "index": 2,
           "name": "member_id",
-          "comment": null
+          "comment": "Foreign key to the member."
         },
         "plan_id": {
           "type": "VARCHAR",
           "index": 3,
           "name": "plan_id",
-          "comment": null
+          "comment": "Foreign key to the membership plan."
         },
         "status": {
           "type": "VARCHAR",
           "index": 4,
           "name": "status",
-          "comment": null
+          "comment": "Current status of the record in the source system."
         },
         "started_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 5,
           "name": "started_at",
-          "comment": null
+          "comment": "Timestamp when the record became active."
         },
         "activated_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 6,
           "name": "activated_at",
-          "comment": null
+          "comment": "Timestamp when the subscription first became billable."
         },
         "cancelled_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 7,
           "name": "cancelled_at",
-          "comment": null
+          "comment": "Timestamp when the record was cancelled. Null if still active."
         },
         "mrr_usd": {
           "type": "VARCHAR",
           "index": 8,
           "name": "mrr_usd",
-          "comment": null
+          "comment": "Monthly recurring revenue attributed to the subscription, in USD."
         },
         "billing_period": {
           "type": "VARCHAR",
           "index": 9,
           "name": "billing_period",
-          "comment": null
+          "comment": "Length of the billing period, in billing period units."
         },
         "billing_period_unit": {
           "type": "VARCHAR",
           "index": 10,
           "name": "billing_period_unit",
-          "comment": null
+          "comment": "Unit the billing period is measured in (month or year)."
         },
         "auto_collection": {
           "type": "VARCHAR",
           "index": 11,
           "name": "auto_collection",
-          "comment": null
+          "comment": "Whether the subscription is charged automatically or invoiced."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 12,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         }
       },
       "stats": {
@@ -8522,67 +8522,67 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "plan_id",
-          "comment": null
+          "comment": "Natural key for the membership plan."
         },
         "plan_name": {
           "type": "VARCHAR",
           "index": 2,
           "name": "plan_name",
-          "comment": null
+          "comment": "Display name of the membership plan."
         },
         "plan_tier": {
           "type": "VARCHAR",
           "index": 3,
           "name": "plan_tier",
-          "comment": null
+          "comment": "Plan tier (unlimited, class pack, or drop-in)."
         },
         "status": {
           "type": "VARCHAR",
           "index": 4,
           "name": "status",
-          "comment": null
+          "comment": "Current status of the record in the source system."
         },
         "price_usd": {
           "type": "VARCHAR",
           "index": 5,
           "name": "price_usd",
-          "comment": null
+          "comment": "Price of the plan, in USD."
         },
         "billing_period": {
           "type": "VARCHAR",
           "index": 6,
           "name": "billing_period",
-          "comment": null
+          "comment": "Length of the billing period, in billing period units."
         },
         "billing_period_unit": {
           "type": "VARCHAR",
           "index": 7,
           "name": "billing_period_unit",
-          "comment": null
+          "comment": "Unit the billing period is measured in (month or year)."
         },
         "trial_period_days": {
           "type": "VARCHAR",
           "index": 8,
           "name": "trial_period_days",
-          "comment": null
+          "comment": "Length of the free trial, in days."
         },
         "is_metered": {
           "type": "BOOLEAN",
           "index": 9,
           "name": "is_metered",
-          "comment": null
+          "comment": "True when the plan bills on usage rather than a flat fee."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 10,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         },
         "updated_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 11,
           "name": "updated_at",
-          "comment": null
+          "comment": "Timestamp of the most recent update in the source system."
         }
       },
       "stats": {
@@ -8610,73 +8610,73 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "invoice_id",
-          "comment": null
+          "comment": "Natural key for the invoice."
         },
         "subscription_id": {
           "type": "VARCHAR",
           "index": 2,
           "name": "subscription_id",
-          "comment": null
+          "comment": "Foreign key to the billing subscription."
         },
         "member_id": {
           "type": "VARCHAR",
           "index": 3,
           "name": "member_id",
-          "comment": null
+          "comment": "Foreign key to the member."
         },
         "status": {
           "type": "VARCHAR",
           "index": 4,
           "name": "status",
-          "comment": null
+          "comment": "Current status of the record in the source system."
         },
         "total_usd": {
           "type": "VARCHAR",
           "index": 5,
           "name": "total_usd",
-          "comment": null
+          "comment": "Invoice total, in USD."
         },
         "amount_paid_usd": {
           "type": "VARCHAR",
           "index": 6,
           "name": "amount_paid_usd",
-          "comment": null
+          "comment": "Amount paid against the invoice, in USD."
         },
         "amount_due_usd": {
           "type": "VARCHAR",
           "index": 7,
           "name": "amount_due_usd",
-          "comment": null
+          "comment": "Amount still outstanding on the invoice, in USD."
         },
         "currency": {
           "type": "VARCHAR",
           "index": 8,
           "name": "currency",
-          "comment": null
+          "comment": "ISO 4217 currency code the amount is denominated in."
         },
         "issued_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 9,
           "name": "issued_at",
-          "comment": null
+          "comment": "Timestamp when the invoice was issued."
         },
         "due_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 10,
           "name": "due_at",
-          "comment": null
+          "comment": "Timestamp when payment on the invoice becomes due."
         },
         "paid_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 11,
           "name": "paid_at",
-          "comment": null
+          "comment": "Timestamp when the invoice was paid in full. Null if unpaid."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 12,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         }
       },
       "stats": {
@@ -8704,67 +8704,67 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "line_item_id",
-          "comment": null
+          "comment": "Natural key for the invoice line item."
         },
         "invoice_id": {
           "type": "VARCHAR",
           "index": 2,
           "name": "invoice_id",
-          "comment": null
+          "comment": "Foreign key to the invoice."
         },
         "subscription_id": {
           "type": "VARCHAR",
           "index": 3,
           "name": "subscription_id",
-          "comment": null
+          "comment": "Foreign key to the billing subscription."
         },
         "plan_id": {
           "type": "VARCHAR",
           "index": 4,
           "name": "plan_id",
-          "comment": null
+          "comment": "Foreign key to the membership plan."
         },
         "description": {
           "type": "VARCHAR",
           "index": 5,
           "name": "description",
-          "comment": null
+          "comment": "Free-text description of the line item."
         },
         "line_item_type": {
           "type": "VARCHAR",
           "index": 6,
           "name": "line_item_type",
-          "comment": null
+          "comment": "Type of invoice line item (plan charge, add-on, or tax)."
         },
         "quantity": {
           "type": "VARCHAR",
           "index": 7,
           "name": "quantity",
-          "comment": null
+          "comment": "Units billed on the line item."
         },
         "unit_amount_usd": {
           "type": "VARCHAR",
           "index": 8,
           "name": "unit_amount_usd",
-          "comment": null
+          "comment": "Price per unit on the line item, in USD."
         },
         "amount_usd": {
           "type": "VARCHAR",
           "index": 9,
           "name": "amount_usd",
-          "comment": null
+          "comment": "Transaction amount in USD."
         },
         "is_taxed": {
           "type": "BOOLEAN",
           "index": 10,
           "name": "is_taxed",
-          "comment": null
+          "comment": "True when tax applies to the line item."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 11,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         }
       },
       "stats": {
@@ -8792,73 +8792,73 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "transaction_id",
-          "comment": null
+          "comment": "Natural key for the billing transaction."
         },
         "invoice_id": {
           "type": "VARCHAR",
           "index": 2,
           "name": "invoice_id",
-          "comment": null
+          "comment": "Foreign key to the invoice."
         },
         "subscription_id": {
           "type": "VARCHAR",
           "index": 3,
           "name": "subscription_id",
-          "comment": null
+          "comment": "Foreign key to the billing subscription."
         },
         "member_id": {
           "type": "VARCHAR",
           "index": 4,
           "name": "member_id",
-          "comment": null
+          "comment": "Foreign key to the member."
         },
         "transaction_type": {
           "type": "VARCHAR",
           "index": 5,
           "name": "transaction_type",
-          "comment": null
+          "comment": "Type of billing transaction (payment, refund, or credit)."
         },
         "status": {
           "type": "VARCHAR",
           "index": 6,
           "name": "status",
-          "comment": null
+          "comment": "Current status of the record in the source system."
         },
         "amount_usd": {
           "type": "VARCHAR",
           "index": 7,
           "name": "amount_usd",
-          "comment": null
+          "comment": "Transaction amount in USD."
         },
         "currency": {
           "type": "VARCHAR",
           "index": 8,
           "name": "currency",
-          "comment": null
+          "comment": "ISO 4217 currency code the amount is denominated in."
         },
         "payment_method": {
           "type": "VARCHAR",
           "index": 9,
           "name": "payment_method",
-          "comment": null
+          "comment": "Payment instrument used for the transaction."
         },
         "gateway": {
           "type": "VARCHAR",
           "index": 10,
           "name": "gateway",
-          "comment": null
+          "comment": "Payment gateway that processed the transaction."
         },
         "processed_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 11,
           "name": "processed_at",
-          "comment": null
+          "comment": "Timestamp when the transaction was processed by the gateway."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 12,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         }
       },
       "stats": {
@@ -8886,73 +8886,73 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "credit_note_id",
-          "comment": null
+          "comment": "Natural key for the credit note."
         },
         "invoice_id": {
           "type": "VARCHAR",
           "index": 2,
           "name": "invoice_id",
-          "comment": null
+          "comment": "Foreign key to the invoice."
         },
         "subscription_id": {
           "type": "VARCHAR",
           "index": 3,
           "name": "subscription_id",
-          "comment": null
+          "comment": "Foreign key to the billing subscription."
         },
         "member_id": {
           "type": "VARCHAR",
           "index": 4,
           "name": "member_id",
-          "comment": null
+          "comment": "Foreign key to the member."
         },
         "status": {
           "type": "VARCHAR",
           "index": 5,
           "name": "status",
-          "comment": null
+          "comment": "Current status of the record in the source system."
         },
         "reason_code": {
           "type": "VARCHAR",
           "index": 6,
           "name": "reason_code",
-          "comment": null
+          "comment": "Machine-readable reason the credit was issued."
         },
         "total_usd": {
           "type": "VARCHAR",
           "index": 7,
           "name": "total_usd",
-          "comment": null
+          "comment": "Invoice total, in USD."
         },
         "amount_refunded_usd": {
           "type": "VARCHAR",
           "index": 8,
           "name": "amount_refunded_usd",
-          "comment": null
+          "comment": "Amount refunded, in USD."
         },
         "amount_allocated_usd": {
           "type": "VARCHAR",
           "index": 9,
           "name": "amount_allocated_usd",
-          "comment": null
+          "comment": "Amount of the credit applied to this transaction, in USD."
         },
         "currency": {
           "type": "VARCHAR",
           "index": 10,
           "name": "currency",
-          "comment": null
+          "comment": "ISO 4217 currency code the amount is denominated in."
         },
         "issued_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 11,
           "name": "issued_at",
-          "comment": null
+          "comment": "Timestamp when the invoice was issued."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 12,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         }
       },
       "stats": {
@@ -8972,7 +8972,7 @@
         "schema": "rippling",
         "name": "employees",
         "database": "RAW",
-        "comment": "One row per FlowState employee with department, role, location, and employment lifecycle dates.",
+        "comment": "One row per FlowState employee with department, role, location, and employment lifecycle dates.\n",
         "owner": null
       },
       "columns": {
@@ -9112,7 +9112,7 @@
         "schema": "zendesk",
         "name": "tickets",
         "database": "RAW",
-        "comment": "Support tickets raised by members and studios, one row per ticket with status, priority, and resolution timestamps.",
+        "comment": "Support tickets raised by members and studios, one row per ticket with status, priority, and resolution timestamps.\n",
         "owner": null
       },
       "columns": {
@@ -10044,85 +10044,85 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "account_id",
-          "comment": null
+          "comment": "Natural key for the account."
         },
         "account_name": {
           "type": "VARCHAR",
           "index": 2,
           "name": "account_name",
-          "comment": null
+          "comment": "Display name of the account."
         },
         "industry": {
           "type": "VARCHAR",
           "index": 3,
           "name": "industry",
-          "comment": null
+          "comment": "Industry classification of the account."
         },
         "studio_count": {
           "type": "NUMBER",
           "index": 4,
           "name": "studio_count",
-          "comment": null
+          "comment": "Studios operated by the account."
         },
         "billing_city": {
           "type": "VARCHAR",
           "index": 5,
           "name": "billing_city",
-          "comment": null
+          "comment": "City on the billing address."
         },
         "billing_state_code": {
           "type": "VARCHAR",
           "index": 6,
           "name": "billing_state_code",
-          "comment": null
+          "comment": "Two-letter state code on the billing address."
         },
         "billing_country": {
           "type": "VARCHAR",
           "index": 7,
           "name": "billing_country",
-          "comment": null
+          "comment": "Country on the billing address."
         },
         "annual_revenue_usd": {
           "type": "VARCHAR",
           "index": 8,
           "name": "annual_revenue_usd",
-          "comment": null
+          "comment": "Self-reported annual revenue of the account, in USD."
         },
         "employee_count": {
           "type": "NUMBER",
           "index": 9,
           "name": "employee_count",
-          "comment": null
+          "comment": "Employees at the account, as reported by the data provider."
         },
         "account_owner_id": {
           "type": "VARCHAR",
           "index": 10,
           "name": "account_owner_id",
-          "comment": null
+          "comment": "User ID of the account owner."
         },
         "account_type": {
           "type": "VARCHAR",
           "index": 11,
           "name": "account_type",
-          "comment": null
+          "comment": "Classification of the account in the chart of accounts."
         },
         "is_customer": {
           "type": "BOOLEAN",
           "index": 12,
           "name": "is_customer",
-          "comment": null
+          "comment": "True when the account has at least one won opportunity."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 13,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         },
         "updated_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 14,
           "name": "updated_at",
-          "comment": null
+          "comment": "Timestamp of the most recent update in the source system."
         }
       },
       "stats": {
@@ -10150,73 +10150,73 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "contact_id",
-          "comment": null
+          "comment": "Natural key for the CRM contact."
         },
         "account_id": {
           "type": "VARCHAR",
           "index": 2,
           "name": "account_id",
-          "comment": null
+          "comment": "Foreign key to the account."
         },
         "first_name": {
           "type": "VARCHAR",
           "index": 3,
           "name": "first_name",
-          "comment": null
+          "comment": "Given name."
         },
         "last_name": {
           "type": "VARCHAR",
           "index": 4,
           "name": "last_name",
-          "comment": null
+          "comment": "Family name."
         },
         "email": {
           "type": "VARCHAR",
           "index": 5,
           "name": "email",
-          "comment": null
+          "comment": "Email address."
         },
         "phone": {
           "type": "VARCHAR",
           "index": 6,
           "name": "phone",
-          "comment": null
+          "comment": "Contact phone number."
         },
         "title": {
           "type": "VARCHAR",
           "index": 7,
           "name": "title",
-          "comment": null
+          "comment": "Job title."
         },
         "contact_role": {
           "type": "VARCHAR",
           "index": 8,
           "name": "contact_role",
-          "comment": null
+          "comment": "Role this contact plays in the buying process."
         },
         "is_primary_contact": {
           "type": "BOOLEAN",
           "index": 9,
           "name": "is_primary_contact",
-          "comment": null
+          "comment": "True when this is the primary contact on the account."
         },
         "lead_source": {
           "type": "VARCHAR",
           "index": 10,
           "name": "lead_source",
-          "comment": null
+          "comment": "Channel the lead originated from."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 11,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         },
         "updated_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 12,
           "name": "updated_at",
-          "comment": null
+          "comment": "Timestamp of the most recent update in the source system."
         }
       },
       "stats": {
@@ -10244,91 +10244,91 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "lead_id",
-          "comment": null
+          "comment": "Natural key for the lead."
         },
         "first_name": {
           "type": "VARCHAR",
           "index": 2,
           "name": "first_name",
-          "comment": null
+          "comment": "Given name."
         },
         "last_name": {
           "type": "VARCHAR",
           "index": 3,
           "name": "last_name",
-          "comment": null
+          "comment": "Family name."
         },
         "email": {
           "type": "VARCHAR",
           "index": 4,
           "name": "email",
-          "comment": null
+          "comment": "Email address."
         },
         "company_name": {
           "type": "VARCHAR",
           "index": 5,
           "name": "company_name",
-          "comment": null
+          "comment": "Company the lead belongs to."
         },
         "lead_source": {
           "type": "VARCHAR",
           "index": 6,
           "name": "lead_source",
-          "comment": null
+          "comment": "Channel the lead originated from."
         },
         "lead_status": {
           "type": "VARCHAR",
           "index": 7,
           "name": "lead_status",
-          "comment": null
+          "comment": "Stage of the lead in the qualification process."
         },
         "industry": {
           "type": "VARCHAR",
           "index": 8,
           "name": "industry",
-          "comment": null
+          "comment": "Industry classification of the account."
         },
         "estimated_studio_count": {
           "type": "NUMBER",
           "index": 9,
           "name": "estimated_studio_count",
-          "comment": null
+          "comment": "Studio count self-reported by the lead."
         },
         "owner_id": {
           "type": "VARCHAR",
           "index": 10,
           "name": "owner_id",
-          "comment": null
+          "comment": "User ID of the record owner."
         },
         "is_converted": {
           "type": "BOOLEAN",
           "index": 11,
           "name": "is_converted",
-          "comment": null
+          "comment": "True when the lead converted to an opportunity."
         },
         "converted_account_id": {
           "type": "VARCHAR",
           "index": 12,
           "name": "converted_account_id",
-          "comment": null
+          "comment": "Account created when the lead converted."
         },
         "converted_opportunity_id": {
           "type": "VARCHAR",
           "index": 13,
           "name": "converted_opportunity_id",
-          "comment": null
+          "comment": "Opportunity created when the lead converted."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 14,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         },
         "converted_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 15,
           "name": "converted_at",
-          "comment": null
+          "comment": "Timestamp when the lead converted to an opportunity."
         }
       },
       "stats": {
@@ -10356,79 +10356,79 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "opportunity_id",
-          "comment": null
+          "comment": "Natural key for the sales opportunity."
         },
         "opportunity_name": {
           "type": "VARCHAR",
           "index": 2,
           "name": "opportunity_name",
-          "comment": null
+          "comment": "Display name of the sales opportunity."
         },
         "account_id": {
           "type": "VARCHAR",
           "index": 3,
           "name": "account_id",
-          "comment": null
+          "comment": "Foreign key to the account."
         },
         "owner_id": {
           "type": "VARCHAR",
           "index": 4,
           "name": "owner_id",
-          "comment": null
+          "comment": "User ID of the record owner."
         },
         "stage_name": {
           "type": "VARCHAR",
           "index": 5,
           "name": "stage_name",
-          "comment": null
+          "comment": "Current sales stage of the opportunity."
         },
         "amount_arr_usd": {
           "type": "VARCHAR",
           "index": 6,
           "name": "amount_arr_usd",
-          "comment": null
+          "comment": "Annual recurring revenue attached to the opportunity, in USD."
         },
         "probability": {
           "type": "VARCHAR",
           "index": 7,
           "name": "probability",
-          "comment": null
+          "comment": "Win probability assigned to the sales stage, as a fraction."
         },
         "lead_source": {
           "type": "VARCHAR",
           "index": 8,
           "name": "lead_source",
-          "comment": null
+          "comment": "Channel the lead originated from."
         },
         "forecast_category": {
           "type": "VARCHAR",
           "index": 9,
           "name": "forecast_category",
-          "comment": null
+          "comment": "Forecast category the opportunity rolls up to."
         },
         "is_won": {
           "type": "BOOLEAN",
           "index": 10,
           "name": "is_won",
-          "comment": null
+          "comment": "True when the opportunity closed won."
         },
         "is_closed": {
           "type": "BOOLEAN",
           "index": 11,
           "name": "is_closed",
-          "comment": null
+          "comment": "True when the opportunity is no longer open."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 12,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         },
         "close_date": {
           "type": "DATE",
           "index": 13,
           "name": "close_date",
-          "comment": null
+          "comment": "Expected or actual close date of the opportunity."
         }
       },
       "stats": {
@@ -10456,55 +10456,55 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "opportunity_history_id",
-          "comment": null
+          "comment": "Natural key for the opportunity history row."
         },
         "opportunity_id": {
           "type": "VARCHAR",
           "index": 2,
           "name": "opportunity_id",
-          "comment": null
+          "comment": "Foreign key to the sales opportunity."
         },
         "from_stage_name": {
           "type": "VARCHAR",
           "index": 3,
           "name": "from_stage_name",
-          "comment": null
+          "comment": "Sales stage the opportunity moved out of."
         },
         "to_stage_name": {
           "type": "VARCHAR",
           "index": 4,
           "name": "to_stage_name",
-          "comment": null
+          "comment": "Sales stage the opportunity moved into."
         },
         "amount_arr_usd": {
           "type": "VARCHAR",
           "index": 5,
           "name": "amount_arr_usd",
-          "comment": null
+          "comment": "Annual recurring revenue attached to the opportunity, in USD."
         },
         "probability": {
           "type": "VARCHAR",
           "index": 6,
           "name": "probability",
-          "comment": null
+          "comment": "Win probability assigned to the sales stage, as a fraction."
         },
         "changed_by_user_id": {
           "type": "VARCHAR",
           "index": 7,
           "name": "changed_by_user_id",
-          "comment": null
+          "comment": "User who made the stage change."
         },
         "is_stage_change": {
           "type": "BOOLEAN",
           "index": 8,
           "name": "is_stage_change",
-          "comment": null
+          "comment": "True when the history row represents an actual stage change."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 9,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         }
       },
       "stats": {
@@ -10532,61 +10532,61 @@
           "type": "VARCHAR",
           "index": 1,
           "name": "user_id",
-          "comment": null
+          "comment": "Natural key for the application user."
         },
         "full_name": {
           "type": "VARCHAR",
           "index": 2,
           "name": "full_name",
-          "comment": null
+          "comment": "Full name as recorded in the source system."
         },
         "email": {
           "type": "VARCHAR",
           "index": 3,
           "name": "email",
-          "comment": null
+          "comment": "Email address."
         },
         "role_name": {
           "type": "VARCHAR",
           "index": 4,
           "name": "role_name",
-          "comment": null
+          "comment": "Display name of the sales role."
         },
         "sales_team": {
           "type": "VARCHAR",
           "index": 5,
           "name": "sales_team",
-          "comment": null
+          "comment": "Sales team the owner belongs to."
         },
         "manager_id": {
           "type": "VARCHAR",
           "index": 6,
           "name": "manager_id",
-          "comment": null
+          "comment": "Employee ID of this person's manager."
         },
         "region": {
           "type": "VARCHAR",
           "index": 7,
           "name": "region",
-          "comment": null
+          "comment": "Sales region the studio belongs to."
         },
         "quota_arr_usd": {
           "type": "VARCHAR",
           "index": 8,
           "name": "quota_arr_usd",
-          "comment": null
+          "comment": "Annual ARR quota assigned to the sales role, in USD."
         },
         "is_active": {
           "type": "BOOLEAN",
           "index": 9,
           "name": "is_active",
-          "comment": null
+          "comment": "True when the record is currently active."
         },
         "created_at": {
           "type": "TIMESTAMP_NTZ",
           "index": 10,
           "name": "created_at",
-          "comment": null
+          "comment": "Timestamp when the record was created in the source system."
         }
       },
       "stats": {
