@@ -288,7 +288,18 @@ def stage_compute_health(ctx: PipelineContext) -> None:
     """Compute project health scores."""
     from docglow.analyzer.health import compute_health, health_to_dict
 
-    report = compute_health(ctx.models, ctx.sources, ctx.seeds, ctx.snapshots)
+    if ctx.exclude_packages:
+        models = {uid: m for uid, m in ctx.models.items() if not m.get("is_package")}
+        seeds = {uid: s for uid, s in ctx.seeds.items() if not s.get("is_package")}
+        snapshots = {uid: s for uid, s in ctx.snapshots.items() if not s.get("is_package")}
+    else:
+        models = ctx.models
+        seeds = ctx.seeds
+        snapshots = ctx.snapshots
+
+    models = {uid: m for uid, m in models.items() if m.get("materialization") != "ephemeral"}
+
+    report = compute_health(models, ctx.sources, seeds, snapshots)
     ctx.health = health_to_dict(report)
 
 
@@ -467,12 +478,21 @@ def context_to_dict(ctx: PipelineContext) -> dict[str, Any]:
     key in the chat panel UI, which stores it in localStorage. This
     prevents accidental key exposure in deployed static sites.
     """
+    if ctx.exclude_packages:
+        models = {uid: m for uid, m in ctx.models.items() if not m.get("is_package")}
+        seeds = {uid: s for uid, s in ctx.seeds.items() if not s.get("is_package")}
+        snapshots = {uid: s for uid, s in ctx.snapshots.items() if not s.get("is_package")}
+    else:
+        models = ctx.models
+        seeds = ctx.seeds
+        snapshots = ctx.snapshots
+
     result: dict[str, Any] = {
         "metadata": ctx.metadata,
-        "models": ctx.models,
+        "models": models,
         "sources": ctx.sources,
-        "seeds": ctx.seeds,
-        "snapshots": ctx.snapshots,
+        "seeds": seeds,
+        "snapshots": snapshots,
         "exposures": ctx.exposures,
         "metrics": ctx.metrics,
         "lineage": ctx.lineage,
