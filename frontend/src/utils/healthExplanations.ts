@@ -104,7 +104,7 @@ export function namingExplanation(health: HealthData): Explanation {
     rules: rules?.length ? rules.map(describeRule) : undefined,
     scope:
       skipped !== undefined && skipped > 0
-        ? `${n.total_checked} of ${total} models were checked. ${skipped} sit in folders that match no configured layer and were skipped — the score reflects only the models checked.`
+        ? `${n.total_checked} of ${total} models were checked. ${skipped} sit in folders that match no configured layer and were skipped. The score reflects only the models checked.`
         : `${n.total_checked} models were checked. Rules are configurable under \`health.naming_rules\` in docglow.yml.`,
   }
 }
@@ -113,8 +113,8 @@ export function orphansExplanation(health: HealthData): Explanation {
   const w = pct(health.config?.weights.orphans)
   return {
     summary:
-      'A model is an orphan when nothing downstream consumes it — no other model ' +
-      `refs it and no exposure depends on it${w ? `. Worth ${w} of the overall grade` : ''}.`,
+      'A model is an orphan when nothing downstream consumes it (i.e. no other model ' +
+      `refs it and no exposure depends on it)${w ? `. Worth ${w} of the overall grade` : ''}.`,
     rules: [
       'Exposures count as consumers, so a mart feeding a dashboard is not an orphan.',
       'Orphans are often dead code, but a model consumed directly by a BI tool will also appear here until you declare an exposure for it.',

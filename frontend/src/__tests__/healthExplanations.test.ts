@@ -3,6 +3,7 @@ import {
   complexityExplanation,
   explanationFor,
   namingExplanation,
+  orphansExplanation,
   overallExplanation,
 } from '../utils/healthExplanations'
 import type { HealthData } from '../types'
@@ -105,9 +106,10 @@ describe('namingExplanation', () => {
   })
 
   it('discloses models skipped because no layer matched', () => {
-    const scope = namingExplanation(makeHealth()).scope
-    expect(scope).toContain('17 of 83 models were checked')
-    expect(scope).toContain('66 sit in folders that match no configured layer')
+    expect(namingExplanation(makeHealth()).scope).toBe(
+      '17 of 83 models were checked. 66 sit in folders that match no configured ' +
+      'layer and were skipped. The score reflects only the models checked.',
+    )
   })
 
   it('does not claim skipped models when everything was checked', () => {
@@ -127,6 +129,23 @@ describe('namingExplanation', () => {
       },
     })
     expect(namingExplanation(health).scope).toContain('17 models were checked')
+  })
+})
+
+describe('orphansExplanation', () => {
+  it('parenthesises the definition rather than using a dash', () => {
+    expect(orphansExplanation(makeHealth()).summary).toBe(
+      'A model is an orphan when nothing downstream consumes it (i.e. no other ' +
+      'model refs it and no exposure depends on it). Worth 10% of the overall grade.',
+    )
+  })
+
+  it('closes the parenthesis when no weight is available', () => {
+    const health = makeHealth({ config: undefined })
+    expect(orphansExplanation(health).summary).toBe(
+      'A model is an orphan when nothing downstream consumes it (i.e. no other ' +
+      'model refs it and no exposure depends on it).',
+    )
   })
 })
 
