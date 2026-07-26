@@ -23,6 +23,10 @@ class NamingReport:
     total_checked: int
     compliant_count: int
     violations: list[NamingViolation]
+    # Every model considered, including those whose folder matched no configured
+    # layer and so were never checked. Without this, a project the rules do not
+    # match at all reports a perfect score off a zero-model sample.
+    total_models: int = 0
 
     @property
     def compliance_rate(self) -> float:
@@ -86,4 +90,5 @@ def check_naming(
         total_checked=total_checked,
         compliant_count=compliant,
         violations=violations,
+        total_models=len(models),
     )

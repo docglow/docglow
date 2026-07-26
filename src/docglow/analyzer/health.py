@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from docglow.analyzer.complexity import ComplexityReport, analyze_complexity
@@ -34,6 +34,10 @@ class HealthReport:
     complexity: ComplexityReport
     naming: NamingReport
     orphan_models: list[dict[str, Any]]
+    # The config the scores were produced under. Thresholds and naming rules are
+    # per-project, so anything explaining a score has to read them from here
+    # rather than assume the defaults.
+    config: HealthConfig = field(default_factory=HealthConfig)
 
 
 def _grade(score: float) -> str:
@@ -181,6 +185,7 @@ def compute_health(
         complexity=complexity,
         naming=naming,
         orphan_models=orphans,
+        config=config,
     )
 
 
@@ -252,6 +257,7 @@ def health_to_dict(report: HealthReport) -> dict[str, Any]:
         },
         "naming": {
             "total_checked": report.naming.total_checked,
+            "total_models": report.naming.total_models,
             "compliant_count": report.naming.compliant_count,
             "compliance_rate": round(report.naming.compliance_rate, 4),
             "violations": [
@@ -266,4 +272,27 @@ def health_to_dict(report: HealthReport) -> dict[str, Any]:
             ],
         },
         "orphans": report.orphan_models,
+        # The rules these scores were produced under. Consumers explaining a
+        # score must render these rather than the defaults — both the complexity
+        # thresholds and the naming rules are overridable in docglow.yml.
+        "config": {
+            "weights": {
+                "documentation": report.config.weights.documentation,
+                "testing": report.config.weights.testing,
+                "freshness": report.config.weights.freshness,
+                "complexity": report.config.weights.complexity,
+                "naming": report.config.weights.naming,
+                "orphans": report.config.weights.orphans,
+            },
+            "complexity_thresholds": {
+                "high_sql_lines": report.config.complexity.high_sql_lines,
+                "high_join_count": report.config.complexity.high_join_count,
+                "high_cte_count": report.config.complexity.high_cte_count,
+                "high_subquery_count": report.config.complexity.high_subquery_count,
+            },
+            "naming_rules": [
+                {"layer": layer, "patterns": list(patterns)}
+                for layer, patterns in report.config.naming_rules.rules
+            ],
+        },
     }
