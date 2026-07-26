@@ -21,9 +21,7 @@ test.describe('Keyboard Navigation & Accessibility', () => {
   })
 
   test('tab navigation works on model page tabs', async ({ page }) => {
-    // Navigate to a model page via the overview table
-    await page.locator('table tbody tr').filter({ hasText: 'orders' }).first().click()
-    await page.waitForURL(/#\/model\//)
+    await page.goto('/#/model/model.jaffle_shop.orders')
 
     const main = page.locator('main')
     // Tabs are rendered as buttons with text content
@@ -37,17 +35,18 @@ test.describe('Keyboard Navigation & Accessibility', () => {
     await expect(main.getByRole('button', { name: 'Compiled', exact: true })).toBeVisible()
   })
 
-  test('overview tables have proper structure', async ({ page }) => {
-    // Overview page has a "Recent Models" table
+  test('data tables have proper structure', async ({ page }) => {
+    // The Overview no longer renders a table by default (DOC-297), so the
+    // structural check moved to the columns table on a model page.
+    await page.goto('/#/model/model.jaffle_shop.orders')
+
     const table = page.locator('table').first()
     await expect(table).toBeVisible()
 
     const headers = table.locator('th')
-    const headerCount = await headers.count()
-    expect(headerCount).toBeGreaterThan(0)
+    expect(await headers.count()).toBeGreaterThan(0)
 
     const rows = table.locator('tbody tr')
-    const rowCount = await rows.count()
-    expect(rowCount).toBeGreaterThan(0)
+    expect(await rows.count()).toBeGreaterThan(0)
   })
 })

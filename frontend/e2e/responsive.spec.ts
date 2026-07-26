@@ -23,11 +23,7 @@ test.describe('Responsive Layout', () => {
 
   test('model page is usable on tablet viewport', async ({ page }) => {
     await page.setViewportSize({ width: 768, height: 1024 })
-    await page.goto('/')
-
-    // Navigate to model via table
-    await page.locator('table tbody tr').filter({ hasText: 'orders' }).first().click()
-    await page.waitForURL(/#\/model\//)
+    await page.goto('/#/model/model.jaffle_shop.orders')
 
     // Model name and tabs should be visible
     await expect(page.locator('h1')).toContainText('orders')

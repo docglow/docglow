@@ -5,9 +5,9 @@ test.describe('Model Detail Page', () => {
   const mainSelector = 'main'
 
   test.beforeEach(async ({ page }) => {
-    await page.goto('/')
-    await page.locator('table tbody tr').filter({ hasText: 'orders' }).first().click()
-    await page.waitForURL(/#\/model\//)
+    // Straight to the model under test — these specs are about the model page,
+    // not about how the landing page happens to link to it.
+    await page.goto('/#/model/model.jaffle_shop.orders')
   })
 
   test('displays model name and materialization badge', async ({ page }) => {

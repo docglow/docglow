@@ -82,13 +82,14 @@ test.describe('Tag Filtering', () => {
   test('overview page shows filtered models heading when tags active', async ({ page }) => {
     const sidebar = page.locator('aside')
 
-    // No filter — shows "Recent Models"
-    await expect(page.getByText('Recent Models')).toBeVisible()
+    // Unfiltered, the Overview shows no model table at all — the list it used to
+    // render was raw manifest order mislabelled as "Recent Models" (DOC-297).
+    await expect(page.getByText('Filtered Models')).toHaveCount(0)
 
     // Click a tag filter
     await sidebar.getByRole('button', { name: 'finance' }).click()
 
-    // Should now show "Filtered Models"
+    // The table is the answer to "what matched?", so it appears now
     await expect(page.getByText('Filtered Models')).toBeVisible()
   })
 
