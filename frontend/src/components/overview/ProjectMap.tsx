@@ -31,10 +31,13 @@ export function ProjectMap({ data }: { data: DocglowData }) {
     <section className="mb-8" aria-labelledby="project-map-heading">
       <h2
         id="project-map-heading"
-        className="text-sm font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-3"
+        className="text-sm font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1"
       >
         Project map
       </h2>
+      <p className="text-xs text-[var(--text-muted)] mb-3">
+        Click on a layer to view those models.
+      </p>
 
       {/* auto-fit keeps every segment the same width at any viewport. Plain
           flex-wrap would stretch a wrapped last row's few items to full width. */}

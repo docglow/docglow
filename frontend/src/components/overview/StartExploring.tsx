@@ -32,7 +32,7 @@ export function StartExploring({ data }: { data: DocglowData }) {
         Start exploring
       </h2>
       <p className="text-xs text-[var(--text-muted)] mb-3">
-        The most connected models in your project — good places to pick up the thread.
+        The most connected models in your project. Click a model to explore.
       </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
