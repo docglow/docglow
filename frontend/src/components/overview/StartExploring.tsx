@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { computeSuggestions } from '../../utils/lineageSuggestions'
 import type { DocglowData } from '../../types'
 
-const CARD_COUNT = 6
+// Eight fills the four-column layout evenly on a desktop viewport, and still
+// splits cleanly at two columns.
+const CARD_COUNT = 8
 
 /**
  * The same connectivity-ranked entry points the Lineage Explorer offers, lifted
@@ -33,7 +35,7 @@ export function StartExploring({ data }: { data: DocglowData }) {
         The most connected models in your project — good places to pick up the thread.
       </p>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         {suggestions.map(s => (
           <button
             key={s.node.id}

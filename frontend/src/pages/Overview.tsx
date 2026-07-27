@@ -100,8 +100,11 @@ export function Overview() {
     exposureCount > 0 ? `${formatNumber(exposureCount)} exposures` : null,
   ].filter(Boolean)
 
+  // No max-width: the map, the card grid and the search results all get more
+  // useful as they get wider, and a capped column left most of a desktop
+  // viewport empty.
   return (
-    <div className="max-w-4xl">
+    <div>
       <h1 className="text-2xl font-bold mb-1">{data.metadata.project_name}</h1>
       <p className="text-[var(--text-muted)] text-sm mb-6">
         {totals.join(' · ')}

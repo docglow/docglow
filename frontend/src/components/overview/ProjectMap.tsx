@@ -36,7 +36,9 @@ export function ProjectMap({ data }: { data: DocglowData }) {
         Project map
       </h2>
 
-      <div className="flex flex-wrap items-stretch gap-1">
+      {/* auto-fit keeps every segment the same width at any viewport. Plain
+          flex-wrap would stretch a wrapped last row's few items to full width. */}
+      <div className="grid gap-1 grid-cols-[repeat(auto-fit,minmax(9rem,1fr))]">
         {segments.map((segment, i) => (
           <div key={segment.rank} className="flex items-stretch gap-1">
             {i > 0 && (
@@ -50,7 +52,7 @@ export function ProjectMap({ data }: { data: DocglowData }) {
             <button
               onClick={() => setOpenRank(openRank === segment.rank ? null : segment.rank)}
               aria-expanded={openRank === segment.rank}
-              className={`px-3 py-2 rounded-lg border text-left transition-colors cursor-pointer
+              className={`flex-1 px-3 py-2 rounded-lg border text-left transition-colors cursor-pointer
                           hover:border-primary/50 ${
                             openRank === segment.rank
                               ? 'border-primary'
