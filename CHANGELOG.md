@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-07-29
+
+### Fixed
+- **`docglow publish` now works for projects over 4.5 MB** — the artifact tarball was POSTed to the Cloud API, whose host rejects request bodies over 4.5 MB at the edge before any application code runs. Any dbt project whose compressed `manifest.json` + `catalog.json` exceeded that (most real projects) failed with an opaque `413 Request Entity Too Large` / `FUNCTION_PAYLOAD_TOO_LARGE` and no actionable message. The tarball now uploads **directly to storage** via a short-lived signed URL, so the API never carries it and the ceiling is the storage limit (50 MB) rather than the API host's. Requires a Cloud deployment with the direct-upload endpoints; against an older server the CLI falls back to the inline upload for tarballs under 4 MB and otherwise explains exactly why it cannot.
+
+### Added
+- **Upload progress bar** — a large upload on a slow uplink is now a visible multi-minute step, so `docglow publish` shows transfer progress, speed, and an ETA instead of appearing to hang.
+- **Retries and human-readable network errors** — the two small API calls retry three times with backoff, the upload retries once, and transport failures now surface as an instruction ("Check your connection and re-run") rather than an `httpx` traceback. Status polling is retried too, so a transient blip no longer fails a publish that already landed.
+- **Versioned `User-Agent`** — requests now identify as `docglow-cli/{version}` so Cloud can tell which clients still use the deprecated inline-upload endpoint.
+
 ## [0.8.5] - 2026-07-10
 
 ### Added

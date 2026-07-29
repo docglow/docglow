@@ -147,6 +147,21 @@ DOCGLOW_API_URL=https://app-staging.docglow.com docglow publish
 | `No dbt artifacts found ... Expected at least manifest.json and catalog.json.` | The target directory exists but has no artifacts. Re-run `dbt build` / `dbt docs generate`. |
 | `Publish failed: ...` | The Cloud rejected the upload or failed to render. Re-run with `--verbose` for details, and check `docglow status` for your workspace state. |
 | `Publish timed out after 300s` | The render took longer than the 5-minute wait window. The publish may still complete — check `docglow status`, or re-run with `--no-wait`. |
+| `Upload interrupted after N MB` | The connection dropped mid-upload (already retried once). Re-run `docglow publish`; the previous partial upload is discarded automatically. |
+| `Could not reach docglow Cloud at ...` | Network or DNS failure after three attempts. Check connectivity and any corporate proxy, then re-run. |
+| `Artifacts are N MB, over the M MB limit for your workspace` | The tarball exceeds the storage upload limit. Trimming unused models shrinks `manifest.json`/`catalog.json`; contact support@docglow.com if you need a higher limit. |
+| `No uploaded artifact found for vN` | The upload did not complete before finalizing (usually an interrupted run). Re-run `docglow publish`. |
+| `Another publish for this project completed while your artifact was uploading` | A concurrent publish (often a second CI job) landed first. Re-run `docglow publish`. |
+| `This docglow Cloud server does not support large uploads yet` | The Cloud deployment predates the direct-upload API and cannot accept a tarball this size. Upgrade the server, or contact support@docglow.com. |
+
+### How the upload works
+
+`docglow publish` uploads artifacts **directly to storage**, not through the API:
+it requests a short-lived signed URL, PUTs the tarball to it, and then makes a
+small call to record the publish. This is why large projects work — the API host
+caps request bodies at 4.5 MB, well under a typical `manifest.json` +
+`catalog.json` pair. Requires docglow 0.9.0+ and a matching Cloud deployment;
+older combinations fall back to an inline upload limited to 4 MB.
 
 ## Related
 
