@@ -9,7 +9,12 @@ import time
 from pathlib import Path
 from typing import Any
 
-from docglow.cloud.client import CloudApiError, CloudClient
+from docglow.cloud.client import (
+    LEGACY_UPLOAD_LIMIT_BYTES,
+    CloudApiError,
+    CloudClient,
+    CloudUploadUrlUnsupportedError,
+)
 from docglow.cloud.config import CloudConfig
 from docglow.config import CONFIG_FILENAMES
 
@@ -76,9 +81,7 @@ def run_publish(
     try:
         client = CloudClient(config)
         try:
-            # Upload
-            logger.info("Uploading artifacts to docglow Cloud...")
-            result = client.publish(tarball_path)
+            result = _upload_and_finalize(client, tarball_path)
             data = result.get("data", result)
             publish_id = data.get("publish_id", "")
 
@@ -94,6 +97,97 @@ def run_publish(
             client.close()
     finally:
         tarball_path.unlink(missing_ok=True)
+
+
+def _upload_and_finalize(client: CloudClient, tarball_path: Path) -> dict[str, Any]:
+    """Upload the tarball to Cloud and record the publish.
+
+    Three steps, because the artifact cannot travel through the API: the hosting
+    platform rejects request bodies over ~4.5 MB at the edge, and a real dbt
+    project's artifacts exceed that compressed. So the CLI asks for a storage URL,
+    uploads straight to storage, and then records the publish over a small JSON
+    call.
+    """
+    size = tarball_path.stat().st_size
+
+    try:
+        upload = client.create_upload_url()
+    except CloudUploadUrlUnsupportedError:
+        return _publish_inline_fallback(client, tarball_path, size)
+
+    # The server owns this number; validating against it rather than a local copy
+    # means the limit can change without shipping a new CLI. Checking before the
+    # upload turns a multi-minute transfer that was always going to fail into an
+    # immediate error.
+    max_bytes = upload.get("max_bytes")
+    if isinstance(max_bytes, int) and size > max_bytes:
+        raise CloudApiError(
+            f"Artifacts are {size / (1024 * 1024):.1f} MB, over the "
+            f"{max_bytes / (1024 * 1024):.0f} MB limit for your workspace. "
+            "Contact support@docglow.com if you need a higher limit."
+        )
+
+    logger.info("Uploading artifacts to docglow Cloud...")
+    _upload_with_progress(client, upload["upload_url"], tarball_path, size)
+
+    return client.finalize_publish(expected_version=upload.get("expected_version"))
+
+
+def _upload_with_progress(
+    client: CloudClient, upload_url: str, tarball_path: Path, size: int
+) -> None:
+    """Upload with a progress bar when the terminal can show one.
+
+    The upload is now a visible multi-minute step on a slow uplink rather than one
+    opaque request, so silence reads as a hang. `rich` is already a dependency; if
+    importing it fails for any reason, fall back to a plain upload rather than
+    letting a cosmetic feature break publishing.
+    """
+    try:
+        from rich.progress import (
+            BarColumn,
+            DownloadColumn,
+            Progress,
+            TimeRemainingColumn,
+            TransferSpeedColumn,
+        )
+    except ImportError:  # pragma: no cover - rich is a hard dependency
+        client.upload_artifacts(upload_url, tarball_path)
+        return
+
+    with Progress(
+        "[progress.description]{task.description}",
+        BarColumn(),
+        DownloadColumn(),
+        TransferSpeedColumn(),
+        TimeRemainingColumn(),
+        transient=True,
+    ) as progress:
+        task = progress.add_task("Uploading artifacts", total=size)
+        client.upload_artifacts(
+            upload_url,
+            tarball_path,
+            on_progress=lambda advanced: progress.advance(task, advanced),
+        )
+
+
+def _publish_inline_fallback(client: CloudClient, tarball_path: Path, size: int) -> dict[str, Any]:
+    """Publish via the deprecated inline endpoint, for a Cloud that predates it.
+
+    Only worth attempting for a small tarball. Above the platform's request-body
+    ceiling the fallback is guaranteed to fail with an opaque 413, so say what is
+    actually wrong instead of letting the user watch a doomed upload.
+    """
+    if size > LEGACY_UPLOAD_LIMIT_BYTES:
+        raise CloudApiError(
+            f"This docglow Cloud server does not support large uploads yet, and "
+            f"your artifacts are {size / (1024 * 1024):.1f} MB (the inline upload "
+            f"limit is {LEGACY_UPLOAD_LIMIT_BYTES / (1024 * 1024):.0f} MB). "
+            "Upgrade the server, or contact support@docglow.com."
+        )
+
+    logger.info("Uploading artifacts to docglow Cloud (legacy inline upload)...")
+    return client.publish(tarball_path)
 
 
 def _find_artifacts(target_dir: Path) -> list[Path]:
