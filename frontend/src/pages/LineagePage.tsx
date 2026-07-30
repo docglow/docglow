@@ -11,36 +11,9 @@ import { getUnionSubgraph } from '../utils/graph'
 import { applyFilters, useFilterState, computeSubgraphOptions, RESOURCE_TYPES } from '../utils/lineageFilters'
 import type { FilterState } from '../components/ui/FilterDropdown'
 import type { LineageDirection } from '../utils/graph'
-import type { LineageNode, LineageEdge } from '../types'
+import { computeSuggestions } from '../utils/lineageSuggestions'
 import { buildModelColumnsMap } from '../utils/modelColumns'
 import { useColumnHighlightStore } from '../stores/columnHighlightStore'
-
-interface ModelSuggestion {
-  node: LineageNode
-  upstreamCount: number
-  downstreamCount: number
-  totalConnections: number
-}
-
-function computeSuggestions(nodes: LineageNode[], edges: LineageEdge[]): ModelSuggestion[] {
-  const inDegree = new Map<string, number>()
-  const outDegree = new Map<string, number>()
-  for (const e of edges) {
-    outDegree.set(e.source, (outDegree.get(e.source) ?? 0) + 1)
-    inDegree.set(e.target, (inDegree.get(e.target) ?? 0) + 1)
-  }
-
-  return nodes
-    .filter(n => n.resource_type === 'model')
-    .map(n => ({
-      node: n,
-      upstreamCount: inDegree.get(n.id) ?? 0,
-      downstreamCount: outDegree.get(n.id) ?? 0,
-      totalConnections: (inDegree.get(n.id) ?? 0) + (outDegree.get(n.id) ?? 0),
-    }))
-    .sort((a, b) => b.totalConnections - a.totalConnections)
-    .slice(0, 12)
-}
 
 export function LineagePage() {
   const { data } = useProjectStore()

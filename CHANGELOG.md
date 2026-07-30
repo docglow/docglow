@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- **Overview landing page rebuilt around orientation and search** — the page was four stat tiles, a letter-grade card, and a ten-row model table, none of which answered a question a reader actually arrives with. It now leads with a full-width search box (with inline results), followed by a **Project map** — sources → staging → intermediate → marts → exposures as a flow with per-layer counts, each segment expanding to the models inside it — and **Start exploring**, the connectivity-ranked entry points previously buried in the Lineage Explorer. Empty layers are omitted rather than shown as zeroes, and the map hides itself entirely on projects with fewer than two populated layers. (DOC-298)
+- **Health is stated as outstanding work, not a letter grade** — the Overview now shows the actionable form (*"1015 columns with no test · 11 models with no downstream consumers →"*) linking through to the Health page, where the grade lives and the reader has opted into being scored. (DOC-298)
+
+### Fixed
+- **"Recent Models" removed from the Overview** — the table was `Object.values(data.models).slice(0, 10)` with no sort, so the heading claimed a recency ordering that never existed; on a real project it filled the landing page with ten near-identical staging models. The table still renders, correctly titled **Filtered Models**, when a tag filter is active — that path was always legitimate and is preserved, now with an empty state when no model carries the selected tags. (DOC-297)
+
 ## [0.8.5] - 2026-07-10
 
 ### Added

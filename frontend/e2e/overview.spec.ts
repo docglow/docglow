@@ -10,38 +10,67 @@ test.describe('Overview Page', () => {
     await expect(page.locator('h1')).toHaveText('jaffle_shop')
   })
 
-  test('displays stat cards with correct counts', async ({ page }) => {
-    const stats = page.locator('.grid > div')
-    await expect(stats).toHaveCount(4)
-
-    await expect(stats.nth(0)).toContainText('Models')
-    await expect(stats.nth(1)).toContainText('Sources')
-    await expect(stats.nth(2)).toContainText('Seeds')
-    await expect(stats.nth(3)).toContainText('Tests')
+  test('shows project totals as a summary line', async ({ page }) => {
+    await expect(page.getByText(/\d+ models · \d+ sources · \d+ tests/)).toBeVisible()
   })
 
-  test('displays health summary with grade', async ({ page }) => {
-    await expect(page.getByText('Project Health')).toBeVisible()
-    // Grade letter visible in the health card
-    await expect(page.getByText('64/100')).toBeVisible()
+  test('leads with search', async ({ page }) => {
+    const search = page.getByRole('searchbox', { name: 'Search this project' })
+    await expect(search).toBeVisible()
+
+    await search.fill('customers')
+    const results = page.getByRole('list', { name: 'Search results' })
+    await expect(results.getByRole('button').first()).toContainText(/customers/i)
   })
 
-  test('health card navigates to health page on click', async ({ page }) => {
-    await page.getByText('Project Health').click()
+  test('search results navigate to the resource page', async ({ page }) => {
+    await page.getByRole('searchbox', { name: 'Search this project' }).fill('customers')
+    const results = page.getByRole('list', { name: 'Search results' })
+    await results.getByRole('button').first().click()
+    await expect(page).toHaveURL(/#\/(model|source)\//)
+  })
+
+  test('pressing Enter in search opens the full search page', async ({ page }) => {
+    const search = page.getByRole('searchbox', { name: 'Search this project' })
+    await search.fill('orders')
+    await search.press('Enter')
+    await expect(page).toHaveURL(/#\/search\?q=orders/)
+  })
+
+  test('shows the project map with layer counts', async ({ page }) => {
+    const map = page.getByRole('region', { name: 'Project map' })
+    await expect(map).toBeVisible()
+    await expect(map.getByRole('button').first()).toContainText(/nodes?/)
+  })
+
+  test('clicking a layer reveals the models in it', async ({ page }) => {
+    const map = page.getByRole('region', { name: 'Project map' })
+    const segment = map.getByRole('button').first()
+    await segment.click()
+    await expect(segment).toHaveAttribute('aria-expanded', 'true')
+  })
+
+  test('shows starting points that open lineage pinned to the model', async ({ page }) => {
+    const section = page.getByRole('region', { name: 'Start exploring' })
+    await expect(section).toBeVisible()
+    await section.getByRole('button').first().click()
+    await expect(page).toHaveURL(/#\/lineage\?pins=/)
+  })
+
+  test('states health as outstanding work, not a letter grade', async ({ page }) => {
+    const strip = page.getByRole('button', { name: /Project health/ })
+    await expect(strip).toBeVisible()
+    // The grade belongs on the Health page, where the reader opted into it.
+    await expect(strip).not.toContainText('/100')
+  })
+
+  test('health strip navigates to the health page', async ({ page }) => {
+    await page.getByRole('button', { name: /Project health/ }).click()
     await expect(page).toHaveURL(/#\/health/)
   })
 
-  test('displays recent models table', async ({ page }) => {
-    await expect(page.getByText('Recent Models')).toBeVisible()
-    const table = page.locator('table')
-    await expect(table).toBeVisible()
-    await expect(table.locator('th')).toHaveCount(4)
-  })
-
-  test('clicking a model row navigates to model page', async ({ page }) => {
-    const firstRow = page.locator('table tbody tr').first()
-    await firstRow.click()
-    await expect(page).toHaveURL(/#\/model\//)
+  test('does not show a model table until a tag filter is applied', async ({ page }) => {
+    await expect(page.locator('table')).toHaveCount(0)
   })
 
   test('displays docglow version info', async ({ page }) => {
