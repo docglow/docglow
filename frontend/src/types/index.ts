@@ -214,3 +214,57 @@ declare module "@docglow/shared-types" {
     readonly relationships_summary?: RelationshipSummary[];
   }
 }
+
+// Project-wide test catalog (Tests dashboard). Added in the DOC tests-dashboard
+// work; local definitions + augmentation until shared-types is republished.
+// Mirrors packages/shared-types/src/tests.ts.
+
+export type ProjectTestStatus = "pass" | "fail" | "warn" | "error" | "not_run";
+
+export type TestSeverity = "error" | "warn";
+
+export interface TestAttachment {
+  readonly unique_id: string;
+  readonly name: string;
+  readonly resource_type: string;
+}
+
+export interface ProjectTest {
+  readonly unique_id: string;
+  readonly name: string;
+  readonly test_type: string;
+  readonly is_generic: boolean;
+  readonly column_name: string | null;
+  readonly severity: TestSeverity;
+  readonly status: ProjectTestStatus;
+  readonly failures: number | null;
+  readonly execution_time: number | null;
+  readonly message: string | null;
+  readonly package_name: string;
+  readonly original_file_path: string;
+  readonly attached: TestAttachment[];
+}
+
+export interface TestSummary {
+  readonly has_run_results: boolean;
+  readonly generated_at: string;
+  readonly total: number;
+  readonly by_status: Record<ProjectTestStatus, number>;
+  readonly by_severity: Record<TestSeverity, number>;
+  readonly by_type: Record<string, number>;
+  readonly pass_rate: number | null;
+  readonly resources_tested: number;
+}
+
+export interface TestsData {
+  readonly tests: ProjectTest[];
+  readonly summary: TestSummary;
+}
+
+declare module "@docglow/shared-types" {
+  // Payloads generated before the Tests dashboard shipped have no `tests` key,
+  // so it is optional; the page guards with a fallback.
+  interface DocglowData {
+    readonly tests?: TestsData;
+  }
+}
