@@ -175,6 +175,35 @@ class TestParseColumnLineage:
             d.source_table == "raw_users" and d.source_column == "id" for d in result["user_id"]
         )
 
+    def test_expression_alongside_star_preserves_lineage(self) -> None:
+        """Explicit expressions must survive expansion of a neighboring star."""
+        sql = """
+        WITH renamed AS (
+            SELECT company, part_num
+            FROM epicor_part
+        )
+        SELECT
+            MD5(company || part_num) AS sk_with_star,
+            *
+        FROM renamed
+        """
+        result = parse_column_lineage(
+            sql,
+            known_columns=["sk_with_star", "company", "part_num"],
+            dialect="trino",
+        )
+
+        assert "sk_with_star" in result
+        assert {
+            (dep.source_table, dep.source_column, dep.transformation)
+            for dep in result["sk_with_star"]
+        } == {
+            ("epicor_part", "company", "derived"),
+            ("epicor_part", "part_num", "derived"),
+        }
+        assert "company" in result
+        assert "part_num" in result
+
     def test_select_star_with_schema_resolves_inner_ctes(self) -> None:
         """Schema mapping should help resolve SELECT * inside CTEs."""
         schema = {
