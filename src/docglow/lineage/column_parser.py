@@ -242,11 +242,12 @@ def _rewrite_star_to_columns(
     columns: list[str],
     dialect: str | None,
 ) -> str:
-    """Rewrite the outermost SELECT * to list explicit column names.
+    """Rewrite the outermost SELECT * while preserving explicit expressions.
 
     SQLGlot's lineage() cannot trace columns through SELECT * from a CTE.
     By replacing `SELECT * FROM cte` with `SELECT col1, col2 FROM cte`,
-    lineage() can resolve each column through the CTE definitions.
+    lineage() can resolve each column through the CTE definitions. Any
+    non-star expressions in the SELECT list are retained unchanged.
     """
     import sqlglot
     from sqlglot import exp
@@ -269,8 +270,28 @@ def _rewrite_star_to_columns(
     if not has_star:
         return sql
 
-    # Build new column expressions
-    new_exprs = [exp.Column(this=exp.to_identifier(c)) for c in columns]
+    # Do not add a star-expanded column when an explicit expression already
+    # produces that name (for example, ``SELECT expr AS id, *``).
+    explicit_names = {
+        expression.alias_or_name.lower()
+        for expression in outermost.expressions
+        if not isinstance(expression, exp.Star) and expression.alias_or_name
+    }
+    star_exprs = [
+        exp.Column(this=exp.to_identifier(column))
+        for column in columns
+        if column.lower() not in explicit_names
+    ]
+
+    # Preserve explicit expressions and replace only the Star, at its original
+    # position in the projection list.
+    new_exprs = []
+    for expression in outermost.expressions:
+        if isinstance(expression, exp.Star):
+            new_exprs.extend(star_exprs)
+        else:
+            new_exprs.append(expression)
+
     outermost.set("expressions", new_exprs)
 
     result: str = tree.sql(dialect=dialect)
