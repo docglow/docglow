@@ -247,6 +247,21 @@ repos:
 
 Docglow has fully opt-in, anonymous telemetry that helps us understand which dbt adapters and project sizes are used in the wild. It is **off by default**, easy to disable with `DOCGLOW_NO_TELEMETRY=1` or `docglow telemetry disable`, and the exact payload is documented at [docs/telemetry.md](docs/telemetry.md).
 
+## Contributing
+
+Contributions are welcome — bug reports, feature requests, and pull requests alike.
+
+**[CONTRIBUTING.md](CONTRIBUTING.md)** covers local dev setup, the site generation
+pipeline architecture, code style, and how to add a CLI command or MCP tool.
+
+Before opening a PR, verify your branch with the checklist the maintainers use —
+run `/pr-verify` if you work in Claude Code, or read
+[`.claude/skills/pr-verify/SKILL.md`](.claude/skills/pr-verify/SKILL.md) and work
+through it by hand. It covers the flag interactions, dbt artifact edge cases, and
+payload compatibility rules that the test suite alone does not catch.
+
+Have a question or an idea? [Open an issue](https://github.com/docglow/docglow/issues).
+
 ## License
 
 MIT
