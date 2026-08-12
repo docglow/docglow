@@ -1,0 +1,141 @@
+---
+name: pr-verify
+description: Verify a Docglow change actually works before submitting or merging a PR. Runs the conformance suite, then a behavioral verification pass (flag matrix, artifact-join spot checks, pipeline contract sweep, payload budget). Use when reviewing a PR, self-reviewing a branch before opening a PR, or when asked to "verify this change" or "run pr-verify".
+---
+
+# PR verification for Docglow
+
+Two phases, in order. Phase 1 proves the author's own tests pass. Phase 2 probes
+what those tests couldn't see — feature interactions and data semantics. **Do not
+state a verdict ("mergeable", "looks good") until Phase 2 is complete.** Green
+checks in Phase 1 are not evidence of correctness; both real blockers found in
+past reviews lived entirely in Phase 2.
+
+## Phase 0 — Setup
+
+Work in a git worktree so the main checkout stays untouched:
+
+```bash
+git worktree add /tmp/pr-verify-<branch> <branch>
+cd /tmp/pr-verify-<branch>
+```
+
+Gotcha: an editable install (`pip install -e`) resolves `docglow` from wherever
+it was installed, not the worktree. Prefix Python commands with
+`PYTHONPATH=$PWD/src` or new modules will fail to import.
+
+## Phase 1 — Conformance
+
+```bash
+PYTHONPATH=$PWD/src python -m pytest -q
+ruff check src/ tests/
+ruff format --check src/ tests/
+mypy src/docglow
+cd frontend && npm ci && npx tsc --noEmit && npm run test -- --run
+```
+
+If the PR touches `src/docglow/static/` (the vendored frontend bundle), verify
+it is a faithful rebuild — the minified blob cannot be reviewed by eye:
+
+```bash
+cd frontend && npm run build
+diff -r dist/assets ../src/docglow/static/assets   # filenames AND content must match
+diff dist/index.html ../src/docglow/static/index.html
+```
+
+A hash mismatch means the bundle was built from different source than the PR
+contains. Treat that as a blocker.
+
+If the PR adds a top-level payload key, both exact-key assertions must be
+updated: `tests/test_data_transformer.py` and `tests/test_dbt_versions.py`.
+
+## Phase 2 — Behavioral verification
+
+### 2a. Generation matrix
+
+Generate real sites under every mode that could interact with the change, and
+**inspect the emitted payload each time** — exit codes prove nothing. Minimum
+matrix for generator-touching changes:
+
+| Mode | What to check |
+|---|---|
+| plain `--static` | new data present and correct |
+| `--select <one model>` / `--exclude` | new data respects filtering; no links to pages that were not generated |
+| `--slim` | new payload key included/excluded deliberately, not by accident |
+| artifacts missing `run_results.json` | absent data reads as "unknown/not run", never as passing |
+| project with none of the relevant resources | empty state, no crash |
+
+```bash
+PYTHONPATH=$PWD/src python -m docglow generate --project-dir examples/jaffle-shop --static --output-dir /tmp/site-plain
+PYTHONPATH=$PWD/src python -m docglow generate --project-dir examples/jaffle-shop --static --select stg_customers --output-dir /tmp/site-select
+```
+
+Then read the embedded payload (grep the output `index.html` for the new key)
+and click through the generated site if the change is user-visible.
+
+### 2b. Enumerate the enum
+
+For any change that joins or maps dbt artifact data: list every category of
+input (each `resource_type`, each `test_type`, each materialization — whatever
+the relevant axis is) and hand-verify **one instance of each category** against
+the raw `manifest.json` / `run_results.json` / `catalog.json`. Bugs cluster in
+the outlier category — e.g. `relationships` tests order `depends_on.nodes` with
+the *referenced* model first, so naive `[0]` indexing picks the wrong resource;
+`attached_node` is the authoritative field. Aggregate counts can be correct
+while identities are wrong, so check identities, not counts.
+
+Fixtures to cross-check against: `tests/fixtures/`, `tests/fixtures/dbt-1.8/`,
+`tests/fixtures/dbt-1.9/`, `examples/jaffle-shop/target/`.
+
+### 2c. Pipeline contract sweep
+
+If the change adds or modifies a pipeline stage: open `default_stages()` in
+`src/docglow/generator/pipeline.py` and walk every existing stage, asking "does
+the new code respect what this stage established?" In particular:
+
+- `filter_nodes` — does the new stage honor `--select`/`--exclude`, or does it
+  read `ctx.artifacts.manifest` raw and leak filtered-out resources back in?
+- `build_search_index` — should the new data be searchable?
+- ordering — does the new stage read anything produced by a later stage?
+
+### 2d. Payload budget
+
+Any new payload key gets measured, not guessed:
+
+```bash
+python -c "import json,sys; d=json.load(open('payload.json')); print(len(json.dumps(d['<key>'])))"
+```
+
+Report bytes-per-item and project at 5,000 and 20,000 items. Publish and page
+load are size-sensitive; unbounded keys need a mitigation (omit null fields,
+drop verbose fields on happy-path items, paginate/virtualize rendering) or an
+explicit decision to defer.
+
+### 2e. Compatibility
+
+Payloads generated by older versions lack new keys, and older viewers may
+render newer payloads. New `DocglowData` keys are **optional**
+(`readonly key?: T`) in `packages/shared-types/src/site.ts` — follow the
+`relationships?` precedent. The frontend-local mirror/augmentation in
+`frontend/src/types/index.ts` must declare the same optionality, or the build
+breaks with TS2717 when shared-types is next republished. Frontend code guards
+against the key being absent.
+
+## Reporting
+
+Tier every finding and attach a reproduction to each blocker:
+
+- **Blocker** — user-visible wrong behavior or broken contract; include the
+  exact command and output that reproduces it
+- **Should fix** — will bite soon (compat breaks, unbounded growth, contradicted
+  invariants)
+- **Nit** — convention, naming, style; never blocks a merge
+
+Also report what was verified and how (commands run, sites generated, fixtures
+cross-checked), so the next reviewer knows what is already covered.
+
+## Cleanup
+
+```bash
+git worktree remove --force /tmp/pr-verify-<branch>
+```
