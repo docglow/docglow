@@ -18,6 +18,7 @@ _DIALECT_MAP: dict[str, str] = {
     "duckdb": "duckdb",
     "databricks": "databricks",
     "spark": "spark",
+    "fabricspark": "spark",
     "trino": "trino",
     "clickhouse": "clickhouse",
     "athena": "presto",
