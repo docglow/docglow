@@ -281,6 +281,7 @@ def _build_column_lineage(
     from docglow.lineage.analyzer import analyze_column_lineage
     from docglow.lineage.column_parser import detect_dialect
 
+    adapter_type = manifest.metadata.adapter_type
     dialect = detect_dialect(manifest.metadata.adapter_type)
 
     subset = None
@@ -302,6 +303,7 @@ def _build_column_lineage(
         seeds=seeds,
         snapshots=snapshots,
         dialect=dialect,
+        adapter_type=adapter_type,
         manifest_nodes=dict(manifest.nodes),
         manifest_sources=dict(manifest.sources),
         cache_path=(

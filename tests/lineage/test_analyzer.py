@@ -90,44 +90,51 @@ class TestCacheRoundTrip:
                 },
             },
         }
-        _save_cache(cache_file, cache, "postgres")
-        loaded = _load_cache(cache_file, "postgres")
+        _save_cache(cache_file, cache, "postgres", None)
+        loaded = _load_cache(cache_file, "postgres", None)
         assert loaded["model.test.foo"]["sql_hash"] == "abc123"
         assert len(loaded["model.test.foo"]["lineage"]["col_a"]) == 1
 
     def test_load_missing_file(self, cache_dir: Path) -> None:
-        result = _load_cache(cache_dir / "nonexistent.json", "postgres")
+        result = _load_cache(cache_dir / "nonexistent.json", "postgres", None)
         assert result == {}
 
     def test_load_none_path(self) -> None:
-        result = _load_cache(None, "postgres")
+        result = _load_cache(None, "postgres", None)
         assert result == {}
 
     def test_save_none_path(self) -> None:
         # Should not raise
-        _save_cache(None, {"foo": "bar"}, "postgres")
+        _save_cache(None, {"foo": "bar"}, "postgres", None)
 
     def test_invalid_json(self, cache_file: Path) -> None:
         cache_file.write_text("not json", encoding="utf-8")
-        result = _load_cache(cache_file, "postgres")
+        result = _load_cache(cache_file, "postgres", None)
         assert result == {}
 
 
 class TestCacheInvalidation:
     def test_version_change_invalidates(self, cache_file: Path) -> None:
         cache: dict[str, Any] = {"model.test.foo": {"sql_hash": "abc", "lineage": {}}}
-        _save_cache(cache_file, cache, "postgres")
+        _save_cache(cache_file, cache, "postgres", None)
 
         # Patch version to simulate upgrade
         with patch("docglow.lineage.analyzer.__version__", "99.99.99"):
-            loaded = _load_cache(cache_file, "postgres")
+            loaded = _load_cache(cache_file, "postgres", None)
         assert loaded == {}
 
     def test_dialect_change_invalidates(self, cache_file: Path) -> None:
         cache: dict[str, Any] = {"model.test.foo": {"sql_hash": "abc", "lineage": {}}}
-        _save_cache(cache_file, cache, "postgres")
+        _save_cache(cache_file, cache, "postgres", None)
 
-        loaded = _load_cache(cache_file, "snowflake")
+        loaded = _load_cache(cache_file, "snowflake", None)
+        assert loaded == {}
+
+    def test_adapter_type_change_invalidates(self, cache_file: Path) -> None:
+        cache: dict[str, Any] = {"model.test.foo": {"sql_hash": "abc", "lineage": {}}}
+        _save_cache(cache_file, cache, "spark", "fabricspark")
+
+        loaded = _load_cache(cache_file, "spark", "fabric")
         assert loaded == {}
 
     def test_direct_migrated_to_passthrough(self, cache_file: Path) -> None:
@@ -153,8 +160,8 @@ class TestCacheInvalidation:
                 },
             },
         }
-        _save_cache(cache_file, cache, "postgres")
-        loaded = _load_cache(cache_file, "postgres")
+        _save_cache(cache_file, cache, "postgres", None)
+        loaded = _load_cache(cache_file, "postgres", None)
         deps_x = loaded["model.test.bar"]["lineage"]["col_x"]
         deps_y = loaded["model.test.bar"]["lineage"]["col_y"]
         assert deps_x[0]["transformation"] == "passthrough"
@@ -162,9 +169,9 @@ class TestCacheInvalidation:
 
     def test_same_version_and_dialect_preserves(self, cache_file: Path) -> None:
         cache: dict[str, Any] = {"model.test.foo": {"sql_hash": "abc", "lineage": {}}}
-        _save_cache(cache_file, cache, "duckdb")
+        _save_cache(cache_file, cache, "duckdb", None)
 
-        loaded = _load_cache(cache_file, "duckdb")
+        loaded = _load_cache(cache_file, "duckdb", None)
         assert "model.test.foo" in loaded
 
 
@@ -328,12 +335,14 @@ class TestSerializeSharedStateRoundTrip:
             seeds=seeds,
             snapshots=snapshots,
             dialect=dialect,
+            adapter_type=manifest.metadata.adapter_type,
             manifest_nodes=dict(manifest.nodes),
             manifest_sources=dict(manifest.sources),
         )
-        resolver, schema, out_dialect = deserialize_shared_state(blob)
+        resolver, schema, out_dialect, out_adapter_type = deserialize_shared_state(blob)
 
         assert out_dialect == dialect
+        assert out_adapter_type == manifest.metadata.adapter_type
 
         # Resolve every short ref the inline resolver knows about — identical results.
         refs_to_check = list(inline._short.keys()) + list(inline._lower.keys())
@@ -349,6 +358,7 @@ class TestSerializeSharedStateRoundTrip:
             seeds=seeds,
             snapshots=snapshots,
             dialect=dialect,
+            adapter_type=manifest.metadata.adapter_type,
             manifest_nodes=dict(manifest.nodes),
             manifest_sources=dict(manifest.sources),
         )
@@ -356,7 +366,7 @@ class TestSerializeSharedStateRoundTrip:
 
         # Round-trips through JSON unchanged (state is only string dicts).
         assert json.loads(json.dumps(blob)) == blob
-        assert set(blob.keys()) == {"resolver", "schema", "dialect"}
+        assert set(blob.keys()) == {"resolver", "schema", "dialect", "adapter_type"}
         assert set(blob["resolver"].keys()) == {"exact", "lower", "short"}
 
     def test_table_resolver_to_from_dict_unit(self) -> None:
@@ -378,6 +388,7 @@ class TestAnalyzeOneModel:
             seeds=seeds,
             snapshots=snapshots,
             dialect=dialect,
+            adapter_type=manifest.metadata.adapter_type,
             manifest_nodes=dict(manifest.nodes),
             manifest_sources=dict(manifest.sources),
         )
@@ -390,6 +401,7 @@ class TestAnalyzeOneModel:
             seeds=seeds,
             snapshots=snapshots,
             dialect=dialect,
+            adapter_type=manifest.metadata.adapter_type,
             manifest_nodes=dict(manifest.nodes),
             manifest_sources=dict(manifest.sources),
         )
@@ -470,7 +482,12 @@ class TestAnalyzeOneModel:
             }
         }
         blob = serialize_shared_state(
-            models=models, sources=sources, seeds={}, snapshots={}, dialect="postgres"
+            models=models,
+            sources=sources,
+            seeds={},
+            snapshots={},
+            dialect="postgres",
+            adapter_type="postgres",
         )
         shared = deserialize_shared_state(blob)
 
@@ -492,7 +509,7 @@ class TestAnalyzeOneModel:
             }
         }
         # Empty schema mapping → SELECT * cannot expand.
-        shared = (TableResolver(models=models, sources={}), {}, "postgres")
+        shared = (TableResolver(models=models, sources={}), {}, "postgres", "postgres")
         result = analyze_one_model("model.proj.dwn", models["model.proj.dwn"], shared)
         assert isinstance(result, _ModelLineageResult)
         # No exception; fragment may be empty since columns can't be expanded.
@@ -510,7 +527,12 @@ class TestAnalyzeOneModel:
             }
         }
         blob = serialize_shared_state(
-            models=models, sources={}, seeds={}, snapshots={}, dialect="postgres"
+            models=models,
+            sources={},
+            seeds={},
+            snapshots={},
+            dialect="postgres",
+            adapter_type="postgres",
         )
         shared = deserialize_shared_state(blob)
         result = analyze_one_model("model.proj.lit", models["model.proj.lit"], shared)
@@ -528,7 +550,12 @@ class TestAnalyzeOneModel:
             }
         }
         blob = serialize_shared_state(
-            models=models, sources={}, seeds={}, snapshots={}, dialect="postgres"
+            models=models,
+            sources={},
+            seeds={},
+            snapshots={},
+            dialect="postgres",
+            adapter_type="postgres",
         )
         shared = deserialize_shared_state(blob)
         # Must not raise.
@@ -539,6 +566,39 @@ class TestAnalyzeOneModel:
         assert result.lineage == {}
 
     def test_skips_model_without_sql(self) -> None:
-        shared = (TableResolver(models={}, sources={}), {}, None)
+        shared = (TableResolver(models={}, sources={}), {}, None, None)
         result = analyze_one_model("model.proj.empty", {"name": "empty"}, shared)
         assert result.skipped
+
+    def test_analyze_column_lineage_preserves_fabric_relations(self) -> None:
+        models = {
+            "model.proj.source_table": {
+                "name": "source_table",
+                "schema": "dbo",
+                "database": "warehouse_name",
+                "columns": [{"name": "source_id"}],
+            },
+            "model.proj.downstream": {
+                "name": "downstream",
+                "schema": "dbo",
+                "database": "warehouse_name",
+                "compiled_sql": (
+                    "SELECT source_id AS id "
+                    "FROM [server_name].[warehouse_name].[dbo].[source_table]"
+                ),
+                "columns": [{"name": "id"}],
+                "depends_on": [],
+            },
+        }
+
+        result = analyze_column_lineage(
+            models=models,
+            sources={},
+            seeds={},
+            snapshots={},
+            dialect="tsql",
+            adapter_type="fabric",
+            max_workers=1,
+        )
+
+        assert result["model.proj.downstream"]["id"][0]["source_model"] == "model.proj.source_table"

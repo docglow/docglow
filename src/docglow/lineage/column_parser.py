@@ -18,6 +18,7 @@ _DIALECT_MAP: dict[str, str] = {
     "duckdb": "duckdb",
     "databricks": "databricks",
     "spark": "spark",
+    "fabricspark": "spark",
     "trino": "trino",
     "clickhouse": "clickhouse",
     "athena": "presto",
@@ -53,6 +54,7 @@ def parse_column_lineage(
     schema: dict[str, dict[str, str]] | None = None,
     dialect: str | None = None,
     known_columns: list[str] | None = None,
+    adapter_type: str | None = None,
 ) -> dict[str, list[ColumnDependency]]:
     """Parse compiled SQL and extract column-level dependencies.
 
@@ -63,6 +65,8 @@ def parse_column_lineage(
         dialect: SQL dialect for parsing (e.g. "snowflake", "bigquery").
         known_columns: Optional list of known output column names (e.g. from
             catalog). Used as fallback when the outermost SELECT uses *.
+        adapter_type: dbt adapter type used for adapter-specific relation
+            handling that must remain separate from the SQL parser dialect.
 
     Returns:
         Dict mapping output column name -> list of upstream ColumnDependency.
@@ -109,7 +113,7 @@ def parse_column_lineage(
     excluded_cols = _get_excluded_columns(select_stmt)
 
     # Detect if outermost SELECT uses * or * EXCLUDE
-    has_star = any(isinstance(expr, exp.Star) for expr in select_stmt.expressions)
+    has_star = any(_is_star_expression(expr) for expr in select_stmt.expressions)
 
     # If SELECT * (with or without EXCLUDE) and we have known columns, use those
     if has_star and known_columns:
@@ -162,6 +166,7 @@ def parse_column_lineage(
                     trace_sql,
                     resolved_schema,
                     dialect,
+                    adapter_type=adapter_type,
                 )
                 if deps:
                     result[col_name] = deps
@@ -188,6 +193,7 @@ def _trace_column_in_executor(
     sql: str,
     schema: dict[str, dict[str, str]],
     dialect: str | None,
+    adapter_type: str | None = None,
     timeout_seconds: int = 2,
 ) -> list[ColumnDependency]:
     """Trace lineage for a single column using a shared executor for timeout."""
@@ -206,7 +212,7 @@ def _trace_column_in_executor(
                 schema=schema or {},
                 dialect=dialect,
             )
-            deps = _collect_dependencies(node)
+            deps = _collect_dependencies(node, adapter_type=adapter_type)
             if deps:
                 return deps
         except Exception:  # noqa: BLE001
@@ -221,7 +227,7 @@ def _trace_column_in_executor(
                 schema={},
                 dialect=dialect,
             )
-            return _collect_dependencies(node)
+            return _collect_dependencies(node, adapter_type=adapter_type)
         except Exception:  # noqa: BLE001
             return []
 
@@ -266,7 +272,7 @@ def _rewrite_star_to_columns(
         return sql
 
     # Only rewrite if the outermost SELECT contains a Star
-    has_star = any(isinstance(expr, exp.Star) for expr in outermost.expressions)
+    has_star = any(_is_star_expression(expr) for expr in outermost.expressions)
     if not has_star:
         return sql
 
@@ -275,7 +281,7 @@ def _rewrite_star_to_columns(
     explicit_names = {
         expression.alias_or_name.lower()
         for expression in outermost.expressions
-        if not isinstance(expression, exp.Star) and expression.alias_or_name
+        if not _is_star_expression(expression) and expression.alias_or_name
     }
     star_exprs = [
         exp.Column(this=exp.to_identifier(column))
@@ -287,7 +293,7 @@ def _rewrite_star_to_columns(
     # position in the projection list.
     new_exprs = []
     for expression in outermost.expressions:
-        if isinstance(expression, exp.Star):
+        if _is_star_expression(expression):
             new_exprs.extend(star_exprs)
         else:
             new_exprs.append(expression)
@@ -304,12 +310,12 @@ def _extract_output_columns(select: Any) -> list[str]:
 
     columns: list[str] = []
     for expression in select.expressions:
+        if _is_star_expression(expression):
+            continue
         if isinstance(expression, exp.Alias):
             columns.append(expression.alias)
         elif isinstance(expression, exp.Column):
             columns.append(expression.name)
-        elif isinstance(expression, exp.Star):
-            continue
         else:
             alias = expression.alias_or_name
             if alias:
@@ -361,7 +367,7 @@ def _resolve_star_from_cte(
             return []
 
         # Check if the CTE itself uses SELECT *
-        cte_has_star = any(isinstance(e, exp.Star) for e in cte_select.expressions)
+        cte_has_star = any(_is_star_expression(e) for e in cte_select.expressions)
         if cte_has_star:
             # CTE also uses SELECT * — we can't resolve further without schema
             return []
@@ -391,7 +397,10 @@ def _get_excluded_columns(select: Any) -> set[str]:
     return excluded
 
 
-def _collect_dependencies(root_node: Any) -> list[ColumnDependency]:
+def _collect_dependencies(
+    root_node: Any,
+    adapter_type: str | None = None,
+) -> list[ColumnDependency]:
     """Walk a SQLGlot lineage node tree and collect leaf dependencies.
 
     The lineage tree has:
@@ -421,7 +430,7 @@ def _collect_dependencies(root_node: Any) -> list[ColumnDependency]:
         source_column = _extract_column_from_node_name(node_name)
 
         if isinstance(lineage_node.source, exp.Table):
-            source_table = _table_to_string(lineage_node.source)
+            source_table = _table_to_string(lineage_node.source, adapter_type=adapter_type)
 
             # If the leaf is a '*', use the parent's column name instead
             if source_column == "*" and parent_node is not None:
@@ -456,8 +465,29 @@ def _walk_with_parent(node: Any, parent: Any | None, result: list[tuple[Any, Any
         _walk_with_parent(child, node, result)
 
 
-def _table_to_string(table: Any) -> str:
+def _normalize_adapter_type(adapter_type: str | None) -> str:
+    return (adapter_type or "").lower()
+
+
+def _preserve_full_relation_parts(adapter_type: str | None) -> bool:
+    return _normalize_adapter_type(adapter_type) in {"fabric", "fabricspark"}
+
+
+def _is_star_expression(expression: Any) -> bool:
+    from sqlglot import exp
+
+    return isinstance(expression, exp.Star) or (
+        isinstance(expression, exp.Column) and expression.is_star
+    )
+
+
+def _table_to_string(table: Any, adapter_type: str | None = None) -> str:
     """Convert a SQLGlot Table expression to a dotted string."""
+    if _preserve_full_relation_parts(adapter_type):
+        table_parts = getattr(table, "parts", None)
+        if table_parts:
+            return ".".join(part.name for part in table_parts)
+
     parts: list[str] = []
     if table.catalog:
         parts.append(table.catalog)

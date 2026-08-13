@@ -97,18 +97,21 @@ def _compute_depth_waves(
 _worker_schema: dict[str, dict[str, str]] = {}
 _worker_resolver: TableResolver | None = None
 _worker_dialect: str | None = None
+_worker_adapter_type: str | None = None
 
 
 def _init_worker(
     schema: dict[str, dict[str, str]],
     resolver: TableResolver,
     dialect: str | None,
+    adapter_type: str | None,
 ) -> None:
     """Initialize shared read-only state in each worker process."""
-    global _worker_schema, _worker_resolver, _worker_dialect  # noqa: PLW0603
+    global _worker_schema, _worker_resolver, _worker_dialect, _worker_adapter_type  # noqa: PLW0603
     _worker_schema = schema
     _worker_resolver = resolver
     _worker_dialect = dialect
+    _worker_adapter_type = adapter_type
 
 
 def _analyze_model_in_worker(
@@ -123,6 +126,7 @@ def _analyze_model_in_worker(
         schema=_worker_schema,
         resolver=_worker_resolver,  # type: ignore[arg-type]
         dialect=_worker_dialect,
+        adapter_type=_worker_adapter_type,
         cached_entry=cached_entry,
     )
 
@@ -133,13 +137,18 @@ def _analyze_single_model(
     schema: dict[str, dict[str, str]],
     resolver: TableResolver,
     dialect: str | None,
-    cached_entry: dict[str, Any] | None,
+    adapter_type: str | None = None,
+    cached_entry: dict[str, Any] | None = None,
 ) -> _ModelLineageResult:
     """Analyze column lineage for a single model. Pure function, no side effects.
 
     All inputs are read-only. Returns a result struct that the caller merges
     into shared state.
     """
+    if cached_entry is None and isinstance(adapter_type, dict):
+        cached_entry = adapter_type
+        adapter_type = None
+
     sql = data.get("compiled_sql", "")
     if not sql:
         raw = data.get("raw_sql", "")
@@ -172,6 +181,7 @@ def _analyze_single_model(
             schema=schema,
             dialect=dialect,
             known_columns=known_columns or None,
+            adapter_type=adapter_type,
         )
     except Exception as e:  # noqa: BLE001
         logger.debug("Failed to parse column lineage for %s: %s", uid, e)
@@ -229,6 +239,7 @@ def serialize_shared_state(
     seeds: dict[str, dict[str, Any]],
     snapshots: dict[str, dict[str, Any]],
     dialect: str | None = None,
+    adapter_type: str | None = None,
     manifest_nodes: dict[str, Any] | None = None,
     manifest_sources: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -274,12 +285,13 @@ def serialize_shared_state(
         "resolver": resolver.to_dict(),
         "schema": schema,
         "dialect": dialect,
+        "adapter_type": adapter_type,
     }
 
 
 def deserialize_shared_state(
     blob: dict[str, Any],
-) -> tuple[TableResolver, dict[str, dict[str, str]], str | None]:
+) -> tuple[TableResolver, dict[str, dict[str, str]], str | None, str | None]:
     """Reconstruct ``(resolver, schema, dialect)`` from a serialized blob.
 
     Inverse of :func:`serialize_shared_state`. The returned tuple is the
@@ -294,13 +306,14 @@ def deserialize_shared_state(
     resolver = TableResolver.from_dict(blob["resolver"])
     schema: dict[str, dict[str, str]] = blob.get("schema", {})
     dialect: str | None = blob.get("dialect")
-    return resolver, schema, dialect
+    adapter_type: str | None = blob.get("adapter_type")
+    return resolver, schema, dialect, adapter_type
 
 
 def analyze_one_model(
     uid: str,
     model_data: dict[str, Any],
-    shared_state: tuple[TableResolver, dict[str, dict[str, str]], str | None],
+    shared_state: tuple[TableResolver, dict[str, dict[str, str]], str | None, str | None],
 ) -> _ModelLineageResult:
     """Analyze column lineage for a single model given pre-built shared state.
 
@@ -330,7 +343,7 @@ def analyze_one_model(
         ``{col: [dep_dict]}`` fragment for this uid), ``.failure``,
         ``.skipped``, and ``.cache_entry``.
     """
-    resolver, schema, dialect = shared_state
+    resolver, schema, dialect, adapter_type = shared_state
     try:
         return _analyze_single_model(
             uid=uid,
@@ -338,6 +351,7 @@ def analyze_one_model(
             schema=schema,
             resolver=resolver,
             dialect=dialect,
+            adapter_type=adapter_type,
             cached_entry=None,
         )
     except Exception as e:  # noqa: BLE001
@@ -362,6 +376,7 @@ def analyze_column_lineage(
     seeds: dict[str, dict[str, Any]],
     snapshots: dict[str, dict[str, Any]],
     dialect: str | None = None,
+    adapter_type: str | None = None,
     manifest_nodes: dict[str, Any] | None = None,
     manifest_sources: dict[str, Any] | None = None,
     cache_path: Path | None = None,
@@ -406,7 +421,7 @@ def analyze_column_lineage(
     schema = build_schema_mapping(models, sources)
 
     # Load cache if available
-    cache = _load_cache(cache_path, dialect)
+    cache = _load_cache(cache_path, dialect, adapter_type)
     cache_hits = 0
 
     column_lineage: dict[str, dict[str, list[dict[str, str]]]] = {}
@@ -461,7 +476,7 @@ def analyze_column_lineage(
         with ProcessPoolExecutor(
             max_workers=workers,
             initializer=_init_worker,
-            initargs=(schema, resolver, dialect),
+            initargs=(schema, resolver, dialect, adapter_type),
         ) as pool:
             futures = {
                 pool.submit(
@@ -502,6 +517,7 @@ def analyze_column_lineage(
                     schema=schema,
                     resolver=resolver,
                     dialect=dialect,
+                    adapter_type=adapter_type,
                     cached_entry=cache.get(uid),
                 )
                 analyzed_count += 1
@@ -536,7 +552,7 @@ def analyze_column_lineage(
     )
 
     # Save updated cache
-    _save_cache(cache_path, cache, dialect)
+    _save_cache(cache_path, cache, dialect, adapter_type)
 
     # Write failure report if there were issues
     if failure_details:
@@ -744,6 +760,7 @@ _CACHE_VERSION_KEY = "__cache_meta__"
 def _load_cache(
     cache_path: Path | None,
     dialect: str | None,
+    adapter_type: str | None,
 ) -> dict[str, Any]:
     """Load the column lineage cache from disk. Returns empty dict on any error."""
     if not cache_path or not cache_path.exists():
@@ -760,8 +777,12 @@ def _load_cache(
 
     # Invalidate if version or dialect changed
     meta = raw.get(_CACHE_VERSION_KEY, {})
-    if meta.get("docglow_version") != __version__ or meta.get("dialect") != dialect:
-        logger.debug("Column lineage cache invalidated (version/dialect change)")
+    if (
+        meta.get("docglow_version") != __version__
+        or meta.get("dialect") != dialect
+        or meta.get("adapter_type") != adapter_type
+    ):
+        logger.debug("Column lineage cache invalidated (version/dialect/adapter change)")
         return {}
 
     # Remove meta key and migrate legacy "direct" → "passthrough"
@@ -795,6 +816,7 @@ def _save_cache(
     cache_path: Path | None,
     cache: dict[str, Any],
     dialect: str | None,
+    adapter_type: str | None,
 ) -> None:
     """Save the column lineage cache to disk."""
     if not cache_path:
@@ -804,6 +826,7 @@ def _save_cache(
         _CACHE_VERSION_KEY: {
             "docglow_version": __version__,
             "dialect": dialect,
+            "adapter_type": adapter_type,
         },
         **cache,
     }
