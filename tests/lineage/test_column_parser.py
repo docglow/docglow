@@ -6,6 +6,7 @@ import pytest
 
 from docglow.lineage.column_parser import (
     ColumnDependency,
+    _table_to_string,
     build_schema_mapping,
     detect_dialect,
     parse_column_lineage,
@@ -148,6 +149,31 @@ class TestParseColumnLineage:
         # With schema provided, * should be expanded
         # At minimum we should get no errors
         assert isinstance(result, dict)
+
+    def test_qualified_star_with_known_columns(self) -> None:
+        sql = "SELECT base.* FROM base"
+        result = parse_column_lineage(sql, known_columns=["id", "name"])
+        assert set(result.keys()) == {"id", "name"}
+        assert "*" not in result
+
+    def test_qualified_star_with_expression_preserves_outputs(self) -> None:
+        sql = """
+        WITH base AS (
+            SELECT source_id AS id, source_date AS adjustment_date
+            FROM source_table
+        )
+        SELECT base.*, current_timestamp() AS updated_at
+        FROM base
+        """
+        result = parse_column_lineage(
+            sql,
+            known_columns=["id", "adjustment_date", "updated_at"],
+            dialect="spark",
+        )
+        assert "id" in result
+        assert "adjustment_date" in result
+        assert "*" not in result
+        assert all(key != "*" for key in result)
 
     def test_subquery(self) -> None:
         sql = """
@@ -298,6 +324,108 @@ class TestParseColumnLineage:
             assert isinstance(dep, ColumnDependency)
             with pytest.raises(AttributeError):
                 dep.source_column = "other"  # type: ignore[misc]
+
+
+class TestTableToString:
+    @pytest.mark.parametrize(
+        ("adapter_type", "sql", "expected"),
+        [
+            ("fabricspark", "SELECT * FROM schema_name.table_name", "schema_name.table_name"),
+            (
+                "fabricspark",
+                "SELECT * FROM lakehouse_name.schema_name.table_name",
+                "lakehouse_name.schema_name.table_name",
+            ),
+            (
+                "fabricspark",
+                "SELECT * FROM `workspace_name`.`lakehouse_name`.`schema_name`.`table_name`",
+                "workspace_name.lakehouse_name.schema_name.table_name",
+            ),
+            ("fabric", "SELECT * FROM schema_name.table_name", "schema_name.table_name"),
+            (
+                "fabric",
+                "SELECT * FROM warehouse_name.schema_name.table_name",
+                "warehouse_name.schema_name.table_name",
+            ),
+            (
+                "fabric",
+                "SELECT * FROM [server_name].[warehouse_name].[dbo].[orders]",
+                "server_name.warehouse_name.dbo.orders",
+            ),
+        ],
+    )
+    def test_preserves_full_relation_parts_for_fabric_adapters(
+        self,
+        adapter_type: str,
+        sql: str,
+        expected: str,
+    ) -> None:
+        import sqlglot
+        from sqlglot import exp
+
+        dialect = detect_dialect(adapter_type)
+        parsed = sqlglot.parse_one(sql, dialect=dialect)
+        table = parsed.find(exp.Table)
+
+        assert table is not None
+        assert _table_to_string(table, adapter_type=adapter_type) == expected
+
+    @pytest.mark.parametrize(
+        ("adapter_type", "dialect", "sql", "expected"),
+        [
+            (
+                "spark",
+                "spark",
+                "SELECT * FROM catalog_name.schema_name.table_name",
+                "catalog_name.schema_name.table_name",
+            ),
+            (
+                "databricks",
+                "databricks",
+                "SELECT * FROM catalog_name.schema_name.table_name",
+                "catalog_name.schema_name.table_name",
+            ),
+            (
+                "snowflake",
+                "snowflake",
+                "SELECT * FROM database_name.schema_name.table_name",
+                "database_name.schema_name.table_name",
+            ),
+            (
+                "bigquery",
+                "bigquery",
+                "SELECT * FROM `project_name.dataset_name.table_name`",
+                "project_name.dataset_name.table_name",
+            ),
+            (
+                "postgres",
+                "postgres",
+                "SELECT * FROM schema_name.table_name",
+                "schema_name.table_name",
+            ),
+            (
+                "sqlserver",
+                "tsql",
+                "SELECT * FROM [server_name].[database_name].[dbo].[orders]",
+                "server_name.database_name.orders",
+            ),
+        ],
+    )
+    def test_non_fabric_adapters_keep_existing_relation_conversion(
+        self,
+        adapter_type: str,
+        dialect: str,
+        sql: str,
+        expected: str,
+    ) -> None:
+        import sqlglot
+        from sqlglot import exp
+
+        parsed = sqlglot.parse_one(sql, dialect=dialect)
+        table = parsed.find(exp.Table)
+
+        assert table is not None
+        assert _table_to_string(table, adapter_type=adapter_type) == expected
 
 
 class TestBuildSchemaMapping:
