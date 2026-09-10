@@ -164,6 +164,26 @@ class TestParseColumnLineage:
         result = parse_column_lineage(sql)
         assert "id" in result
 
+    def test_select_star_from_cte_with_no_schema_or_known_columns(self) -> None:
+        """SELECT * FROM cte resolves from the CTE's own definition alone.
+
+        No external schema and no catalog known_columns are provided —
+        qualify()'s infer_schema resolves the star structurally from the
+        CTE body itself.
+        """
+        sql = """
+        WITH renamed AS (
+            SELECT id AS user_id, name FROM raw_users
+        )
+        SELECT * FROM renamed
+        """
+        result = parse_column_lineage(sql)
+        assert "user_id" in result
+        assert "name" in result
+        assert any(
+            d.source_table == "raw_users" and d.source_column == "id" for d in result["user_id"]
+        )
+
     def test_select_star_from_cte_with_known_columns(self) -> None:
         """SELECT * FROM cte should be rewritten using known_columns."""
         sql = """

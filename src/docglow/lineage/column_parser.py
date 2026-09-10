@@ -111,26 +111,28 @@ def parse_column_lineage(
     # Expand qualified stars (e.g. renamed.*) into their real columns using
     # the nested schema, before we look at the SELECT clause. On any failure
     # (schema too sparse, unresolvable ref, etc.) fall back to the unqualified
-    # tree — the existing star-handling below still applies to it.
-    if schema:
-        try:
-            from sqlglot.optimizer.qualify import qualify
+    # tree — the existing star-handling below still applies to it. Attempted
+    # even with no external schema: qualify()'s infer_schema resolves
+    # `SELECT * FROM cte` structurally from the CTE's own definition.
+    effective_schema: NestedSchema = schema or {}
+    try:
+        from sqlglot.optimizer.qualify import qualify
 
-            qualified = qualify(root_statement, schema=schema, infer_schema=True)
-            qualified_select = qualified.find(exp.Select)
-            if qualified_select is not None:
-                select_stmt = qualified_select
-        except Exception as e:  # noqa: BLE001
-            logger.debug("qualify() failed, falling back to unqualified tree: %s", e)
+        qualified = qualify(root_statement, schema=effective_schema, infer_schema=True)
+        qualified_select = qualified.find(exp.Select)
+        if qualified_select is not None:
+            select_stmt = qualified_select
+    except Exception as e:  # noqa: BLE001
+        logger.debug("qualify() failed, falling back to unqualified tree: %s", e)
 
-        # qualify() gives up on expanding *any* star in the SELECT list if
-        # even one referenced table can't be resolved from schema (e.g. one
-        # side of a join points at a table missing from both schema and
-        # known_columns). Manually expand what qualify() left behind so a
-        # partially-resolvable join still reports the resolvable side's
-        # columns instead of degrading to nothing.
-        if any(_is_star_expr(e) for e in select_stmt.expressions):
-            select_stmt = _expand_resolvable_qualified_stars(select_stmt, schema)
+    # qualify() gives up on expanding *any* star in the SELECT list if
+    # even one referenced table can't be resolved from schema (e.g. one
+    # side of a join points at a table missing from both schema and
+    # known_columns). Manually expand what qualify() left behind so a
+    # partially-resolvable join still reports the resolvable side's
+    # columns instead of degrading to nothing.
+    if any(_is_star_expr(e) for e in select_stmt.expressions):
+        select_stmt = _expand_resolvable_qualified_stars(select_stmt, effective_schema)
 
     # Extract output column names from the SELECT clause
     output_columns = _extract_output_columns(select_stmt)
@@ -151,17 +153,6 @@ def parse_column_lineage(
         star_columns = [c for c in star_columns if c.lower() not in explicit_names]
         # Prepend star columns before explicit columns
         output_columns = star_columns + output_columns
-    elif has_star and not known_columns:
-        # No catalog/manifest columns — try to resolve from the CTE definition
-        cte_columns = _resolve_star_from_cte(parsed[0], select_stmt, excluded_cols, dialect)
-        if cte_columns:
-            explicit_names = {c.lower() for c in output_columns}
-            cte_columns = [c for c in cte_columns if c.lower() not in explicit_names]
-            output_columns = cte_columns + output_columns
-            logger.debug(
-                "Resolved %d columns from CTE for SELECT * (no catalog data)",
-                len(cte_columns),
-            )
     elif not output_columns and known_columns:
         output_columns = list(known_columns)
 
@@ -444,66 +435,6 @@ def _extract_output_columns(select: Any) -> list[str]:
             if alias:
                 columns.append(alias)
     return columns
-
-
-def _resolve_star_from_cte(
-    tree: Any,
-    outer_select: Any,
-    excluded_cols: set[str],
-    dialect: str | None,
-) -> list[str]:
-    """Resolve column names for SELECT * by inspecting the referenced CTE.
-
-    When the outermost SELECT is ``SELECT * FROM some_cte`` and we have no
-    catalog/manifest columns, we can look at the CTE definition to find the
-    output column names. This handles the common dbt pattern::
-
-        WITH renamed AS (
-            SELECT col_a, col_b AS alias_b, ...
-            FROM source
-        )
-        SELECT * FROM renamed
-    """
-    from sqlglot import exp
-
-    # Find the FROM clause of the outermost SELECT
-    from_clause = outer_select.find(exp.From)
-    if not from_clause:
-        return []
-
-    # Get the table name referenced in FROM
-    table = from_clause.find(exp.Table)
-    if not table:
-        return []
-
-    cte_name = table.name.lower()
-
-    # Find the matching CTE definition
-    for cte in tree.find_all(exp.CTE):
-        alias = cte.alias
-        if not alias or alias.lower() != cte_name:
-            continue
-
-        # Found the CTE — extract its output columns
-        cte_select = cte.find(exp.Select)
-        if not cte_select:
-            return []
-
-        # Check if the CTE itself uses SELECT *
-        cte_has_star = any(isinstance(e, exp.Star) for e in cte_select.expressions)
-        if cte_has_star:
-            # CTE also uses SELECT * — we can't resolve further without schema
-            return []
-
-        columns = _extract_output_columns(cte_select)
-
-        # Apply EXCLUDE filter
-        if excluded_cols:
-            columns = [c for c in columns if c.lower() not in excluded_cols]
-
-        return columns
-
-    return []
 
 
 def _star_expr_excluded_columns(expression: Any) -> set[str]:
