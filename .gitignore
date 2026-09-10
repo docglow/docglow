@@ -53,3 +53,7 @@ frontend/test-results/
 agent-orchestrator.yaml
 test-results/
 .worktrees
+
+# Harness scratch (ai-conductor working notes and decision memory)
+.pipeline/
+.memory/
