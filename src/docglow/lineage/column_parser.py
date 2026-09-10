@@ -54,7 +54,7 @@ def detect_dialect(adapter_type: str | None) -> str | None:
 
 def parse_column_lineage(
     compiled_sql: str,
-    schema: dict[str, dict[str, str]] | None = None,
+    schema: NestedSchema | None = None,
     dialect: str | None = None,
     known_columns: list[str] | None = None,
 ) -> dict[str, list[ColumnDependency]]:
@@ -190,7 +190,7 @@ def _trace_column_in_executor(
     executor: Any,
     col_name: str,
     sql: str,
-    schema: dict[str, dict[str, str]],
+    schema: NestedSchema,
     dialect: str | None,
     timeout_seconds: int = 2,
 ) -> list[ColumnDependency]:
