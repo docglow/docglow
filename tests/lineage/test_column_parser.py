@@ -455,3 +455,28 @@ class TestBuildSchemaMapping:
         }
         schema = build_schema_mapping(models, {})
         MappingSchema(schema)
+
+    def test_same_named_tables_in_different_schemas_coexist(self) -> None:
+        """Two tables named `orders` in different schemas must not collide."""
+        models = {
+            "model.proj.staging_orders": {
+                "name": "orders",
+                "schema": "staging",
+                "database": "jaffle_shop",
+                "columns": [{"name": "raw_order_id", "data_type": "INT"}],
+            },
+            "model.proj.marts_orders": {
+                "name": "orders",
+                "schema": "marts",
+                "database": "jaffle_shop",
+                "columns": [{"name": "order_id", "data_type": "BIGINT"}],
+            },
+        }
+        schema = build_schema_mapping(models, {})
+
+        staging_orders = schema["jaffle_shop"]["staging"]["orders"]
+        marts_orders = schema["jaffle_shop"]["marts"]["orders"]
+
+        assert staging_orders == {"raw_order_id": "INT"}
+        assert marts_orders == {"order_id": "BIGINT"}
+        assert staging_orders != marts_orders
