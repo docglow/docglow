@@ -377,8 +377,11 @@ def _expand_resolvable_qualified_stars(select: Any, schema: NestedSchema) -> Any
             new_expressions.append(expression)
             continue
 
+        excluded = _star_expr_excluded_columns(expression)
+        column_names = [name for name in columns if name.lower() not in excluded]
+
         changed = True
-        new_expressions.extend(exp.column(column_name, table=alias) for column_name in columns)
+        new_expressions.extend(exp.column(column_name, table=alias) for column_name in column_names)
 
     if changed:
         select.set("expressions", new_expressions)
@@ -503,17 +506,31 @@ def _resolve_star_from_cte(
     return []
 
 
-def _get_excluded_columns(select: Any) -> set[str]:
-    """Extract column names from EXCLUDE/EXCEPT clause in SELECT * EXCLUDE(...)."""
+def _star_expr_excluded_columns(expression: Any) -> set[str]:
+    """Extract EXCLUDE/EXCEPT column names from a star expression.
+
+    Handles both the bare-star form (``exp.Star``) and the qualified-star form
+    (``exp.Column(this=exp.Star())``, e.g. ``a.* EXCLUDE (x)``) — the EXCLUDE
+    clause hangs off the inner ``Star`` node either way.
+    """
     from sqlglot import exp
 
+    star = expression.this if isinstance(expression, exp.Column) else expression
+    if not isinstance(star, exp.Star):
+        return set()
+
+    excluded: set[str] = set()
+    for child in star.walk():
+        if isinstance(child, exp.Column):
+            excluded.add(child.name.lower())
+    return excluded
+
+
+def _get_excluded_columns(select: Any) -> set[str]:
+    """Extract column names from EXCLUDE/EXCEPT clause in SELECT * EXCLUDE(...)."""
     excluded: set[str] = set()
     for expression in select.expressions:
-        if isinstance(expression, exp.Star):
-            # Star may contain EXCLUDE/EXCEPT columns as children
-            for child in expression.walk():
-                if isinstance(child, exp.Column):
-                    excluded.add(child.name.lower())
+        excluded |= _star_expr_excluded_columns(expression)
     return excluded
 
 

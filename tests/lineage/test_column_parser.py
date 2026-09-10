@@ -679,6 +679,69 @@ class TestQualifiedStarGuard:
         assert result == {}
         assert "*" not in result
 
+    def test_qualified_star_exclude_drops_excluded_column(self) -> None:
+        """`a.* EXCLUDE (x)` on the resolvable side of a half-resolvable join
+        must drop `x`, not just the columns qualify() itself expands."""
+        sql = """
+        SELECT a.* EXCLUDE (x), b.*
+        FROM raw.a AS a
+        JOIN missing.b AS b ON a.id = b.id
+        """
+        schema = {"raw": {"a": {"id": "INT", "x": "VARCHAR"}}}
+
+        result = parse_column_lineage(sql, schema=schema)
+
+        assert set(result.keys()) == {"id"}
+        assert "x" not in result
+
+    def test_bare_star_exclude_still_drops_excluded_column(self) -> None:
+        """Regression: bare `SELECT * EXCLUDE (x)` behaviour is unchanged."""
+        sql = "SELECT * EXCLUDE (x) FROM raw.a"
+        schema = {"raw": {"a": {"id": "INT", "x": "INT"}}}
+
+        result = parse_column_lineage(sql, schema=schema)
+
+        assert set(result.keys()) == {"id"}
+        assert "x" not in result
+
+    def test_exclude_nonexistent_column_returns_all_real_columns(self) -> None:
+        """Excluding a column name that isn't actually a column is a no-op."""
+        sql = """
+        SELECT a.* EXCLUDE (nonexistent), b.*
+        FROM raw.a AS a
+        JOIN missing.b AS b ON a.id = b.id
+        """
+        schema = {"raw": {"a": {"id": "INT", "x": "VARCHAR"}}}
+
+        result = parse_column_lineage(sql, schema=schema)
+
+        assert set(result.keys()) == {"id", "x"}
+
+    def test_exclude_every_column_yields_empty_result_with_no_star_key(self) -> None:
+        """Excluding every column of the only resolvable source leaves nothing
+        to report — and must never surface a literal '*' key."""
+        sql = """
+        SELECT a.* EXCLUDE (id, x), b.*
+        FROM raw.a AS a
+        JOIN missing.b AS b ON a.id = b.id
+        """
+        schema = {"raw": {"a": {"id": "INT", "x": "VARCHAR"}}}
+
+        result = parse_column_lineage(sql, schema=schema)
+
+        assert result == {}
+        assert "*" not in result
+
+    def test_unparseable_exclude_sql_returns_empty_dict_without_raising(self) -> None:
+        """SQL SQLGlot can't parse at all (EXCLUDE or otherwise) falls back to
+        the existing unparseable-SQL path — {} without raising."""
+        sql = "SELECT ((( FROM"
+        schema = {"raw": {"a": {"id": "INT"}}}
+
+        result = parse_column_lineage(sql, schema=schema)
+
+        assert result == {}
+
     def test_column_trace_timeout_omits_only_that_column(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
