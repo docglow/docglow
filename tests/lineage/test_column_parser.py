@@ -129,6 +129,20 @@ class TestParseColumnLineage:
         assert parse_column_lineage("") == {}
         assert parse_column_lineage("   ") == {}
 
+    def test_cte_leaf_resolves_to_source_table_not_bare_column(self) -> None:
+        """Nested schema mapping improves leaf attribution (DOC-317 ADR).
+
+        Under the old flat/depth-1 mapping this resolved to a bare 'id' with
+        no source table. With the nested {db: {schema: {table: cols}}} shape,
+        qualify() can trace the CTE leaf all the way to raw.src.
+        """
+        schema = {"db": {"raw": {"src": {"id": "INT"}}}}
+        sql = "WITH r AS (SELECT id FROM raw.src) SELECT r.id AS id FROM r"
+        result = parse_column_lineage(sql, schema=schema)
+        assert "id" in result
+        deps = result["id"]
+        assert any(d.source_table == "raw.src" and d.source_column == "id" for d in deps)
+
     def test_invalid_sql_returns_empty(self) -> None:
         result = parse_column_lineage("THIS IS NOT SQL AT ALL ;;; {{{")
         # Should not raise, just return empty or partial results

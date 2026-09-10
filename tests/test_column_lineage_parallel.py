@@ -254,3 +254,72 @@ class TestParallelVsSequential:
         cache = json.loads(cache_path.read_text())
         assert "__cache_meta__" in cache
         assert len(cache) > 1  # meta + at least one model
+
+
+def _load_flowstate_data() -> tuple[
+    dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any], Any, str | None
+]:
+    """Load flowstate example-project fixtures, mirroring _load_test_data()."""
+    from docglow.generator.pipeline import (
+        PipelineContext,
+        stage_filter_nodes,
+        stage_transform_nodes,
+        stage_transform_sources,
+    )
+
+    project = FIXTURES_DIR.parent.parent / "examples" / "flowstate"
+    artifacts = load_artifacts(project)
+    ctx = PipelineContext(artifacts=artifacts, column_lineage_enabled=True)
+    stage_transform_nodes(ctx)
+    stage_filter_nodes(ctx)
+    stage_transform_sources(ctx)
+    dialect = detect_dialect(artifacts.manifest.metadata.adapter_type)
+    return ctx.models, ctx.sources, ctx.seeds, ctx.snapshots, artifacts.manifest, dialect
+
+
+class TestExampleProjectLineageQuality:
+    """DOC-317: real-world lineage quality on the bundled example projects.
+
+    Measured traced-column counts at this HEAD (after all 14 prior DOC-317
+    tasks reshaping the schema mapping to nested depth-3 and replacing the
+    hand-rolled CTE star resolver with qualify()-based expansion):
+
+        jaffle-shop (13 models): 12 models produced lineage, 77 traced columns
+        flowstate (83 models):   82 models produced lineage, 830 traced columns
+
+    These become the floor for future changes — the assertions below require
+    the counts not to regress below these recorded values.
+    """
+
+    def _traced_column_count(
+        self, models, sources, seeds, snapshots, manifest, dialect
+    ) -> tuple[dict[str, dict[str, Any]], int]:
+        lineage = analyze_column_lineage(
+            models=models,
+            sources=sources,
+            seeds=seeds,
+            snapshots=snapshots,
+            dialect=dialect,
+            manifest_nodes=dict(manifest.nodes),
+            manifest_sources=dict(manifest.sources),
+        )
+        traced = sum(len(cols) for cols in lineage.values())
+        return lineage, traced
+
+    def test_jaffle_shop_traced_columns_not_regressed(self) -> None:
+        models, sources, seeds, snapshots, manifest, dialect = _load_test_data()
+        lineage, traced = self._traced_column_count(
+            models, sources, seeds, snapshots, manifest, dialect
+        )
+        assert traced >= 77
+        for cols in lineage.values():
+            assert "*" not in cols
+
+    def test_flowstate_traced_columns_not_regressed(self) -> None:
+        models, sources, seeds, snapshots, manifest, dialect = _load_flowstate_data()
+        lineage, traced = self._traced_column_count(
+            models, sources, seeds, snapshots, manifest, dialect
+        )
+        assert traced >= 830
+        for cols in lineage.values():
+            assert "*" not in cols

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
@@ -166,6 +167,58 @@ class TestCacheInvalidation:
 
         loaded = _load_cache(cache_file, "duckdb")
         assert "model.test.foo" in loaded
+
+    def test_stale_star_key_cache_is_discarded_and_regenerated_without_star(
+        self, cache_file: Path
+    ) -> None:
+        """DOC-317: pre-fix caches could carry a literal '*' lineage key.
+
+        Simulate a cache file written by an older docglow version (before
+        qualified-star expansion existed) that stored an unexpanded '*' key.
+        On version mismatch it must be discarded outright, and regenerating
+        lineage from real jaffle-shop models must produce no '*' key.
+        """
+        models, sources, seeds, snapshots, manifest, dialect = _load_jaffle_shop_data()
+        uid = next(iter(models))
+
+        stale_cache = {
+            "__cache_meta__": {"docglow_version": "0.0.1", "dialect": dialect},
+            uid: {
+                "sql_hash": "deadbeef00000000",
+                "lineage": {
+                    "*": [
+                        {
+                            "source_model": "some.other.model",
+                            "source_column": "*",
+                            "transformation": "passthrough",
+                        }
+                    ]
+                },
+            },
+        }
+        cache_file.write_text(json.dumps(stale_cache), encoding="utf-8")
+
+        # Version mismatch discards the stale cache outright.
+        assert _load_cache(cache_file, dialect) == {}
+
+        result = analyze_column_lineage(
+            models=models,
+            sources=sources,
+            seeds=seeds,
+            snapshots=snapshots,
+            dialect=dialect,
+            manifest_nodes=dict(manifest.nodes),
+            manifest_sources=dict(manifest.sources),
+            cache_path=cache_file,
+        )
+        for lineage in result.values():
+            assert "*" not in lineage
+
+        regenerated = json.loads(cache_file.read_text(encoding="utf-8"))
+        for key, entry in regenerated.items():
+            if key == "__cache_meta__":
+                continue
+            assert "*" not in entry.get("lineage", {})
 
 
 # --- Subset computation tests ---
