@@ -566,6 +566,55 @@ class TestQualifiedStarGuard:
 
         assert "*" not in result
 
+    def test_multi_star_two_way_join_resolves_each_source(self) -> None:
+        """SELECT a.*, b.* FROM a JOIN b resolves both stars independently —
+        never collapses to {} even though each source contributes a star."""
+        sql = """
+        SELECT a.*, b.*
+        FROM raw.public.a AS a
+        JOIN raw.public.b AS b ON a.id = b.id
+        """
+        schema = {
+            "raw": {
+                "public": {
+                    "a": {"id": "INT", "x": "VARCHAR"},
+                    "b": {"id": "INT", "y": "VARCHAR"},
+                }
+            }
+        }
+
+        result = parse_column_lineage(sql, schema=schema)
+
+        assert set(result.keys()) == {"id", "x", "y"}
+        assert {(d.source_table, d.source_column) for d in result["x"]} == {("raw.public.a", "x")}
+        assert {(d.source_table, d.source_column) for d in result["y"]} == {("raw.public.b", "y")}
+
+    def test_multi_star_three_way_join_resolves_each_source(self) -> None:
+        """A three-way join with a star per side reports columns from all
+        three sources."""
+        sql = """
+        SELECT a.*, b.*, c.*
+        FROM raw.public.a AS a
+        JOIN raw.public.b AS b ON a.id = b.id
+        JOIN raw.public.c AS c ON a.id = c.id
+        """
+        schema = {
+            "raw": {
+                "public": {
+                    "a": {"id": "INT", "x": "VARCHAR"},
+                    "b": {"id": "INT", "y": "VARCHAR"},
+                    "c": {"id": "INT", "z": "VARCHAR"},
+                }
+            }
+        }
+
+        result = parse_column_lineage(sql, schema=schema)
+
+        assert set(result.keys()) == {"id", "x", "y", "z"}
+        assert {(d.source_table, d.source_column) for d in result["x"]} == {("raw.public.a", "x")}
+        assert {(d.source_table, d.source_column) for d in result["y"]} == {("raw.public.b", "y")}
+        assert {(d.source_table, d.source_column) for d in result["z"]} == {("raw.public.c", "z")}
+
     def test_unparseable_sql_returns_empty_dict(self) -> None:
         """SQL that SQLGlot cannot parse at all returns {} without raising,
         before qualify() is ever reached."""
