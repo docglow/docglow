@@ -7,6 +7,7 @@ from sqlglot.schema import MappingSchema
 
 from docglow.lineage.column_parser import (
     ColumnDependency,
+    _extract_output_columns,
     build_schema_mapping,
     detect_dialect,
     parse_column_lineage,
@@ -496,3 +497,17 @@ class TestBuildSchemaMapping:
         assert staging_orders == {"raw_order_id": "INT"}
         assert marts_orders == {"order_id": "BIGINT"}
         assert staging_orders != marts_orders
+
+
+class TestQualifiedStarGuard:
+    """A qualified star (e.g. renamed.*) must never surface as a literal '*'."""
+
+    def test_unresolvable_qualified_star_has_no_star_key(self) -> None:
+        result = parse_column_lineage("SELECT renamed.* FROM renamed", schema={})
+        assert "*" not in result
+
+    def test_extract_output_columns_skips_qualified_stars(self) -> None:
+        import sqlglot
+
+        select = sqlglot.parse_one("SELECT a.*, b.* FROM tbl_a a JOIN tbl_b b ON a.id = b.id")
+        assert _extract_output_columns(select) == []

@@ -310,6 +310,10 @@ def _extract_output_columns(select: Any) -> list[str]:
     for expression in select.expressions:
         if isinstance(expression, exp.Alias):
             columns.append(expression.alias)
+        elif isinstance(expression, exp.Column) and isinstance(expression.this, exp.Star):
+            # Qualified star (e.g. renamed.* or a.*) — never emit a literal "*"
+            # as an output column name.
+            continue
         elif isinstance(expression, exp.Column):
             columns.append(expression.name)
         elif isinstance(expression, exp.Star):
