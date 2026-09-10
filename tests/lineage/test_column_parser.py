@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 from sqlglot.schema import MappingSchema
 
@@ -643,6 +645,67 @@ class TestQualifiedStarGuard:
         assert {(d.source_table, d.source_column) for d in result["x"]} == {("raw.public.a", "x")}
         assert {(d.source_table, d.source_column) for d in result["y"]} == {("raw.public.b", "y")}
         assert {(d.source_table, d.source_column) for d in result["z"]} == {("raw.public.c", "z")}
+
+    def test_half_resolvable_join_reports_resolvable_side(self) -> None:
+        """When one side of a join is in schema and the other side's table is
+        absent from both schema and known_columns, the resolvable side's
+        columns are still reported and no exception is raised."""
+        sql = """
+        SELECT a.*, b.*
+        FROM raw.a AS a
+        JOIN missing.b AS b ON a.id = b.id
+        """
+        schema = {"raw": {"a": {"id": "INT", "x": "VARCHAR"}}}
+
+        result = parse_column_lineage(sql, schema=schema)
+
+        assert set(result.keys()) == {"id", "x"}
+        assert {(d.source_table, d.source_column) for d in result["id"]} == {("raw.a", "id")}
+        assert {(d.source_table, d.source_column) for d in result["x"]} == {("raw.a", "x")}
+
+    def test_fully_unresolvable_join_returns_empty_dict(self) -> None:
+        """When neither side of a join can be resolved (both tables absent
+        from schema, no known_columns), the result is {} with no '*' key and
+        no exception is raised."""
+        sql = """
+        SELECT a.*, b.*
+        FROM missing.a AS a
+        JOIN missing.b AS b ON a.id = b.id
+        """
+        schema = {"raw": {"other": {"id": "INT"}}}
+
+        result = parse_column_lineage(sql, schema=schema)
+
+        assert result == {}
+        assert "*" not in result
+
+    def test_column_trace_timeout_omits_only_that_column(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A per-column trace that exceeds the timeout is omitted from the
+        result while other columns that trace successfully are still
+        returned."""
+        import time
+
+        from docglow.lineage import column_parser
+
+        # Shrink the timeout so the test doesn't need to sleep for seconds.
+        monkeypatch.setattr(column_parser._trace_column_in_executor, "__defaults__", (0.1,))
+
+        from sqlglot.lineage import lineage as real_lineage
+
+        def fake_lineage(column: str, sql: str, schema: Any, dialect: str | None) -> Any:
+            if column == "slow":
+                time.sleep(0.3)
+            return real_lineage(column=column, sql=sql, schema=schema, dialect=dialect)
+
+        monkeypatch.setattr("sqlglot.lineage.lineage", fake_lineage)
+
+        sql = "SELECT id, slow FROM users"
+        result = parse_column_lineage(sql)
+
+        assert "id" in result
+        assert "slow" not in result
 
     def test_unparseable_sql_returns_empty_dict(self) -> None:
         """SQL that SQLGlot cannot parse at all returns {} without raising,

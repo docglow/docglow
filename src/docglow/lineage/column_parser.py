@@ -123,6 +123,15 @@ def parse_column_lineage(
         except Exception as e:  # noqa: BLE001
             logger.debug("qualify() failed, falling back to unqualified tree: %s", e)
 
+        # qualify() gives up on expanding *any* star in the SELECT list if
+        # even one referenced table can't be resolved from schema (e.g. one
+        # side of a join points at a table missing from both schema and
+        # known_columns). Manually expand what qualify() left behind so a
+        # partially-resolvable join still reports the resolvable side's
+        # columns instead of degrading to nothing.
+        if any(_is_star_expr(e) for e in select_stmt.expressions):
+            select_stmt = _expand_resolvable_qualified_stars(select_stmt, schema)
+
     # Extract output column names from the SELECT clause
     output_columns = _extract_output_columns(select_stmt)
 
@@ -333,6 +342,67 @@ def _rewrite_star_to_columns(
 
     result: str = tree.sql(dialect=dialect)
     return result
+
+
+def _expand_resolvable_qualified_stars(select: Any, schema: NestedSchema) -> Any:
+    """Expand qualified stars (``a.*``) whose table is present in ``schema``,
+    leaving stars for unresolvable tables untouched.
+
+    ``qualify()`` bails on expanding every star in the SELECT list if even one
+    referenced table can't be found in schema — this resolves what it can
+    directly against the flat schema mapping so a half-resolvable join still
+    reports the resolvable side's columns rather than nothing at all.
+    """
+    from sqlglot import exp
+
+    alias_to_table: dict[str, Any] = {}
+    for table in select.find_all(exp.Table):
+        alias = table.alias_or_name
+        if alias:
+            alias_to_table[alias.lower()] = table
+
+    new_expressions: list[Any] = []
+    changed = False
+    for expression in select.expressions:
+        if not (isinstance(expression, exp.Column) and _is_star_expr(expression)):
+            new_expressions.append(expression)
+            continue
+
+        table_id = expression.args.get("table")
+        alias = table_id.this if table_id is not None else None
+        table = alias_to_table.get(str(alias).lower()) if alias else None
+        columns = _lookup_schema_columns(schema, table) if table is not None else None
+
+        if not columns:
+            new_expressions.append(expression)
+            continue
+
+        changed = True
+        new_expressions.extend(exp.column(column_name, table=alias) for column_name in columns)
+
+    if changed:
+        select.set("expressions", new_expressions)
+    return select
+
+
+def _lookup_schema_columns(schema: NestedSchema, table: Any) -> dict[str, str] | None:
+    """Look up a table's column mapping in the nested schema dict.
+
+    Tries progressively shorter ``(catalog, db, name)`` suffixes against the
+    schema root to match schemas of varying nesting depth (table-only,
+    db.table, or catalog.db.table).
+    """
+    parts = [p for p in (table.catalog, table.db, table.name) if p]
+    for start in range(len(parts) - 1, -1, -1):
+        node: Any = schema
+        for part in parts[start:]:
+            if not isinstance(node, dict) or part not in node:
+                node = None
+                break
+            node = node[part]
+        if isinstance(node, dict) and node and all(not isinstance(v, dict) for v in node.values()):
+            return node
+    return None
 
 
 def _is_star_expr(expression: Any) -> bool:
