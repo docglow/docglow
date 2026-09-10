@@ -57,3 +57,7 @@ test-results/
 # Harness scratch (ai-conductor working notes and decision memory)
 .pipeline/
 .memory/
+.daemon/
+.claude/solutions/
+.claude/worktrees/
+.claude/scheduled_tasks.lock
