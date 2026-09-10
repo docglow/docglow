@@ -129,8 +129,9 @@ def parse_column_lineage(
     # Check for SELECT * EXCLUDE(...) pattern
     excluded_cols = _get_excluded_columns(select_stmt)
 
-    # Detect if outermost SELECT uses * or * EXCLUDE
-    has_star = any(isinstance(expr, exp.Star) for expr in select_stmt.expressions)
+    # Detect if outermost SELECT uses * or * EXCLUDE (bare star or a qualified
+    # star like `a.*`, which sqlglot represents as Column(this=Star)).
+    has_star = any(_is_star_expr(expr) for expr in select_stmt.expressions)
 
     # If SELECT * (with or without EXCLUDE) and we have known columns, use those
     if has_star and known_columns:
@@ -286,8 +287,8 @@ def _rewrite_star_to_columns(
     if outermost is None:
         return sql
 
-    # Only rewrite if the outermost SELECT contains a Star
-    has_star = any(isinstance(expr, exp.Star) for expr in outermost.expressions)
+    # Only rewrite if the outermost SELECT contains a star (bare or qualified)
+    has_star = any(_is_star_expr(expr) for expr in outermost.expressions)
     if not has_star:
         return sql
 
@@ -308,7 +309,7 @@ def _rewrite_star_to_columns(
     # position in the projection list.
     new_exprs = []
     for expression in outermost.expressions:
-        if isinstance(expression, exp.Star):
+        if _is_star_expr(expression):
             new_exprs.extend(star_exprs)
         else:
             new_exprs.append(expression)
@@ -317,6 +318,21 @@ def _rewrite_star_to_columns(
 
     result: str = tree.sql(dialect=dialect)
     return result
+
+
+def _is_star_expr(expression: Any) -> bool:
+    """True for a bare star (``*``) or a qualified star (``a.*``).
+
+    SQLGlot represents a bare star as ``exp.Star`` but a qualified star as
+    ``exp.Column(this=exp.Star())`` — callers that only check ``isinstance(x,
+    exp.Star)`` silently miss the qualified form (e.g. when ``qualify()``
+    can't resolve the referenced table and leaves it in place).
+    """
+    from sqlglot import exp
+
+    if isinstance(expression, exp.Star):
+        return True
+    return isinstance(expression, exp.Column) and isinstance(expression.this, exp.Star)
 
 
 def _extract_output_columns(select: Any) -> list[str]:

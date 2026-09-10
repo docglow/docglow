@@ -531,3 +531,46 @@ class TestQualifiedStarGuard:
         assert {(d.source_table, d.source_column, d.transformation) for d in result["sk"]} == {
             ("raw.src", "company", "derived")
         }
+
+    def test_qualified_star_against_plain_table(self) -> None:
+        """A qualified star (a.*) against a plain (non-CTE) table expands fully."""
+        sql = "SELECT a.* FROM raw.public.a AS a"
+        schema = {"raw": {"public": {"a": {"id": "INT", "name": "VARCHAR"}}}}
+
+        result = parse_column_lineage(sql, schema=schema)
+
+        assert set(result.keys()) == {"id", "name"}
+        assert {(d.source_table, d.source_column) for d in result["id"]} == {("raw.public.a", "id")}
+        assert {(d.source_table, d.source_column) for d in result["name"]} == {
+            ("raw.public.a", "name")
+        }
+
+    def test_qualified_star_falls_back_to_known_columns(self) -> None:
+        """When the star's source table isn't in the schema mapping, fall back
+        to the known_columns parameter (e.g. from the catalog) instead of
+        silently dropping the star."""
+        sql = "SELECT a.* FROM raw.a AS a"
+        schema = {"other": {"public": {"z": {"x": "INT"}}}}
+
+        result = parse_column_lineage(sql, schema=schema, known_columns=["id", "name"])
+
+        assert set(result.keys()) == {"id", "name"}
+
+    def test_qualified_star_against_zero_column_source(self) -> None:
+        """A qualified star against a source with zero columns yields no '*' key
+        and does not raise."""
+        sql = "SELECT a.* FROM raw.public.a AS a"
+        schema = {"raw": {"public": {"a": {}}}}
+
+        result = parse_column_lineage(sql, schema=schema)
+
+        assert "*" not in result
+
+    def test_unparseable_sql_returns_empty_dict(self) -> None:
+        """SQL that SQLGlot cannot parse at all returns {} without raising,
+        before qualify() is ever reached."""
+        result = parse_column_lineage(
+            "SELECT FROM FROM WHERE (((", schema={"a": {"b": {"c": {"d": "INT"}}}}
+        )
+
+        assert result == {}
