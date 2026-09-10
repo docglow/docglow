@@ -539,6 +539,8 @@ def build_schema_mapping(
             col_map[col["name"]] = col_type or "VARCHAR"
         if not col_map:
             continue
+        if not database or not schema_name:
+            continue
 
         schema.setdefault(database, {}).setdefault(schema_name, {})[name] = col_map
 

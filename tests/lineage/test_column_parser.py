@@ -396,3 +396,62 @@ class TestBuildSchemaMapping:
         schema = build_schema_mapping(models, {})
         assert schema["jaffle_shop"]["main"]["orders"]["order_id"] == "INT"
         assert MappingSchema(schema).depth() == 3
+
+    def test_node_missing_database_is_omitted(self) -> None:
+        """A node missing `database` must be dropped, not inserted at a shorter depth."""
+        models = {
+            "model.proj.orders": {
+                "name": "orders",
+                "schema": "main",
+                "database": "",
+                "columns": [{"name": "order_id", "data_type": "INT"}],
+            },
+            "model.proj.customers": {
+                "name": "customers",
+                "schema": "main",
+                "database": "jaffle_shop",
+                "columns": [{"name": "customer_id", "data_type": "INT"}],
+            },
+        }
+        schema = build_schema_mapping(models, {})
+        assert "" not in schema
+        assert schema["jaffle_shop"]["main"]["customers"]["customer_id"] == "INT"
+
+    def test_node_missing_schema_is_omitted(self) -> None:
+        """A node missing `schema` must be dropped, not inserted at a shorter depth."""
+        models = {
+            "model.proj.orders": {
+                "name": "orders",
+                "schema": "",
+                "database": "jaffle_shop",
+                "columns": [{"name": "order_id", "data_type": "INT"}],
+            },
+            "model.proj.customers": {
+                "name": "customers",
+                "schema": "main",
+                "database": "jaffle_shop",
+                "columns": [{"name": "customer_id", "data_type": "INT"}],
+            },
+        }
+        schema = build_schema_mapping(models, {})
+        assert "" not in schema["jaffle_shop"]
+        assert schema["jaffle_shop"]["main"]["customers"]["customer_id"] == "INT"
+
+    def test_omitted_node_does_not_break_mapping_schema(self) -> None:
+        """A malformed node must not make MappingSchema raise SchemaError."""
+        models = {
+            "model.proj.orders": {
+                "name": "orders",
+                "schema": "main",
+                "database": "",
+                "columns": [{"name": "order_id", "data_type": "INT"}],
+            },
+            "model.proj.customers": {
+                "name": "customers",
+                "schema": "main",
+                "database": "jaffle_shop",
+                "columns": [{"name": "customer_id", "data_type": "INT"}],
+            },
+        }
+        schema = build_schema_mapping(models, {})
+        MappingSchema(schema)
