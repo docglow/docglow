@@ -159,6 +159,21 @@ def parse_column_lineage(
     if not output_columns:
         return {}
 
+    # Star expansion across a join can produce the same output name from
+    # multiple sources (e.g. both sides of a join have an `id` column).
+    # Keep only the first occurrence so we trace and report it once.
+    deduped_columns = list(dict.fromkeys(output_columns))
+    if len(deduped_columns) != len(output_columns):
+        seen: set[str] = set()
+        for name in output_columns:
+            if name in seen:
+                logger.debug(
+                    "Collapsing duplicate star output column '%s' to its first source",
+                    name,
+                )
+            seen.add(name)
+    output_columns = deduped_columns
+
     # If the outermost SELECT uses *, rewrite it to explicit columns
     # so SQLGlot's lineage() can trace through
     trace_sql = compiled_sql

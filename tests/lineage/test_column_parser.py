@@ -589,6 +589,35 @@ class TestQualifiedStarGuard:
         assert {(d.source_table, d.source_column) for d in result["x"]} == {("raw.public.a", "x")}
         assert {(d.source_table, d.source_column) for d in result["y"]} == {("raw.public.b", "y")}
 
+    def test_duplicate_star_column_collapses_to_first_source(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """When both sides of a join contribute a column with the same name
+        (e.g. both have `id`), the output collapses to a single `id` key
+        resolving to the first-seen source, and a DEBUG log names it."""
+        sql = """
+        SELECT a.*, b.*
+        FROM raw.public.a AS a
+        JOIN raw.public.b AS b ON a.id = b.id
+        """
+        schema = {
+            "raw": {
+                "public": {
+                    "a": {"id": "INT", "x": "VARCHAR"},
+                    "b": {"id": "INT", "y": "VARCHAR"},
+                }
+            }
+        }
+
+        with caplog.at_level("DEBUG", logger="docglow.lineage.column_parser"):
+            result = parse_column_lineage(sql, schema=schema)
+
+        assert set(result.keys()) == {"id", "x", "y"}
+        assert {(d.source_table, d.source_column) for d in result["id"]} == {("raw.public.a", "id")}
+
+        debug_messages = [r.message for r in caplog.records if r.levelname == "DEBUG"]
+        assert any("id" in message for message in debug_messages)
+
     def test_multi_star_three_way_join_resolves_each_source(self) -> None:
         """A three-way join with a star per side reports columns from all
         three sources."""
