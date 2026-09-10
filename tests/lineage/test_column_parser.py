@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from sqlglot.schema import MappingSchema
 
 from docglow.lineage.column_parser import (
     ColumnDependency,
@@ -394,3 +395,4 @@ class TestBuildSchemaMapping:
         }
         schema = build_schema_mapping(models, {})
         assert schema["jaffle_shop"]["main"]["orders"]["order_id"] == "INT"
+        assert MappingSchema(schema).depth() == 3

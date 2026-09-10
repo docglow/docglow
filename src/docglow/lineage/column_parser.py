@@ -518,13 +518,14 @@ def _classify_transformation(expression: Any) -> str:
 def build_schema_mapping(
     models: dict[str, dict[str, Any]],
     sources: dict[str, dict[str, Any]],
-) -> dict[str, dict[str, str]]:
+) -> NestedSchema:
     """Build a schema mapping for SQLGlot from docglow model/source data.
 
-    Returns a dict of {table_reference: {column_name: column_type}} that
-    SQLGlot can use to expand SELECT * expressions.
+    Returns a nested dict of {database: {schema: {table: {column: type}}}}
+    that SQLGlot's MappingSchema can use to expand SELECT * expressions,
+    including qualified stars (e.g. `alias.*`).
     """
-    schema: dict[str, dict[str, str]] = {}
+    schema: NestedSchema = {}
 
     for data in {**models, **sources}.values():
         name = data.get("name", "")
@@ -539,17 +540,6 @@ def build_schema_mapping(
         if not col_map:
             continue
 
-        # Index by multiple key formats for flexible matching:
-        # bare name, schema.name, database.schema.name
-        schema.setdefault(name, col_map)
-        if schema_name:
-            schema[f"{schema_name}.{name}"] = col_map
-            if database:
-                schema[f"{database}.{schema_name}.{name}"] = col_map
-
-        # Also index by source_name.table_name for sources
-        source_name = data.get("source_name", "")
-        if source_name:
-            schema.setdefault(f"{source_name}.{name}", col_map)
+        schema.setdefault(database, {}).setdefault(schema_name, {})[name] = col_map
 
     return schema
