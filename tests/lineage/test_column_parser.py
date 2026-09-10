@@ -308,6 +308,7 @@ class TestBuildSchemaMapping:
             "model.proj.users": {
                 "name": "users",
                 "schema": "public",
+                "database": "jaffle_shop",
                 "columns": [
                     {"name": "id", "data_type": "INT"},
                     {"name": "name", "data_type": "VARCHAR"},
@@ -316,57 +317,72 @@ class TestBuildSchemaMapping:
         }
         sources: dict[str, dict[str, object]] = {}
         schema = build_schema_mapping(models, sources)
-        assert "public.users" in schema
-        assert schema["public.users"]["id"] == "INT"
-        assert schema["public.users"]["name"] == "VARCHAR"
+        assert "jaffle_shop" in schema
+        assert schema["jaffle_shop"]["public"]["users"]["id"] == "INT"
+        assert schema["jaffle_shop"]["public"]["users"]["name"] == "VARCHAR"
 
     def test_empty_data_type_defaults_to_varchar(self) -> None:
         models = {
             "model.proj.t": {
                 "name": "t",
                 "schema": "s",
+                "database": "db",
                 "columns": [{"name": "col", "data_type": ""}],
             }
         }
         schema = build_schema_mapping(models, {})
-        assert schema["s.t"]["col"] == "VARCHAR"
+        assert schema["db"]["s"]["t"]["col"] == "VARCHAR"
 
     def test_sources_included(self) -> None:
         sources = {
             "source.proj.raw.events": {
                 "name": "events",
                 "schema": "raw",
+                "database": "jaffle_shop",
                 "columns": [{"name": "event_id", "data_type": "BIGINT"}],
             }
         }
         schema = build_schema_mapping({}, sources)
-        assert "raw.events" in schema
+        assert "events" in schema["jaffle_shop"]["raw"]
 
     def test_bare_name_indexed(self) -> None:
-        """Models should be indexed by bare name for Jinja-stripped SQL."""
+        """Models with full database/schema/table info nest to depth 3.
+
+        Bare-name indexing (for Jinja-stripped SQL) is no longer
+        build_schema_mapping's job — that's TableResolver's `_short` index
+        (see tests/lineage/test_table_resolver.py). This mapping exists
+        solely to drive SQLGlot's qualify()/star-expansion, so it only ever
+        holds fully qualified database.schema.table paths.
+        """
         models = {
             "model.proj.users": {
                 "name": "users",
                 "schema": "public",
+                "database": "jaffle_shop",
                 "columns": [{"name": "id", "data_type": "INT"}],
             }
         }
         schema = build_schema_mapping(models, {})
-        assert "users" in schema
-        assert schema["users"]["id"] == "INT"
+        assert schema["jaffle_shop"]["public"]["users"]["id"] == "INT"
 
     def test_source_name_indexed(self) -> None:
-        """Sources should be indexed by source_name.table_name."""
+        """Sources nest under database.schema.table like models do.
+
+        source_name.table_name indexing (for resolving `source()` refs) is
+        TableResolver's job, not build_schema_mapping's — see
+        tests/lineage/test_table_resolver.py.
+        """
         sources = {
             "source.proj.ecom.orders": {
                 "name": "orders",
                 "schema": "raw",
+                "database": "ecom_db",
                 "source_name": "ecom",
                 "columns": [{"name": "id", "data_type": "INT"}],
             }
         }
         schema = build_schema_mapping({}, sources)
-        assert "ecom.orders" in schema
+        assert schema["ecom_db"]["raw"]["orders"]["id"] == "INT"
 
     def test_no_columns_skipped(self) -> None:
         models = {

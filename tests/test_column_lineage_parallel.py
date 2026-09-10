@@ -12,6 +12,9 @@ from docglow.lineage.analyzer import (
     _compute_depth_waves,
     _ModelLineageResult,
     analyze_column_lineage,
+    analyze_one_model,
+    deserialize_shared_state,
+    serialize_shared_state,
 )
 from docglow.lineage.column_parser import build_schema_mapping, detect_dialect
 from docglow.lineage.table_resolver import TableResolver
@@ -189,6 +192,47 @@ class TestParallelVsSequential:
                 seq_deps = sorted(str(d) for d in sequential[uid][col])
                 par_deps = sorted(str(d) for d in parallel[uid][col])
                 assert seq_deps == par_deps, f"Dep mismatch {uid}.{col}"
+
+    def test_worker_shared_state_round_trips_through_json(self) -> None:
+        """The nested schema must survive the worker-transport path unchanged.
+
+        serialize_shared_state -> JSON round trip (proving it's plain
+        JSON-serializable, as required to cross a process boundary) ->
+        deserialize_shared_state -> analyze_one_model must produce lineage
+        identical to the direct sequential (in-process) path for the same
+        model. This is the proof that the nested {database: {schema: {table:
+        {column: type}}}} mapping survives _init_worker /
+        serialize_shared_state / deserialize_shared_state transport.
+        """
+        models, sources, seeds, snapshots, manifest, dialect = _load_test_data()
+
+        common_kwargs = dict(
+            models=models,
+            sources=sources,
+            seeds=seeds,
+            snapshots=snapshots,
+            dialect=dialect,
+            manifest_nodes=dict(manifest.nodes),
+            manifest_sources=dict(manifest.sources),
+        )
+
+        sequential = analyze_column_lineage(**common_kwargs, max_workers=1)
+
+        blob = serialize_shared_state(**common_kwargs)
+        # Round-trip through actual JSON text, not just a Python dict copy —
+        # this is what proves the nested schema is JSON-serializable.
+        json_blob = json.loads(json.dumps(blob))
+        resolver, schema, restored_dialect = deserialize_shared_state(json_blob)
+
+        uid = next(uid for uid in sequential if models[uid].get("compiled_sql"))
+        result = analyze_one_model(uid, models[uid], (resolver, schema, restored_dialect))
+
+        assert not result.skipped
+        assert result.lineage.keys() == sequential[uid].keys()
+        for col in result.lineage:
+            worker_deps = sorted(str(d) for d in result.lineage[col])
+            seq_deps = sorted(str(d) for d in sequential[uid][col])
+            assert worker_deps == seq_deps, f"Dep mismatch {uid}.{col}"
 
     def test_cache_valid_after_parallel(self, tmp_path: Path) -> None:
         models, sources, seeds, snapshots, manifest, dialect = _load_test_data()
