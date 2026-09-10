@@ -377,3 +377,20 @@ class TestBuildSchemaMapping:
         }
         schema = build_schema_mapping(models, {})
         assert "public.empty" not in schema
+
+    def test_nested_database_schema_table_column_shape(self) -> None:
+        """Schema mapping should be subscriptable as a depth-3 nested dict.
+
+        {database: {schema: {table: {column: type}}}} lets SQLGlot's
+        qualify() expand qualified stars (e.g. renamed.*, a.* / b.*).
+        """
+        models = {
+            "model.proj.orders": {
+                "name": "orders",
+                "schema": "main",
+                "database": "jaffle_shop",
+                "columns": [{"name": "order_id", "data_type": "INT"}],
+            }
+        }
+        schema = build_schema_mapping(models, {})
+        assert schema["jaffle_shop"]["main"]["orders"]["order_id"] == "INT"

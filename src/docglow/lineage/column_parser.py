@@ -8,6 +8,10 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+# {database: {schema: {table: {column: type}}}} — nested schema shape used by
+# SQLGlot's qualify() to expand qualified star expressions.
+NestedSchema = dict[str, dict[str, dict[str, dict[str, str]]]]
+
 # Adapter type -> SQLGlot dialect mapping
 _DIALECT_MAP: dict[str, str] = {
     "bigquery": "bigquery",
