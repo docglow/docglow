@@ -96,15 +96,32 @@ def parse_column_lineage(
 
     # Get the outermost SELECT statement
     select_stmt = None
+    root_statement = None
     for statement in parsed:
         if statement is None:
             continue
         select_stmt = statement.find(exp.Select)
         if select_stmt:
+            root_statement = statement
             break
 
-    if select_stmt is None:
+    if select_stmt is None or root_statement is None:
         return {}
+
+    # Expand qualified stars (e.g. renamed.*) into their real columns using
+    # the nested schema, before we look at the SELECT clause. On any failure
+    # (schema too sparse, unresolvable ref, etc.) fall back to the unqualified
+    # tree — the existing star-handling below still applies to it.
+    if schema:
+        try:
+            from sqlglot.optimizer.qualify import qualify
+
+            qualified = qualify(root_statement, schema=schema, infer_schema=True)
+            qualified_select = qualified.find(exp.Select)
+            if qualified_select is not None:
+                select_stmt = qualified_select
+        except Exception as e:  # noqa: BLE001
+            logger.debug("qualify() failed, falling back to unqualified tree: %s", e)
 
     # Extract output column names from the SELECT clause
     output_columns = _extract_output_columns(select_stmt)

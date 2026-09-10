@@ -511,3 +511,23 @@ class TestQualifiedStarGuard:
 
         select = sqlglot.parse_one("SELECT a.*, b.* FROM tbl_a a JOIN tbl_b b ON a.id = b.id")
         assert _extract_output_columns(select) == []
+
+    def test_qualified_star_expands_via_nested_schema(self) -> None:
+        """A qualified star (renamed.*) expands to real columns via qualify()."""
+        sql = """
+        WITH renamed AS (SELECT id, company FROM raw.src)
+        SELECT md5(company) AS sk, renamed.* FROM renamed
+        """
+        schema = {"raw": {"public": {"src": {"id": "INT", "company": "VARCHAR"}}}}
+
+        result = parse_column_lineage(sql, schema=schema)
+
+        assert set(result.keys()) == {"sk", "id", "company"}
+
+        assert {(d.source_table, d.source_column) for d in result["id"]} == {("raw.src", "id")}
+        assert {(d.source_table, d.source_column) for d in result["company"]} == {
+            ("raw.src", "company")
+        }
+        assert {(d.source_table, d.source_column, d.transformation) for d in result["sk"]} == {
+            ("raw.src", "company", "derived")
+        }
