@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-09-10
+
+### Added
+- **`python -m docglow`** — the console script is bound to whichever environment installed it, so it breaks for source-tree runs, for installs that put scripts outside `PATH`, and for tools that shell out via `sys.executable`. `python -m docglow` now runs the CLI against the invoking interpreter. (#149)
+
+### Fixed
+- **Column lineage no longer drops expressions that sit alongside `SELECT *`** — a model written as `select <expr> as foo, * from cte` lost lineage for `foo` entirely. `_rewrite_star_to_columns` expands the star so SQLGlot can trace through a CTE, but it replaced the whole projection list with the expanded columns, discarding every explicitly listed expression. The star is now replaced in place, non-star expressions are preserved, and a star column is skipped when an explicit expression already produces that name. The failure was near-silent — one line in `.docglow-column-lineage-failures.log` and a missing lineage panel in the site. Thanks to [@krutoileshii](https://github.com/krutoileshii). (#145, fixes #144)
+
+### Documentation
+- **Contributor verification checklist** — adds a two-phase `pr-verify` checklist: conformance (Python and frontend suites, lint, type checks, and a rebuild-and-compare of the vendored frontend bundle) and behavioral (generating real sites under `--select`, `--slim`, and without `run_results.json`, then reading the payload). It works as a Claude Code skill or as a plain checklist. Linked from `CONTRIBUTING.md`, which the README now points to at all. (#149)
+
 ## [0.9.0] - 2026-07-30
 
 ### Added
@@ -357,7 +368,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Suppressed hover highlights during node drag to prevent flicker
 - Shared SVG markers to reduce DOM overhead
 
-[Unreleased]: https://github.com/docglow/docglow/compare/v0.5.5...HEAD
+[Unreleased]: https://github.com/docglow/docglow/compare/v0.9.1...HEAD
+[0.9.1]: https://github.com/docglow/docglow/compare/v0.9.0...v0.9.1
+[0.9.0]: https://github.com/docglow/docglow/compare/v0.8.5...v0.9.0
 [0.5.5]: https://github.com/docglow/docglow/compare/v0.5.4...v0.5.5
 [0.5.4]: https://github.com/docglow/docglow/compare/v0.5.3...v0.5.4
 [0.5.3]: https://github.com/docglow/docglow/compare/v0.5.2...v0.5.3
