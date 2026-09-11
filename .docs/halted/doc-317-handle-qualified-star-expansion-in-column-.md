@@ -1,6 +1,8 @@
 # Halt record
 
-Status: halted
+Status: resolved
+Resolution cause: operator
+Resolved at: 2026-09-11T05:09:08.165Z
 Slug: doc-317-handle-qualified-star-expansion-in-column-
 Class: needs-human
 Halting step: unknown
