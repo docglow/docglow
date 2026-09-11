@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
@@ -118,7 +118,9 @@ def parse_column_lineage(
     try:
         from sqlglot.optimizer.qualify import qualify
 
-        qualified = qualify(root_statement, schema=effective_schema, infer_schema=True)
+        qualified = qualify(
+            root_statement, schema=cast(dict[str, object], effective_schema), infer_schema=True
+        )
         qualified_select = qualified.find(exp.Select)
         if qualified_select is not None:
             select_stmt = qualified_select
