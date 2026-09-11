@@ -1,0 +1,7 @@
+starshop:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: starshop.duckdb
+      schema: main

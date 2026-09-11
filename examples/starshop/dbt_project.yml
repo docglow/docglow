@@ -1,0 +1,8 @@
+name: starshop
+version: "1.0.0"
+profile: starshop
+model-paths: ["models"]
+target-path: "target"
+models:
+  starshop:
+    +materialized: table

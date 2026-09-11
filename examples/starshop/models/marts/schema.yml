@@ -1,0 +1,44 @@
+version: 2
+
+models:
+  - name: dim_company
+    description: >
+      Company dimension. Selects a qualified star from a CTE
+      (`renamed.*`) alongside a derived key, so every column except
+      company_key reaches this model through star expansion.
+    columns:
+      - name: company_key
+        description: Hash of the company name, written explicitly in the SELECT.
+      - name: company_id
+        description: Arrives through the qualified star.
+      - name: company_name
+        description: Arrives through the qualified star.
+      - name: country_code
+        description: Arrives through the qualified star.
+      - name: employee_count
+        description: Arrives through the qualified star.
+
+  - name: fct_company_contracts
+    description: >
+      Contract fact joined to its company. Selects two qualified stars
+      (`c.*`, `k.*`) across a join, so each star has to resolve against
+      its own source rather than the first one.
+    columns:
+      - name: company_id
+        description: Company key, from the stg_companies star.
+      - name: company_name
+        description: From the stg_companies star.
+      - name: country_code
+        description: From the stg_companies star.
+      - name: employee_count
+        description: From the stg_companies star.
+      - name: contract_id
+        description: From the stg_contracts star.
+      - name: company_id_1
+        description: >
+          The stg_contracts join key. Collides with company_id from the
+          other star, so the warehouse disambiguates it with a suffix.
+      - name: annual_value
+        description: From the stg_contracts star.
+      - name: contract_status
+        description: From the stg_contracts star.

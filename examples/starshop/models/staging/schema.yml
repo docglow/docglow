@@ -1,0 +1,26 @@
+version: 2
+
+models:
+  - name: stg_companies
+    description: One row per company, standing in for a raw CRM extract.
+    columns:
+      - name: company_id
+        description: Surrogate key for the company.
+      - name: company_name
+        description: Registered company name.
+      - name: country_code
+        description: Two-letter ISO country code for the billing address.
+      - name: employee_count
+        description: Headcount as last reported by the company.
+
+  - name: stg_contracts
+    description: One row per signed contract.
+    columns:
+      - name: contract_id
+        description: Surrogate key for the contract.
+      - name: company_id
+        description: Company the contract belongs to.
+      - name: annual_value
+        description: Contract value in USD for a full year.
+      - name: contract_status
+        description: Lifecycle state of the contract, such as active or churned.
