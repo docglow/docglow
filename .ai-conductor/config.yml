@@ -1,0 +1,36 @@
+# Project config — <repo>/.ai-conductor/config.yml
+
+harness_version: ">=0.99.0"
+
+# The test-quality reviewer is opt-in for scaffolded projects. Enable it only
+# after configuring a supported scoped test command below.
+build_review:
+  rubrics:
+    testQuality:
+      enabled: false
+
+# Required for the native pre-SHIP aggregate gate. Name one project-owned
+# command that composes every authoritative test suite.
+#
+# Uses the checkout-local .venv so the suite exercises THIS tree's src/docglow.
+# A bare `pytest` resolves to whichever docglow is on PATH, which in a daemon
+# worktree is the main checkout — the build agent hit exactly that and recorded
+# it as a gotcha.
+#
+# ponytail: Python suite only. The frontend vitest suite is deliberately out of
+# the aggregate because daemon worktrees have no frontend/node_modules, so
+# including it would fail the gate on every worktree run. Add
+# `&& npm --prefix frontend run test` here once worktree creation installs
+# frontend deps.
+test_suite:
+  command: .venv/bin/pytest -q
+  working_directory: .
+  timeout_seconds: 1800
+  verification:
+    mode: aggregate
+
+# --- Per-step overrides (optional) -------------------------------------------
+# steps:
+#   explore:
+#     model: haiku
+#     effort: low
