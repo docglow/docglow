@@ -4,6 +4,12 @@ spec_hash: 7c5c4aaf7c15417f96f054520c0f95b2f62a1ed10bfd3208b91fec3d5c0ae5da
 pr: https://github.com/docglow/docglow/pull/159
 shipped: 2026-09-11
 engine_version: 20260907T140355Z-8e7daae72ad7
+findings:
+  - gate: prd_audit
+    grade: OVER_SCOPE
+    criterion: NC.1
+    summary: ".ai-conductor/config.yml:1 (commit b609374) — new tracked harness config added during the feature branch; no plan task owns it and no story criterion covers it"
+    accepted: false
 ---
 
 ## Cost
