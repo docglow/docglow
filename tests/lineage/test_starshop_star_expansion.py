@@ -19,6 +19,8 @@ import pytest
 from docglow.lineage.analyzer import analyze_column_lineage
 from docglow.lineage.column_parser import detect_dialect
 
+Lineage = dict[str, dict[str, list[dict[str, str]]]]
+
 STARSHOP = Path(__file__).parent.parent.parent / "examples" / "starshop"
 
 DIM_COMPANY = "model.starshop.dim_company"
@@ -27,7 +29,7 @@ STG_COMPANIES = "model.starshop.stg_companies"
 STG_CONTRACTS = "model.starshop.stg_contracts"
 
 
-def _load_starshop() -> dict[str, dict[str, list[dict[str, str]]]]:
+def _load_starshop() -> Lineage:
     """Run column lineage over the committed starshop artifacts."""
     from docglow.artifacts.loader import load_artifacts
     from docglow.generator.pipeline import (
@@ -54,7 +56,7 @@ def _load_starshop() -> dict[str, dict[str, list[dict[str, str]]]]:
 
 
 @pytest.fixture(scope="module")
-def lineage() -> dict[str, dict[str, list[dict[str, str]]]]:
+def lineage() -> Lineage:
     return _load_starshop()
 
 
@@ -65,9 +67,7 @@ def _upstream_models(deps: list[dict[str, str]]) -> set[str]:
 class TestSingleQualifiedStar:
     """dim_company: `select md5(company_name) as company_key, renamed.* from renamed`."""
 
-    def test_star_columns_are_traced(
-        self, lineage: dict[str, dict[str, list[dict[str, str]]]]
-    ) -> None:
+    def test_star_columns_are_traced(self, lineage: Lineage) -> None:
         # company_key is written out explicitly and survived even the bug; the
         # other four exist only because `renamed.*` expands.
         assert set(lineage[DIM_COMPANY]) == {
@@ -78,17 +78,13 @@ class TestSingleQualifiedStar:
             "employee_count",
         }
 
-    def test_star_columns_reach_the_source_model(
-        self, lineage: dict[str, dict[str, list[dict[str, str]]]]
-    ) -> None:
+    def test_star_columns_reach_the_source_model(self, lineage: Lineage) -> None:
         for column in ("company_id", "company_name", "country_code", "employee_count"):
             assert _upstream_models(lineage[DIM_COMPANY][column]) == {STG_COMPANIES}, (
                 f"{column} should trace to stg_companies"
             )
 
-    def test_no_literal_star_column(
-        self, lineage: dict[str, dict[str, list[dict[str, str]]]]
-    ) -> None:
+    def test_no_literal_star_column(self, lineage: Lineage) -> None:
         # The original defect surfaced a literal '*' as an output column name.
         assert "*" not in lineage[DIM_COMPANY]
 
@@ -96,24 +92,18 @@ class TestSingleQualifiedStar:
 class TestMultiStarJoin:
     """fct_company_contracts: `select c.*, k.* from stg_companies c join stg_contracts k`."""
 
-    def test_model_has_lineage_at_all(
-        self, lineage: dict[str, dict[str, list[dict[str, str]]]]
-    ) -> None:
+    def test_model_has_lineage_at_all(self, lineage: Lineage) -> None:
         # Before the fix this model produced no column lineage whatsoever.
         assert lineage.get(FCT_CONTRACTS), "multi-star join produced no column lineage"
 
-    def test_each_star_resolves_against_its_own_source(
-        self, lineage: dict[str, dict[str, list[dict[str, str]]]]
-    ) -> None:
+    def test_each_star_resolves_against_its_own_source(self, lineage: Lineage) -> None:
         columns = lineage[FCT_CONTRACTS]
         for column in ("company_name", "country_code", "employee_count"):
             assert _upstream_models(columns[column]) == {STG_COMPANIES}
         for column in ("contract_id", "annual_value", "contract_status"):
             assert _upstream_models(columns[column]) == {STG_CONTRACTS}
 
-    def test_colliding_name_collapses_to_the_first_source(
-        self, lineage: dict[str, dict[str, list[dict[str, str]]]]
-    ) -> None:
+    def test_colliding_name_collapses_to_the_first_source(self, lineage: Lineage) -> None:
         """company_id appears in both stars; lineage keeps the first source only.
 
         This is the deliberate choice in
@@ -129,7 +119,5 @@ class TestMultiStarJoin:
         assert _upstream_models(columns["company_id"]) == {STG_COMPANIES}
         assert "company_id_1" not in columns
 
-    def test_no_literal_star_column(
-        self, lineage: dict[str, dict[str, list[dict[str, str]]]]
-    ) -> None:
+    def test_no_literal_star_column(self, lineage: Lineage) -> None:
         assert "*" not in lineage[FCT_CONTRACTS]

@@ -54,7 +54,7 @@ rm -f starshop.duckdb            # gitignored, but keep the tree clean
 
 ```bash
 docglow generate --project-dir examples/starshop --output-dir /tmp/starshop-site
-docglow serve --output-dir /tmp/starshop-site
+docglow serve --dir /tmp/starshop-site
 ```
 
 Open `dim_company` in the lineage view and click any column other than
