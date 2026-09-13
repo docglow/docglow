@@ -9,6 +9,7 @@ import { ExposurePage } from './pages/ExposurePage'
 import { ErdPage } from './pages/ErdPage'
 import { LineagePage } from './pages/LineagePage'
 import { HealthPage } from './pages/HealthPage'
+import { TestsPage } from './pages/TestsPage'
 import { LayersPage } from './pages/LayersPage'
 import { SearchPage } from './pages/SearchPage'
 import { useProjectStore } from './stores/projectStore'
@@ -72,6 +73,7 @@ function App() {
           <Route path="/erd" element={<ErdPage />} />
           <Route path="/lineage" element={<LineagePage />} />
           <Route path="/health" element={<HealthPage />} />
+          <Route path="/tests" element={<TestsPage />} />
           <Route path="/layers" element={<LayersPage />} />
           <Route path="/search" element={<SearchPage />} />
         </Route>
