@@ -2,6 +2,40 @@
 
 Thanks for your interest in contributing to docglow! This guide covers everything you need to get set up and start contributing.
 
+## Project Direction
+
+Docglow has one goal. It aims to be the best replacement for `dbt docs` for teams on dbt Core. We weigh every issue and PR against that goal.
+
+What's in scope:
+
+- **Finding and understanding things fast.** Search, navigation, and readable descriptions.
+- **Lineage.** This includes column-level lineage on plain dbt Core.
+- **Trust signals.** Tests, health scoring, and freshness.
+- **Working on real projects.** Adapters, large DAGs, and dbt packages.
+- **Zero-infrastructure output.** A static site you can host anywhere.
+
+What's out of scope:
+
+- Tools other than dbt. Docglow reads dbt artifacts (`manifest.json`, `catalog.json`, `run_results.json`) and nothing else.
+- Features that need a running server or a hosted service.
+- Writing changes back to the warehouse or to your dbt project.
+- New AI features. The MCP server stays. AI chat gets bug fixes but no new surface area.
+
+If an idea is on the edge of these lines, open an issue first. That is cheaper than a PR that we can't merge.
+
+### How issues and PRs are reviewed
+
+We triage open issues and PRs in a weekly pass. We grade each one on three things. How well does it fit the direction above? How big and risky is the change? How clear is the problem, the example, and the behavior you want? Each item then gets one of these outcomes:
+
+- **Accepted.** We will build it, or we invite you to send a PR.
+- **Needs info.** We ask specific questions. Answers move it forward.
+- **Deferred.** A good idea, but not now. We say why.
+- **Declined.** Out of scope. We close it as not planned and say why.
+
+PRs that wait on requested changes get one reminder after 30 days. If there is no reply 14 days after that, we close them. You can reopen at any time.
+
+Large features (hundreds of lines, or changes to the payload, lineage, or health scoring) go much faster when you open an issue and agree on the approach before you write the code.
+
 ## Local Dev Setup
 
 ### Prerequisites
@@ -249,6 +283,7 @@ ToolDefinition(
 - Ensure `pytest`, `ruff check`, and `mypy` pass before submitting
 - Add tests for new functionality
 - Keep PRs focused — one feature or fix per PR
+- Check the change fits the [project direction](#project-direction)
 
 ### Verify your branch before submitting
 
