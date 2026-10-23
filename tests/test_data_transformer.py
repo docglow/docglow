@@ -108,6 +108,7 @@ class TestBuildDocglowData:
             "metrics",
             "lineage",
             "health",
+            "tests",
             "search_index",
             "ai_context",
             "ai_key",

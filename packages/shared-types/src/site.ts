@@ -8,6 +8,7 @@ import type { ErdRelationship } from "./erd.js";
 import type { HealthData } from "./health.js";
 import type { LineageData, SearchEntry } from "./lineage.js";
 import type { DocglowExposure, DocglowMetric, DocglowModel, DocglowSource } from "./models.js";
+import type { TestsData } from "./tests.js";
 
 export interface HostedFeatures {
   readonly ai_chat: boolean;
@@ -58,6 +59,12 @@ export interface DocglowData {
   readonly lineage: LineageData;
   readonly column_lineage?: ColumnLineageData;
   readonly health: HealthData;
+  /**
+   * Project-wide test catalog powering the Tests dashboard. Always present
+   * (tests are core), though `summary.has_run_results` is false when no
+   * run_results.json was available.
+   */
+  readonly tests: TestsData;
   /**
    * ERD relationships extracted from dbt `relationships` tests and
    * `meta.docglow.relationships` declarations. The key is omitted entirely
