@@ -7,7 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.9.2] - 2026-10-23
+
 ### Fixed
+- **Column lineage now expands qualified stars** — `renamed.*`, and `a.*` / `b.*` across a join, expanded to nothing: a staging model that selected `renamed.*` beside a derived column lost lineage for every star column, and a two-source join lost lineage entirely. Star expansion is now delegated to SQLGlot's `qualify()` against a schema mapping nested as `database.schema.table`, which also covers `EXCLUDE`, nested CTE chains, unions, and subqueries; when one table in a join cannot be resolved, the stars that can be still expand. CTE columns now trace to their real source table rather than a bare column name. (#159, fixes #155)
 - **Pin `sqlglot` below 30** — the requirement was `sqlglot>=26.0`, so a fresh install resolved sqlglot 30.24.0, where `sqlglot.optimizer.qualify.qualify()` no longer accepts the `infer_schema` argument column lineage passes (removed in 30.22.0). The resulting `TypeError` was swallowed by a fallback, so qualified-star and `SELECT * FROM cte` expansion silently degraded and CI failed on three column-parser tests plus mypy. The requirement is now `sqlglot>=26.0,<30` until column lineage is adapted to the newer `qualify()` API.
 - **`docglow.yml` health settings now take effect** — the `health:` section (weights, complexity thresholds, naming rules) was parsed but never passed to the scorer, so `docglow generate`, `docglow health`, and the MCP server's `get_health` tool always scored with the defaults, and the payload's `health.config` reported the defaults too. The loaded config now reaches the health stage. **If your `docglow.yml` already sets any `health:` options, your scores will change on upgrade** to reflect them. Projects without a `health:` section score exactly as before. (#67)
 
@@ -372,7 +375,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Suppressed hover highlights during node drag to prevent flicker
 - Shared SVG markers to reduce DOM overhead
 
-[Unreleased]: https://github.com/docglow/docglow/compare/v0.9.1...HEAD
+[Unreleased]: https://github.com/docglow/docglow/compare/v0.9.2...HEAD
+[0.9.2]: https://github.com/docglow/docglow/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/docglow/docglow/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/docglow/docglow/compare/v0.8.5...v0.9.0
 [0.5.5]: https://github.com/docglow/docglow/compare/v0.5.4...v0.5.5
