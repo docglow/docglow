@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- **Pin `sqlglot` below 30** — the requirement was `sqlglot>=26.0`, so a fresh install resolved sqlglot 30.24.0, where `sqlglot.optimizer.qualify.qualify()` no longer accepts the `infer_schema` argument column lineage passes (removed in 30.22.0). The resulting `TypeError` was swallowed by a fallback, so qualified-star and `SELECT * FROM cte` expansion silently degraded and CI failed on three column-parser tests plus mypy. The requirement is now `sqlglot>=26.0,<30` until column lineage is adapted to the newer `qualify()` API.
+
 ## [0.9.1] - 2026-09-10
 
 ### Added
