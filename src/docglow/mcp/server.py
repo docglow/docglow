@@ -126,6 +126,7 @@ def run_server(project_dir: Path, target_dir: Path | None = None) -> None:
     logger.info("Loading dbt artifacts from %s", project_dir)
 
     from docglow.artifacts.loader import ArtifactLoadError, load_artifacts
+    from docglow.config import load_config
     from docglow.generator.data import build_docglow_data
 
     try:
@@ -134,7 +135,8 @@ def run_server(project_dir: Path, target_dir: Path | None = None) -> None:
         logger.error("Failed to load artifacts: %s", e)
         sys.exit(1)
 
-    data = build_docglow_data(artifacts)
+    config = load_config(project_dir)
+    data = build_docglow_data(artifacts, health_config=config.health)
     model_count = len(data["models"])
     source_count = len(data["sources"])
     logger.info("Data loaded: %d models, %d sources", model_count, source_count)

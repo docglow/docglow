@@ -1,13 +1,17 @@
 """docglow.yml health settings must reach the scorer (#67).
 
-`load_config` parsed the `health:` section, but neither `docglow generate` nor
-`docglow health` passed it on, so every project was scored with the defaults.
-These tests drive both commands end to end against the fixture artifacts.
+`load_config` parsed the `health:` section, but neither `docglow generate`,
+`docglow health`, nor `docglow mcp-server` passed it on, so every project was
+scored with the defaults. These tests drive each command end to end against the
+fixture artifacts.
 """
 
 from __future__ import annotations
 
+import io
 import json
+import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +19,7 @@ import pytest
 from click.testing import CliRunner
 
 from docglow.cli import cli
+from docglow.mcp.transport import read_message, write_message
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
@@ -84,10 +89,42 @@ def _health_via_health_command(project: Path) -> dict[str, Any]:
     return health
 
 
+def _health_via_mcp_get_health(project: Path) -> dict[str, Any]:
+    requests = io.BytesIO()
+    write_message({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}, requests)
+    write_message({"jsonrpc": "2.0", "method": "notifications/initialized"}, requests)
+    write_message(
+        {
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/call",
+            "params": {"name": "get_health", "arguments": {}},
+        },
+        requests,
+    )
+    result = subprocess.run(
+        [sys.executable, "-m", "docglow", "mcp-server", "--project-dir", str(project)],
+        input=requests.getvalue(),
+        capture_output=True,
+        timeout=120,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr.decode()
+
+    responses = io.BytesIO(result.stdout)
+    messages = []
+    while (message := read_message(responses)) is not None:
+        messages.append(message)
+    call = next(m for m in messages if m.get("id") == 2)
+    assert not call["result"].get("isError"), call
+    health: dict[str, Any] = json.loads(call["result"]["content"][0]["text"])
+    return health
+
+
 ENTRY_POINTS = pytest.mark.parametrize(
     "run_health",
-    [_health_via_generate, _health_via_health_command],
-    ids=["generate", "health"],
+    [_health_via_generate, _health_via_health_command, _health_via_mcp_get_health],
+    ids=["generate", "health", "mcp"],
 )
 
 
