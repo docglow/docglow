@@ -57,7 +57,7 @@ def health(
         loaded_manifest = artifacts.manifest
 
         # Build data to get transformed models/sources
-        data = build_docglow_data(artifacts)
+        data = build_docglow_data(artifacts, health_config=config.health)
         health_data = data["health"]
         score = health_data["score"]
 
