@@ -1,7 +1,17 @@
+import { readFileSync } from 'node:fs'
 import { test, expect } from '@playwright/test'
+
+// Serve the checked-in fixture so the spec doesn't depend on a generated
+// docglow-data.json being present in dist/.
+const fixture = readFileSync(new URL('./fixtures/docglow-data.json', import.meta.url), 'utf-8')
 
 test.describe('Health Page', () => {
   test.beforeEach(async ({ page }) => {
+    await page.route('**/docglow-data.json', route => route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: fixture,
+    }))
     await page.goto('/#/health')
   })
 
@@ -35,7 +45,7 @@ test.describe('Health Page', () => {
   test('can switch to complexity tab', async ({ page }) => {
     await page.getByRole('button', { name: 'Complexity' }).click()
     const hasTable = await page.locator('table').count()
-    const hasEmpty = await page.getByText('No high-complexity').count()
+    const hasEmpty = await page.getByText('No models exceed any of these thresholds').count()
     expect(hasTable + hasEmpty).toBeGreaterThan(0)
   })
 
