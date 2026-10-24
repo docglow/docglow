@@ -10,8 +10,8 @@ Please do not open public issues for security vulnerabilities.
 
 | Version | Supported |
 |---------|-----------|
-| 0.5.x | Yes |
-| < 0.5.0 | No (see advisory below) |
+| 0.9.x | Yes |
+| < 0.9.0 | No (0.1.0–0.4.1: see advisory below) |
 
 ## Known Security Advisories
 
