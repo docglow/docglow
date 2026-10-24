@@ -11,7 +11,7 @@ from rich.console import Console
 
 from docglow import __version__
 from docglow.artifacts.loader import LoadedArtifacts
-from docglow.config import UiConfig
+from docglow.config import HealthConfig, UiConfig
 from docglow.generator.layers import LineageLayerConfig
 
 logger = logging.getLogger(__name__)
@@ -34,6 +34,7 @@ class PipelineContext:
     exclude: str | None = None
     layer_config: LineageLayerConfig = field(default_factory=LineageLayerConfig)
     ui_config: UiConfig = field(default_factory=UiConfig)
+    health_config: HealthConfig = field(default_factory=HealthConfig)
     column_lineage_enabled: bool = False
     column_lineage_select: str | None = None
     column_lineage_depth: int | None = None
@@ -288,7 +289,9 @@ def stage_compute_health(ctx: PipelineContext) -> None:
     """Compute project health scores."""
     from docglow.analyzer.health import compute_health, health_to_dict
 
-    report = compute_health(ctx.models, ctx.sources, ctx.seeds, ctx.snapshots)
+    report = compute_health(
+        ctx.models, ctx.sources, ctx.seeds, ctx.snapshots, config=ctx.health_config
+    )
     ctx.health = health_to_dict(report)
 
 

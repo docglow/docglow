@@ -76,6 +76,7 @@ def generate_site(
         exclude=exclude,
         layer_config=config.lineage_layers,
         ui_config=config.ui,
+        health_config=config.health,
         column_lineage_enabled=column_lineage_enabled,
         column_lineage_select=column_lineage_select,
         column_lineage_depth=column_lineage_depth,
