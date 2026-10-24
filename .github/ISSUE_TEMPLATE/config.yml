@@ -1,5 +1,12 @@
+# SECURITY.md asks that a vulnerability never be a public issue. Surface the
+# private advisory form in the issue chooser next to Discussions, so reporters
+# see the private route where they decide how to file.
+
 blank_issues_enabled: false
 contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/docglow/docglow/security/advisories/new
+    about: Do not open a public issue. Report it privately here. See SECURITY.md.
   - name: Questions & Discussion
     url: https://github.com/docglow/docglow/discussions
     about: Ask questions and discuss ideas with the community
