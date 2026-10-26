@@ -4,6 +4,7 @@ import { useProjectStore } from '../../stores/projectStore'
 import { useTagFilterStore } from '../../stores/tagFilterStore'
 import { collectAllTags, nodeMatchesTags, type SidebarTreeNode } from '../../utils/sidebarFilters'
 import { buildTree, collectFolderPaths } from '../../utils/sidebarTree'
+import { failingTestCount } from '../../utils/testStatus'
 import { buildResourcePath } from '../../utils/resourceRoutes'
 
 type TreeNode = SidebarTreeNode
@@ -261,6 +262,26 @@ export function Sidebar() {
                 {data.health.score.grade}
               </span>
             )}
+          </button>
+          <button
+            onClick={() => navigate('/tests')}
+            className="w-full text-left px-2 py-1.5 text-sm rounded
+                       hover:bg-[var(--bg-surface)] transition-colors cursor-pointer
+                       flex items-center gap-2 text-[var(--text)]"
+          >
+            <svg className="w-4 h-4 text-[var(--text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75}
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            </svg>
+            Tests
+            {data?.tests && (() => {
+              const failing = failingTestCount(data.tests.summary)
+              return failing > 0 ? (
+                <span className="ml-auto text-xs font-medium text-danger">{failing}</span>
+              ) : data.tests.summary.total > 0 ? (
+                <span className="ml-auto text-xs font-medium text-success">✓</span>
+              ) : null
+            })()}
           </button>
           <button
             onClick={() => navigate('/layers')}
