@@ -9,7 +9,9 @@ from sqlglot.schema import MappingSchema
 
 from docglow.lineage.column_parser import (
     ColumnDependency,
+    _collect_dependencies,
     _extract_output_columns,
+    _LineageScopes,
     build_schema_mapping,
     detect_dialect,
     parse_column_lineage,
@@ -791,10 +793,10 @@ class TestQualifiedStarGuard:
 
         from sqlglot.lineage import lineage as real_lineage
 
-        def fake_lineage(column: str, sql: str, schema: Any, dialect: str | None) -> Any:
+        def fake_lineage(column: str, sql: Any, **kwargs: Any) -> Any:
             if column == "slow":
                 time.sleep(0.3)
-            return real_lineage(column=column, sql=sql, schema=schema, dialect=dialect)
+            return real_lineage(column=column, sql=sql, **kwargs)
 
         monkeypatch.setattr("sqlglot.lineage.lineage", fake_lineage)
 
@@ -812,3 +814,111 @@ class TestQualifiedStarGuard:
         )
 
         assert result == {}
+
+
+class TestSharedLineageScope:
+    """Each model's SQL is qualified once and shared across its output columns."""
+
+    # Shapes that exercise different lineage paths: CTE chain, join, aggregate,
+    # window, scalar subquery, star rewrite and UNION.
+    QUERIES = [
+        """
+        WITH a AS (SELECT id, name, amount FROM raw.orders),
+             b AS (SELECT id, SUM(amount) AS total FROM a GROUP BY id)
+        SELECT a.id, a.name, b.total, a.amount * 2 AS doubled
+        FROM a JOIN b ON a.id = b.id
+        """,
+        """
+        SELECT id,
+               ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY ordered_at) AS n,
+               (SELECT MAX(amount) FROM raw.payments p WHERE p.order_id = o.id) AS max_pay
+        FROM raw.orders o
+        """,
+        """
+        WITH s AS (SELECT id, status FROM raw.orders)
+        SELECT * FROM s
+        """,
+        """
+        SELECT id, name FROM raw.a
+        UNION ALL
+        SELECT id, name FROM raw.b
+        """,
+    ]
+
+    @staticmethod
+    def _per_column_reference(sql: str, columns: list[str]) -> dict[str, set[ColumnDependency]]:
+        """The pre-#170 behaviour: lineage() on the SQL string, once per column."""
+        from sqlglot.lineage import lineage
+
+        out: dict[str, set[ColumnDependency]] = {}
+        for col in columns:
+            try:
+                deps = _collect_dependencies(lineage(column=col, sql=sql, schema={}))
+            except Exception:  # noqa: BLE001
+                deps = []
+            if deps:
+                out[col] = set(deps)
+        return out
+
+    @pytest.mark.parametrize("sql", QUERIES)
+    def test_matches_per_column_lineage(self, sql: str) -> None:
+        result = parse_column_lineage(sql, known_columns=["id", "status"])
+        assert result, "expected some lineage"
+        # Dependency order comes from a set inside sqlglot and was never
+        # stable, so compare as sets.
+        got = {col: set(deps) for col, deps in result.items()}
+        if "*" in sql:
+            sql = sql.replace("SELECT * FROM s", "SELECT id, status FROM s")
+        assert got == self._per_column_reference(sql, list(result))
+
+    def test_qualifies_once_per_model_not_per_column(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import sqlglot.optimizer.qualify as qualify_module
+
+        calls = 0
+        real_qualify = qualify_module.qualify
+
+        def counting_qualify(*args: Any, **kwargs: Any) -> Any:
+            nonlocal calls
+            calls += 1
+            return real_qualify(*args, **kwargs)
+
+        monkeypatch.setattr(qualify_module, "qualify", counting_qualify)
+
+        sql = "SELECT a, b, c, d, e, f, g, h FROM raw.wide"
+        result = parse_column_lineage(sql)
+
+        assert len(result) == 8
+        # One qualify to discover output columns, one shared by every column's
+        # trace. Before #170 this was 1 + 8.
+        assert calls == 2
+
+    def test_failed_build_is_cached(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import sqlglot.optimizer.qualify as qualify_module
+
+        calls = 0
+
+        def failing_qualify(*args: Any, **kwargs: Any) -> Any:
+            nonlocal calls
+            calls += 1
+            raise ValueError("boom")
+
+        monkeypatch.setattr(qualify_module, "qualify", failing_qualify)
+
+        scopes = _LineageScopes("SELECT a FROM t", {}, None)
+        assert scopes.get(with_schema=True) is None
+        assert scopes.get(with_schema=True) is None
+        # With an empty schema both variants qualify identically and share a build.
+        assert scopes.get(with_schema=False) is None
+        assert calls == 1
+
+    def test_schema_and_schemaless_variants_built_separately(self) -> None:
+        schema = {"raw": {"public": {"t": {"a": "INT"}}}}
+        scopes = _LineageScopes("SELECT a FROM raw.public.t", schema, None)
+
+        with_schema = scopes.get(with_schema=True)
+        without_schema = scopes.get(with_schema=False)
+
+        assert with_schema is not None
+        assert without_schema is not None
+        assert with_schema is not without_schema
+        assert scopes.get(with_schema=True) is with_schema
