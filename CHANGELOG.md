@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- **Column lineage works on sqlglot 30.22+ again; the `<30` pin is lifted** — sqlglot 30.22 removed `qualify()`'s `infer_schema` argument and made `lineage()`'s `schema` argument required. Both broke column lineage with a `TypeError`, and broad `except Exception` fallbacks turned that into empty lineage for every model. `qualify()` is now called through a small shim that passes `infer_schema` only to versions that still accept it, and `lineage()` gets the schema the shared scope was qualified against. The fallbacks around `qualify()` and `lineage()` now catch only `SqlglotError`, so SQL that sqlglot can't qualify still degrades gracefully, but an API mismatch surfaces as a per-model failure that says what went wrong. The requirement is `sqlglot>=26.0` again. On jaffle-shop, starshop, and flowstate, sqlglot 30.27 traces the same column dependencies as 29.0.1. In 4 flowstate columns, the dependencies of a multi-input expression come out in a different order. (DOC-318)
+
 ## [0.9.2] - 2026-10-23
 
 ### Fixed

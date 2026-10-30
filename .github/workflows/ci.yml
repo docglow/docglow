@@ -41,6 +41,21 @@ jobs:
       - run: pip install -e ".[dev,profiling,ai,cloud,column-lineage]"
       - run: pytest --cov=docglow --cov-report=term-missing
 
+  # The test job above resolves the newest sqlglot; this one pins older
+  # releases inside the supported range, whose qualify()/lineage() APIs differ.
+  test-sqlglot:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        sqlglot-version: ["26.0.0", "29.0.1"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev,profiling,ai,cloud,column-lineage]" "sqlglot==${{ matrix.sqlglot-version }}"
+      - run: pytest
+
   frontend-bundle-drift:
     name: Frontend bundle drift check
     runs-on: ubuntu-latest
