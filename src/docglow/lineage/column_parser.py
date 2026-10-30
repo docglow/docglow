@@ -190,7 +190,9 @@ def parse_column_lineage(
 
     result: dict[str, list[ColumnDependency]] = {}
     failures: list[str] = []
-    resolved_schema = schema or {}
+    # Qualify trace_sql once per model and share it across all output columns,
+    # instead of letting lineage() re-parse and re-qualify it for every column.
+    scopes = _LineageScopes(trace_sql, schema or {}, dialect)
 
     with ThreadPoolExecutor(max_workers=1) as executor:
         for col_name in output_columns:
@@ -198,8 +200,7 @@ def parse_column_lineage(
                 deps = _trace_column_in_executor(
                     executor,
                     col_name,
-                    trace_sql,
-                    resolved_schema,
+                    scopes,
                     dialect,
                 )
                 if deps:
@@ -221,11 +222,61 @@ def parse_column_lineage(
     return result
 
 
+class _LineageScopes:
+    """Qualified tree and scope for a model's SQL, built at most once per schema variant.
+
+    Given a SQL string, sqlglot's ``lineage()`` parses, qualifies and builds the
+    scope of the whole query on every call, so tracing N columns redid that work
+    N times (up to 2N with the schema-less retry). This does the same steps
+    ``lineage()`` would, once, and hands the result to every column via
+    ``scope=``. ``lineage()`` only reads the scope, so sharing it is safe.
+
+    Variants are built lazily inside the per-column executor, so the build
+    stays under the per-column timeout, and a failed build is cached so it is
+    not retried for every column. Not thread-safe; callers use a single-worker
+    executor.
+    """
+
+    def __init__(self, sql: str, schema: NestedSchema, dialect: str | None) -> None:
+        self._sql = sql
+        self._schema = schema
+        self._dialect = dialect
+        self._built: dict[bool, tuple[Any, Any] | None] = {}
+
+    def get(self, with_schema: bool) -> tuple[Any, Any] | None:
+        """Return ``(qualified_expression, scope)``, or None if it can't be built."""
+        # An empty schema qualifies identically either way, so share one build.
+        key = with_schema and bool(self._schema)
+        if key not in self._built:
+            self._built[key] = self._build(self._schema if key else {})
+        return self._built[key]
+
+    def _build(self, schema: NestedSchema) -> tuple[Any, Any] | None:
+        import sqlglot
+        from sqlglot.optimizer.qualify import qualify
+        from sqlglot.optimizer.scope import build_scope
+
+        # Mirrors the parse/qualify/build_scope steps inside sqlglot's lineage().
+        try:
+            expression = qualify(
+                sqlglot.parse_one(self._sql, dialect=self._dialect),
+                dialect=self._dialect,
+                schema=cast(dict[str, object], schema),
+                validate_qualify_columns=False,
+                identify=False,
+            )
+            scope = build_scope(expression)
+        except Exception:  # noqa: BLE001
+            return None
+        if scope is None:
+            return None
+        return expression, scope
+
+
 def _trace_column_in_executor(
     executor: Any,
     col_name: str,
-    sql: str,
-    schema: NestedSchema,
+    scopes: _LineageScopes,
     dialect: str | None,
     timeout_seconds: int = 2,
 ) -> list[ColumnDependency]:
@@ -234,18 +285,26 @@ def _trace_column_in_executor(
 
     from sqlglot.lineage import lineage
 
+    def _trace_with(with_schema: bool) -> list[ColumnDependency]:
+        prepared = scopes.get(with_schema)
+        if prepared is None:
+            raise ValueError("SQL could not be qualified for lineage")
+        expression, scope = prepared
+        node = lineage(
+            column=col_name,
+            sql=expression,
+            dialect=dialect,
+            scope=scope,
+            copy=False,
+        )
+        return _collect_dependencies(node)
+
     def _trace() -> list[ColumnDependency]:
         # Try with schema first (enables SELECT * expansion through CTEs).
         # If it fails, retry without schema (handles cases where schema
         # keys don't match SQL table references or columns are missing).
         try:
-            node = lineage(
-                column=col_name,
-                sql=sql,
-                schema=schema or {},
-                dialect=dialect,
-            )
-            deps = _collect_dependencies(node)
+            deps = _trace_with(with_schema=True)
             if deps:
                 return deps
         except Exception:  # noqa: BLE001
@@ -254,13 +313,7 @@ def _trace_column_in_executor(
         # Retry without schema (more lenient — won't resolve SELECT * but
         # won't blow up on unknown columns or variant access syntax)
         try:
-            node = lineage(
-                column=col_name,
-                sql=sql,
-                schema={},
-                dialect=dialect,
-            )
-            return _collect_dependencies(node)
+            return _trace_with(with_schema=False)
         except Exception:  # noqa: BLE001
             return []
 
