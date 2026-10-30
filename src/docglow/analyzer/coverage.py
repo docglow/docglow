@@ -93,12 +93,14 @@ def compute_coverage(
             if len(col.get("tests", [])) > 0:
                 columns_with_tests += 1
 
-    # Also count source columns
+    # Also count source columns, so tests on them count toward the same total
     for source in sources.values():
         for col in source.get("columns", []):
             total_columns += 1
             if col.get("description", "").strip():
                 columns_with_desc += 1
+            if len(col.get("tests", [])) > 0:
+                columns_with_tests += 1
 
     # Sort undocumented/untested by downstream impact (most depended-on first)
     undocumented.sort(key=lambda x: x["downstream_count"], reverse=True)

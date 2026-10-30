@@ -45,7 +45,7 @@ export function testingExplanation(health: HealthData): Explanation {
       `column-level coverage${w ? `, and is worth ${w} of the overall grade` : ''}.`,
     rules: [
       'Tests declared in yml count toward coverage even if the latest run did not execute them — this measures test coverage, not run results.',
-      'Source columns are counted in the denominator but cannot currently hold tests, which caps column coverage below 100%.',
+      'Source columns count too: a test declared on a source column covers it the same way a model column test does.',
     ],
     scope:
       `${c.models_tested.total} models and ${c.columns_tested.total} columns were checked.`,
