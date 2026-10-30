@@ -913,7 +913,26 @@ class TestSharedLineageScope:
         assert scopes.get(with_schema=True) is None
         # With an empty schema both variants qualify identically and share a build.
         assert scopes.get(with_schema=False) is None
-        assert calls == 1
+        # One full qualify and one retry without column qualification.
+        assert calls == 2
+
+    @pytest.mark.parametrize(
+        "sql",
+        [
+            """
+            SELECT o.id, (SELECT MAX(amount) FROM raw.payments p WHERE p.order_id = o.id) AS max_pay
+            FROM raw.orders o
+            """,
+            """
+            SELECT o.id FROM raw.orders o
+            WHERE EXISTS (SELECT 1 FROM raw.payments p WHERE p.order_id = o.id AND amount > 0)
+            """,
+        ],
+    )
+    def test_unresolvable_correlated_subquery_keeps_outer_lineage(self, sql: str) -> None:
+        result = parse_column_lineage(sql)
+
+        assert result["id"] == [ColumnDependency("raw.orders", "id", "passthrough")]
 
     def test_schema_and_schemaless_variants_built_separately(self) -> None:
         schema = {"raw": {"public": {"t": {"a": "INT"}}}}

@@ -277,20 +277,24 @@ class _LineageScopes:
 
     def _build(self, schema: NestedSchema) -> tuple[Any, Any, Any] | None:
         import sqlglot
-        from sqlglot.errors import SqlglotError
+        from sqlglot.errors import OptimizeError, SqlglotError
         from sqlglot.optimizer.scope import build_scope
         from sqlglot.schema import ensure_schema
 
         # Mirrors the parse/qualify/build_scope steps inside sqlglot's lineage().
         try:
             sqlglot_schema = ensure_schema(cast(dict[str, object], schema), dialect=self._dialect)
-            expression = _qualify(
-                sqlglot.parse_one(self._sql, dialect=self._dialect),
-                dialect=self._dialect,
-                schema=sqlglot_schema,
-                validate_qualify_columns=False,
-                identify=False,
-            )
+            parsed = sqlglot.parse_one(self._sql, dialect=self._dialect)
+            qualify_kwargs: dict[str, Any] = {
+                "dialect": self._dialect,
+                "schema": sqlglot_schema,
+                "validate_qualify_columns": False,
+                "identify": False,
+            }
+            try:
+                expression = _qualify(parsed.copy(), **qualify_kwargs)
+            except OptimizeError:
+                expression = _qualify(parsed, qualify_columns=False, **qualify_kwargs)
             scope = build_scope(expression)
         except SqlglotError:
             return None

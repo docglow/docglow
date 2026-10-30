@@ -178,7 +178,6 @@ def _analyze_single_model(
         logger.debug("Failed to parse column lineage for %s: %s", uid, e)
         return _ModelLineageResult(
             uid=uid,
-            cache_entry={"sql_hash": sql_hash, "lineage": {}},
             failure={
                 "model": uid,
                 "name": data.get("name", ""),
