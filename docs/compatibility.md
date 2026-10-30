@@ -57,6 +57,7 @@ To disable column lineage, use `--skip-column-lineage` on the CLI or set `column
 
 - **Complex Jinja macros**: Custom macros and `dbt_utils.pivot()` are replaced with `NULL` if compiled SQL is unavailable. The column lineage for those expressions is lost.
 - **Deeply nested CTEs**: sqlglot's lineage tracer has a 2-second timeout per column. Very complex SQL with many nested CTEs may time out on some columns.
+- **Correlated subqueries (sqlglot 30.22+)**: sqlglot won't qualify a correlated subquery that references an unqualified column from a table missing from the catalog. The model's outer columns still trace, but the subquery column may not.
 - **Adapter-specific functions**: While Snowflake is well-supported, some adapter-specific SQL functions may not parse correctly in other dialects.
 
 ### Recommendations

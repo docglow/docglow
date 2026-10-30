@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import functools
+import inspect
 import logging
 from dataclasses import dataclass
 from typing import Any, cast
@@ -52,6 +54,28 @@ def detect_dialect(adapter_type: str | None) -> str | None:
     return _DIALECT_MAP.get(adapter_type.lower())
 
 
+@functools.cache
+def _qualify_params() -> frozenset[str]:
+    from sqlglot.optimizer.qualify import qualify
+
+    return frozenset(inspect.signature(qualify).parameters)
+
+
+def _qualify(expression: Any, **kwargs: Any) -> Any:
+    """Call sqlglot's ``qualify()``, dropping options the installed sqlglot lacks.
+
+    sqlglot 30.22 removed ``infer_schema`` (the optimizer now always expects
+    the schema it is given, and ``lineage()`` does its own single-source
+    inference). Older versions still use it, so pass it only where it exists.
+    Any other unknown option is a real API mismatch and raises ``TypeError``.
+    """
+    from sqlglot.optimizer.qualify import qualify
+
+    if "infer_schema" not in _qualify_params():
+        kwargs.pop("infer_schema", None)
+    return qualify(expression, **kwargs)
+
+
 def parse_column_lineage(
     compiled_sql: str,
     schema: NestedSchema | None = None,
@@ -78,6 +102,7 @@ def parse_column_lineage(
     try:
         import sqlglot
         from sqlglot import exp
+        from sqlglot.errors import SqlglotError
     except ImportError:
         logger.warning(
             "sqlglot is not installed. Install with: pip install docglow[column-lineage]"
@@ -112,19 +137,17 @@ def parse_column_lineage(
     # the nested schema, before we look at the SELECT clause. On any failure
     # (schema too sparse, unresolvable ref, etc.) fall back to the unqualified
     # tree — the existing star-handling below still applies to it. Attempted
-    # even with no external schema: qualify()'s infer_schema resolves
-    # `SELECT * FROM cte` structurally from the CTE's own definition.
+    # even with no external schema: qualify() resolves `SELECT * FROM cte`
+    # structurally from the CTE's own definition.
     effective_schema: NestedSchema = schema or {}
     try:
-        from sqlglot.optimizer.qualify import qualify
-
-        qualified = qualify(
+        qualified = _qualify(
             root_statement, schema=cast(dict[str, object], effective_schema), infer_schema=True
         )
         qualified_select = qualified.find(exp.Select)
         if qualified_select is not None:
             select_stmt = qualified_select
-    except Exception as e:  # noqa: BLE001
+    except SqlglotError as e:
         logger.debug("qualify() failed, falling back to unqualified tree: %s", e)
 
     # qualify() gives up on expanding *any* star in the SELECT list if
@@ -208,9 +231,6 @@ def parse_column_lineage(
             except FuturesTimeout:
                 logger.debug("Timeout tracing lineage for column '%s'", col_name)
                 failures.append(col_name)
-            except Exception as e:  # noqa: BLE001
-                logger.debug("Failed to trace lineage for column '%s': %s", col_name, e)
-                failures.append(col_name)
 
     if failures:
         logger.debug(
@@ -241,36 +261,46 @@ class _LineageScopes:
         self._sql = sql
         self._schema = schema
         self._dialect = dialect
-        self._built: dict[bool, tuple[Any, Any] | None] = {}
+        self._built: dict[bool, tuple[Any, Any, Any] | None] = {}
 
-    def get(self, with_schema: bool) -> tuple[Any, Any] | None:
-        """Return ``(qualified_expression, scope)``, or None if it can't be built."""
+    def get(self, with_schema: bool) -> tuple[Any, Any, Any] | None:
+        """Return ``(qualified_expression, scope, schema)``, or None if it can't be built.
+
+        ``schema`` is the sqlglot ``Schema`` the expression was qualified against;
+        pass it on to ``lineage()``, which requires one from sqlglot 30.22.
+        """
         # An empty schema qualifies identically either way, so share one build.
         key = with_schema and bool(self._schema)
         if key not in self._built:
             self._built[key] = self._build(self._schema if key else {})
         return self._built[key]
 
-    def _build(self, schema: NestedSchema) -> tuple[Any, Any] | None:
+    def _build(self, schema: NestedSchema) -> tuple[Any, Any, Any] | None:
         import sqlglot
-        from sqlglot.optimizer.qualify import qualify
+        from sqlglot.errors import OptimizeError, SqlglotError
         from sqlglot.optimizer.scope import build_scope
+        from sqlglot.schema import ensure_schema
 
         # Mirrors the parse/qualify/build_scope steps inside sqlglot's lineage().
         try:
-            expression = qualify(
-                sqlglot.parse_one(self._sql, dialect=self._dialect),
-                dialect=self._dialect,
-                schema=cast(dict[str, object], schema),
-                validate_qualify_columns=False,
-                identify=False,
-            )
+            sqlglot_schema = ensure_schema(cast(dict[str, object], schema), dialect=self._dialect)
+            parsed = sqlglot.parse_one(self._sql, dialect=self._dialect)
+            qualify_kwargs: dict[str, Any] = {
+                "dialect": self._dialect,
+                "schema": sqlglot_schema,
+                "validate_qualify_columns": False,
+                "identify": False,
+            }
+            try:
+                expression = _qualify(parsed.copy(), **qualify_kwargs)
+            except OptimizeError:
+                expression = _qualify(parsed, qualify_columns=False, **qualify_kwargs)
             scope = build_scope(expression)
-        except Exception:  # noqa: BLE001
+        except SqlglotError:
             return None
         if scope is None:
             return None
-        return expression, scope
+        return expression, scope, sqlglot_schema
 
 
 def _trace_column_in_executor(
@@ -283,16 +313,18 @@ def _trace_column_in_executor(
     """Trace lineage for a single column using a shared executor for timeout."""
     from concurrent.futures import TimeoutError as FuturesTimeout
 
+    from sqlglot.errors import SqlglotError
     from sqlglot.lineage import lineage
 
     def _trace_with(with_schema: bool) -> list[ColumnDependency]:
         prepared = scopes.get(with_schema)
         if prepared is None:
-            raise ValueError("SQL could not be qualified for lineage")
-        expression, scope = prepared
+            return []
+        expression, scope, schema = prepared
         node = lineage(
             column=col_name,
             sql=expression,
+            schema=schema,
             dialect=dialect,
             scope=scope,
             copy=False,
@@ -303,18 +335,21 @@ def _trace_column_in_executor(
         # Try with schema first (enables SELECT * expansion through CTEs).
         # If it fails, retry without schema (handles cases where schema
         # keys don't match SQL table references or columns are missing).
+        # Only SQL that sqlglot can't trace is tolerated: anything else (e.g.
+        # a TypeError from a sqlglot API change) propagates instead of
+        # silently degrading lineage to empty.
         try:
             deps = _trace_with(with_schema=True)
             if deps:
                 return deps
-        except Exception:  # noqa: BLE001
+        except SqlglotError:
             pass  # Fall through to retry without schema
 
         # Retry without schema (more lenient — won't resolve SELECT * but
         # won't blow up on unknown columns or variant access syntax)
         try:
             return _trace_with(with_schema=False)
-        except Exception:  # noqa: BLE001
+        except SqlglotError:
             return []
 
     future = executor.submit(_trace)

@@ -220,6 +220,30 @@ class TestCacheInvalidation:
                 continue
             assert "*" not in entry.get("lineage", {})
 
+    def test_model_that_raised_is_retried_on_next_run(self, cache_file: Path) -> None:
+        """A parse that raised is reported as a failure and not cached as empty lineage."""
+        models, sources, seeds, snapshots, manifest, dialect = _load_jaffle_shop_data()
+        kwargs: dict[str, Any] = dict(
+            models=models,
+            sources=sources,
+            seeds=seeds,
+            snapshots=snapshots,
+            dialect=dialect,
+            manifest_nodes=dict(manifest.nodes),
+            manifest_sources=dict(manifest.sources),
+            cache_path=cache_file,
+            max_workers=1,
+        )
+
+        with patch(
+            "docglow.lineage.analyzer.parse_column_lineage",
+            side_effect=TypeError("qualify() got an unexpected keyword argument"),
+        ):
+            assert analyze_column_lineage(**kwargs) == {}
+        assert _load_cache(cache_file, dialect) == {}
+
+        assert analyze_column_lineage(**kwargs)
+
 
 # --- Subset computation tests ---
 

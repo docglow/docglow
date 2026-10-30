@@ -5,6 +5,8 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
+from sqlglot import exp
+from sqlglot.errors import OptimizeError
 from sqlglot.schema import MappingSchema
 
 from docglow.lineage.column_parser import (
@@ -12,6 +14,8 @@ from docglow.lineage.column_parser import (
     _collect_dependencies,
     _extract_output_columns,
     _LineageScopes,
+    _qualify,
+    _qualify_params,
     build_schema_mapping,
     detect_dialect,
     parse_column_lineage,
@@ -831,7 +835,7 @@ class TestSharedLineageScope:
         """
         SELECT id,
                ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY ordered_at) AS n,
-               (SELECT MAX(amount) FROM raw.payments p WHERE p.order_id = o.id) AS max_pay
+               (SELECT MAX(p.amount) FROM raw.payments p WHERE p.order_id = o.id) AS max_pay
         FROM raw.orders o
         """,
         """
@@ -900,7 +904,7 @@ class TestSharedLineageScope:
         def failing_qualify(*args: Any, **kwargs: Any) -> Any:
             nonlocal calls
             calls += 1
-            raise ValueError("boom")
+            raise OptimizeError("boom")
 
         monkeypatch.setattr(qualify_module, "qualify", failing_qualify)
 
@@ -909,7 +913,26 @@ class TestSharedLineageScope:
         assert scopes.get(with_schema=True) is None
         # With an empty schema both variants qualify identically and share a build.
         assert scopes.get(with_schema=False) is None
-        assert calls == 1
+        # One full qualify and one retry without column qualification.
+        assert calls == 2
+
+    @pytest.mark.parametrize(
+        "sql",
+        [
+            """
+            SELECT o.id, (SELECT MAX(amount) FROM raw.payments p WHERE p.order_id = o.id) AS max_pay
+            FROM raw.orders o
+            """,
+            """
+            SELECT o.id FROM raw.orders o
+            WHERE EXISTS (SELECT 1 FROM raw.payments p WHERE p.order_id = o.id AND amount > 0)
+            """,
+        ],
+    )
+    def test_unresolvable_correlated_subquery_keeps_outer_lineage(self, sql: str) -> None:
+        result = parse_column_lineage(sql)
+
+        assert result["id"] == [ColumnDependency("raw.orders", "id", "passthrough")]
 
     def test_schema_and_schemaless_variants_built_separately(self) -> None:
         schema = {"raw": {"public": {"t": {"a": "INT"}}}}
@@ -922,3 +945,116 @@ class TestSharedLineageScope:
         assert without_schema is not None
         assert with_schema is not without_schema
         assert scopes.get(with_schema=True) is with_schema
+
+
+class TestSqlglotApiCompatibility:
+    """Lineage keeps working across sqlglot's qualify()/lineage() API changes.
+
+    sqlglot 30.22 removed qualify()'s ``infer_schema`` and made lineage()'s
+    ``schema`` required. Both surfaced as a TypeError that a broad ``except``
+    turned into silently empty lineage (DOC-318).
+    """
+
+    SQL = """
+    WITH s AS (SELECT id, status FROM raw.orders)
+    SELECT id, status FROM s
+    """
+
+    @pytest.fixture(autouse=True)
+    def _reset_qualify_params(self) -> Any:
+        _qualify_params.cache_clear()
+        yield
+        _qualify_params.cache_clear()
+
+    def test_installed_sqlglot_traces_lineage(self) -> None:
+        result = parse_column_lineage(self.SQL)
+
+        assert result == {
+            "id": [ColumnDependency("raw.orders", "id", "passthrough")],
+            "status": [ColumnDependency("raw.orders", "status", "passthrough")],
+        }
+
+    def test_qualify_api_error_is_raised_not_swallowed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import sqlglot.optimizer.qualify as qualify_module
+
+        def incompatible_qualify(*args: Any, **kwargs: Any) -> Any:
+            raise TypeError("qualify() got an unexpected keyword argument 'infer_schema'")
+
+        monkeypatch.setattr(qualify_module, "qualify", incompatible_qualify)
+
+        with pytest.raises(TypeError, match="infer_schema"):
+            parse_column_lineage(self.SQL)
+
+    def test_lineage_api_error_is_raised_not_swallowed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import sqlglot.lineage as lineage_module
+
+        def incompatible_lineage(*args: Any, **kwargs: Any) -> Any:
+            raise TypeError("lineage() missing 1 required positional argument: 'schema'")
+
+        monkeypatch.setattr(lineage_module, "lineage", incompatible_lineage)
+
+        with pytest.raises(TypeError, match="schema"):
+            parse_column_lineage(self.SQL)
+
+    def test_sql_that_cannot_be_qualified_still_falls_back(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import sqlglot.optimizer.qualify as qualify_module
+
+        def failing_qualify(*args: Any, **kwargs: Any) -> Any:
+            raise OptimizeError("Unknown column: nope")
+
+        monkeypatch.setattr(qualify_module, "qualify", failing_qualify)
+
+        assert parse_column_lineage(self.SQL) == {}
+
+    def test_infer_schema_dropped_when_qualify_lacks_it(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import sqlglot.optimizer.qualify as qualify_module
+
+        received: dict[str, Any] = {}
+
+        def qualify_without_infer_schema(expression: Any, schema: Any = None) -> Any:
+            received["schema"] = schema
+            return expression
+
+        monkeypatch.setattr(qualify_module, "qualify", qualify_without_infer_schema)
+
+        _qualify(exp.column("a"), schema={}, infer_schema=True)
+
+        assert received == {"schema": {}}
+
+    def test_infer_schema_forwarded_when_qualify_has_it(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import sqlglot.optimizer.qualify as qualify_module
+
+        received: dict[str, Any] = {}
+
+        def qualify_with_infer_schema(
+            expression: Any, schema: Any = None, infer_schema: bool | None = None
+        ) -> Any:
+            received["infer_schema"] = infer_schema
+            return expression
+
+        monkeypatch.setattr(qualify_module, "qualify", qualify_with_infer_schema)
+
+        _qualify(exp.column("a"), schema={}, infer_schema=True)
+
+        assert received == {"infer_schema": True}
+
+    def test_unknown_qualify_option_still_raises(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import sqlglot.optimizer.qualify as qualify_module
+
+        def narrow_qualify(expression: Any) -> Any:
+            return expression
+
+        monkeypatch.setattr(qualify_module, "qualify", narrow_qualify)
+
+        with pytest.raises(TypeError):
+            _qualify(exp.column("a"), not_an_option=True)
