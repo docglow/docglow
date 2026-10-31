@@ -125,6 +125,60 @@ class TestCoverage:
         assert result.models_documented.rate == 1.0
         assert result.columns_documented.rate == 1.0
 
+    def test_tested_source_column_counts_as_tested(self) -> None:
+        sources = {
+            "s1": _make_source(
+                columns=[{"name": "id", "description": "", "tests": [{"test_name": "not_null"}]}]
+            ),
+        }
+        result = compute_coverage({}, sources, {}, {})
+        assert result.columns_tested.total == 1
+        assert result.columns_tested.covered == 1
+
+    def test_untested_source_column_counts_against(self) -> None:
+        sources = {
+            "s1": _make_source(
+                columns=[
+                    {"name": "id", "description": "", "tests": [{"test_name": "unique"}]},
+                    {"name": "name", "description": "", "tests": []},
+                ]
+            ),
+        }
+        result = compute_coverage({}, sources, {}, {})
+        assert result.columns_tested.total == 2
+        assert result.columns_tested.covered == 1
+
+    def test_model_and_source_columns_share_one_tested_total(self) -> None:
+        models = {
+            "m1": _make_model(
+                columns=[
+                    {"name": "id", "description": "", "tests": [{"test_name": "t"}]},
+                    {"name": "amount", "description": "", "tests": []},
+                ]
+            ),
+        }
+        sources = {
+            "s1": _make_source(
+                columns=[{"name": "id", "description": "", "tests": [{"test_name": "t"}]}]
+            ),
+        }
+        result = compute_coverage(models, sources, {}, {})
+        assert result.columns_tested.total == 3
+        assert result.columns_tested.covered == 2
+
+    def test_model_column_tests_unchanged_without_sources(self) -> None:
+        models = {
+            "m1": _make_model(
+                columns=[
+                    {"name": "id", "description": "", "tests": [{"test_name": "t"}]},
+                    {"name": "amount", "description": "", "tests": []},
+                ]
+            ),
+        }
+        result = compute_coverage(models, {}, {}, {})
+        assert result.columns_tested.total == 2
+        assert result.columns_tested.covered == 1
+
 
 class TestComplexity:
     def test_simple_sql(self) -> None:
@@ -282,6 +336,21 @@ class TestHealthScore:
         report = compute_health(models, {}, {}, {})
         assert report.score.overall > 80
         assert report.score.grade in ("A", "B")
+
+    def test_fully_tested_project_with_sources_scores_100_testing(self) -> None:
+        models = {
+            "m1": _make_model(
+                columns=[{"name": "id", "description": "", "tests": [{"test_name": "t"}]}],
+                test_results=[{"status": "pass"}],
+            ),
+        }
+        sources = {
+            "s1": _make_source(
+                columns=[{"name": "id", "description": "", "tests": [{"test_name": "t"}]}]
+            ),
+        }
+        report = compute_health(models, sources, {}, {})
+        assert report.score.testing == 100.0
 
     def test_poor_health(self) -> None:
         models = {
