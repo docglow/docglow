@@ -9,6 +9,17 @@
  *
  * Determinism: dagre's algorithm is deterministic for a fixed input.
  *
+ * Star ordering (#153): when dagre's crossing minimisation has no reason to
+ * prefer one order over another — the common case for a star schema, where
+ * every edge leaves the same fact table — it keeps the order in which edges
+ * were added. Those edges are drawn from the fact table's FK *column rows*,
+ * though, so a dimension order that differs from the column order makes the
+ * connectors cross. Each edge may therefore carry `fromColumnIndex` (the FK
+ * column's position in the child table), and edges leaving the same node are
+ * fed to dagre in that order. Only the relative order of edges that share a
+ * source node changes; when no edge carries an index the input to dagre —
+ * and so the layout — is exactly what it was before.
+ *
  * The caller must provide per-node heights. ErdCanvas estimates from
  * keys-mode rendering (the default view); the layout still works when users
  * later toggle to compact/full because user-dragged positions take
@@ -42,6 +53,52 @@ export interface ErdLayoutNodeInput {
 export interface ErdLayoutEdgeInput {
   readonly from: string
   readonly to: string
+  /**
+   * Position of the FK column within the `from` (child) table's column list,
+   * when known. Edges leaving the same node are laid out in ascending order
+   * of this value so the parent tables line up with the column rows the
+   * edges are drawn from. Edges without it keep their relative input order.
+   */
+  readonly fromColumnIndex?: number
+}
+
+/**
+ * Reorder edges so that, within each group of edges sharing a `from` node,
+ * they appear in ascending `fromColumnIndex` order. Every edge stays in one
+ * of the array slots its group already occupied, so edges from different
+ * nodes keep their relative order. The sort is stable, and edges without an
+ * index sort after indexed ones in their group.
+ */
+function orderEdgesByFromColumn(
+  edges: readonly ErdLayoutEdgeInput[],
+): readonly ErdLayoutEdgeInput[] {
+  if (!edges.some((e) => e.fromColumnIndex !== undefined)) return edges
+
+  const slotsByFrom = new Map<string, number[]>()
+  edges.forEach((e, i) => {
+    const slots = slotsByFrom.get(e.from)
+    if (slots) slots.push(i)
+    else slotsByFrom.set(e.from, [i])
+  })
+
+  const rank = (e: ErdLayoutEdgeInput): number =>
+    e.fromColumnIndex ?? Number.POSITIVE_INFINITY
+
+  const ordered: ErdLayoutEdgeInput[] = edges.slice()
+  for (const slots of slotsByFrom.values()) {
+    if (slots.length < 2) continue
+    const group = slots
+      .map((i) => edges[i])
+      .sort((a, b) => {
+        const ra = rank(a)
+        const rb = rank(b)
+        return ra === rb ? 0 : ra < rb ? -1 : 1
+      })
+    slots.forEach((slot, k) => {
+      ordered[slot] = group[k]
+    })
+  }
+  return ordered
 }
 
 /**
@@ -51,6 +108,8 @@ export interface ErdLayoutEdgeInput {
  * @param edges - directed `{from, to}` pairs (child → parent for ERDs).
  *   Self-loops and edges referencing missing uids are dropped silently.
  *   Duplicate edges between the same pair are deduplicated for layout.
+ *   Edges sharing a `from` node are laid out in `fromColumnIndex` order
+ *   when it is given (see the star-ordering note above).
  * @returns map from uid → top-left `{x, y}` in canvas px.
  *   Returned positions are dagre-centered then offset by `-width/2, -height/2`
  *   so they match ReactFlow's top-left coordinate convention.
@@ -78,7 +137,7 @@ export function computeErdLayout(
   }
 
   const seen = new Set<string>()
-  for (const e of edges) {
+  for (const e of orderEdgesByFromColumn(edges)) {
     if (e.from === e.to) continue
     if (!heightByUid.has(e.from) || !heightByUid.has(e.to)) continue
     const key = `${e.from}->${e.to}`
