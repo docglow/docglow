@@ -91,6 +91,14 @@ class FreshnessConfig(BaseModel):
     error_after: FreshnessRule = Field(default_factory=FreshnessRule)
     filter: str | None = None
 
+    @field_validator("warn_after", "error_after", mode="before")
+    @classmethod
+    def _null_rule_means_no_threshold(cls, value: object) -> object:
+        # dbt serializes an explicitly disabled threshold (`error_after: null`
+        # in YAML, e.g. to make a source warn-only) as null, so treat it as an
+        # empty rule rather than failing to load the whole manifest.
+        return {} if value is None else value
+
 
 class ManifestSource(BaseModel):
     """A source definition in the dbt manifest."""
