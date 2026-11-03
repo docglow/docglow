@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class SourcesMetadata(BaseModel):
@@ -17,6 +17,12 @@ class FreshnessCriteria(BaseModel):
     warn_after: dict[str, object] = Field(default_factory=dict)
     error_after: dict[str, object] = Field(default_factory=dict)
     filter: str | None = None
+
+    @field_validator("warn_after", "error_after", mode="before")
+    @classmethod
+    def _null_rule_means_no_threshold(cls, value: object) -> object:
+        # Same as FreshnessConfig in manifest.py: a disabled threshold is null.
+        return {} if value is None else value
 
 
 class FreshnessTimingEntry(BaseModel):

@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- **A warn-only source no longer stops the manifest from loading** — dbt lets a source switch one freshness threshold off with an explicit `null` (e.g. `error_after: null`, so a sparse source only ever warns), and writes it to `manifest.json` as `"error_after": null`. docglow required a dict there, so `docglow generate` failed on the whole manifest with a pydantic `ValidationError` before building anything. A `null` `warn_after` / `error_after` is now read as an empty rule (no threshold), in both `manifest.json` and `sources.json`.
+
 ## [0.9.3] - 2026-10-30
 
 ### Performance

@@ -1,5 +1,6 @@
 """Tests for artifact loading and parsing."""
 
+import json
 import logging
 from pathlib import Path
 
@@ -7,7 +8,8 @@ import pytest
 
 from docglow.artifacts.catalog import CatalogNode, CatalogStat
 from docglow.artifacts.loader import ArtifactLoadError, LoadedArtifacts, load_artifacts
-from docglow.artifacts.manifest import ManifestExposure
+from docglow.artifacts.manifest import FreshnessConfig, FreshnessRule, ManifestExposure
+from docglow.artifacts.sources import FreshnessCriteria
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
@@ -101,6 +103,52 @@ class TestManifestExposureOwner:
             name="dashboard",
         )
         assert exposure.owner == {}
+
+
+class TestFreshnessNullThresholds:
+    """dbt writes an explicitly disabled freshness threshold as null; parsing must tolerate it."""
+
+    def test_error_after_null(self) -> None:
+        """`error_after: null` makes a source warn-only."""
+        freshness = FreshnessConfig.model_validate(
+            {"warn_after": {"count": 72, "period": "hour"}, "error_after": None, "filter": None}
+        )
+        assert freshness.warn_after == FreshnessRule(count=72, period="hour")
+        assert freshness.error_after == FreshnessRule()
+
+    def test_warn_after_null(self) -> None:
+        freshness = FreshnessConfig.model_validate(
+            {"warn_after": None, "error_after": {"count": 48, "period": "hour"}}
+        )
+        assert freshness.warn_after == FreshnessRule()
+        assert freshness.error_after == FreshnessRule(count=48, period="hour")
+
+    def test_sources_criteria_null(self) -> None:
+        criteria = FreshnessCriteria.model_validate(
+            {"warn_after": {"count": 72, "period": "hour"}, "error_after": None, "filter": None}
+        )
+        assert criteria.warn_after == {"count": 72, "period": "hour"}
+        assert criteria.error_after == {}
+
+    def test_manifest_with_null_error_after_loads(self, tmp_path: Path) -> None:
+        """One warn-only source must not stop the whole manifest from loading."""
+        target = tmp_path / "target"
+        target.mkdir()
+        manifest = json.loads((FIXTURES_DIR / "manifest.json").read_text())
+        source = next(iter(manifest["sources"].values()))
+        source["freshness"] = {
+            "warn_after": {"count": 72, "period": "hour"},
+            "error_after": None,
+            "filter": None,
+        }
+        (target / "manifest.json").write_text(json.dumps(manifest))
+        (target / "catalog.json").write_text((FIXTURES_DIR / "catalog.json").read_text())
+
+        result = load_artifacts(tmp_path)
+
+        loaded = result.manifest.sources[source["unique_id"]]
+        assert loaded.freshness is not None
+        assert loaded.freshness.error_after == FreshnessRule()
 
 
 class TestLoadArtifacts:
