@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- **ERD star schemas no longer draw crossing connectors by default** — dagre stacked the dimension tables of a star in whatever order the relationships arrived, but each connector leaves the fact table at its FK column row, so a dimension order that differed from the column order made the lines cross. Edges leaving the same table are now handed to the layout in the order of their FK columns in that table, so the dimension tables line up with the rows they connect to. Only edges that share a source table are reordered and dagre's crossing minimisation still runs, so graphs that aren't simple stars are laid out as before apart from tie-breaks. (fixes #153)
+
 ## [0.9.3] - 2026-10-30
 
 ### Performance

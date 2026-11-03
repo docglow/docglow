@@ -193,9 +193,26 @@ function ErdCanvasInner({ models, relationships, mode = 'standalone' }: ErdCanva
       const height = ROW_H_HEAD + visibleRows * 26 + 40 // header + rows + summary
       return { uid, height }
     })
+    // Carry each FK column's position in the child table so dimension
+    // tables are stacked in the same order as the rows their edges leave
+    // from — this avoids crossing connectors on star schemas (#153).
+    const columnIndexByModel = new Map<string, Map<string, number>>()
+    const fromColumnIndex = (uid: string, column: string): number | undefined => {
+      let index = columnIndexByModel.get(uid)
+      if (!index) {
+        const built = new Map<string, number>()
+        models[uid]?.columns.forEach((c, i) => {
+          if (!built.has(c.name)) built.set(c.name, i)
+        })
+        columnIndexByModel.set(uid, built)
+        index = built
+      }
+      return index.get(column)
+    }
     const layoutEdges = relationships.map((r) => ({
       from: r.from_unique_id,
       to: r.to_unique_id,
+      fromColumnIndex: fromColumnIndex(r.from_unique_id, r.from_column),
     }))
     return computeErdLayout(layoutNodes, layoutEdges)
   }, [modelUids, models, relationships])

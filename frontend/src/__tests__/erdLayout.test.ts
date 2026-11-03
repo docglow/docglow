@@ -166,3 +166,106 @@ describe('computeErdLayout (dagre)', () => {
     expect(edges).toEqual(edgesBefore)
   })
 })
+
+describe('computeErdLayout star ordering (#153)', () => {
+  /** Dimension uids sorted top-to-bottom by their laid-out y. */
+  const verticalOrder = (
+    result: Record<string, { x: number; y: number }>,
+    uids: readonly string[],
+  ) => uids.slice().sort((a, b) => result[a].y - result[b].y)
+
+  const dims = ['m.dim_a', 'm.dim_b', 'm.dim_c', 'm.dim_d', 'm.dim_e']
+  const starNodes = [node('m.fact', 300), ...dims.map((d) => node(d, 100))]
+
+  it('stacks dimension tables in the order of the fact table FK columns', () => {
+    // Relationships arrive in an order unrelated to the fact table's columns.
+    const fkColumn: Record<string, number> = {
+      'm.dim_c': 0,
+      'm.dim_a': 1,
+      'm.dim_e': 2,
+      'm.dim_b': 3,
+      'm.dim_d': 4,
+    }
+    const edges = ['m.dim_d', 'm.dim_a', 'm.dim_b', 'm.dim_e', 'm.dim_c'].map(
+      (to) => ({ from: 'm.fact', to, fromColumnIndex: fkColumn[to] }),
+    )
+    const result = computeErdLayout(starNodes, edges)
+    expect(verticalOrder(result, dims)).toEqual([
+      'm.dim_c',
+      'm.dim_a',
+      'm.dim_e',
+      'm.dim_b',
+      'm.dim_d',
+    ])
+    for (const d of dims) {
+      expect(result['m.fact'].x).toBeLessThan(result[d].x)
+    }
+  })
+
+  it('is unchanged from the plain layout when no edge carries a column index', () => {
+    const edges = [
+      edge('m.orders', 'm.customers'),
+      edge('m.items', 'm.orders'),
+      edge('m.items', 'm.products'),
+    ]
+    const nodes = [
+      node('m.orders'),
+      node('m.customers'),
+      node('m.items'),
+      node('m.products'),
+    ]
+    const withUndefined = edges.map((e) => ({ ...e, fromColumnIndex: undefined }))
+    expect(computeErdLayout(nodes, withUndefined)).toEqual(
+      computeErdLayout(nodes, edges),
+    )
+  })
+
+  it('keeps edges without a column index after indexed ones, in input order', () => {
+    const edges = [
+      { from: 'm.fact', to: 'm.dim_a' },
+      { from: 'm.fact', to: 'm.dim_b', fromColumnIndex: 1 },
+      { from: 'm.fact', to: 'm.dim_c' },
+      { from: 'm.fact', to: 'm.dim_d', fromColumnIndex: 0 },
+    ]
+    const nodes = starNodes.filter((n) => n.uid !== 'm.dim_e')
+    const result = computeErdLayout(nodes, edges)
+    expect(
+      verticalOrder(result, ['m.dim_a', 'm.dim_b', 'm.dim_c', 'm.dim_d']),
+    ).toEqual(['m.dim_d', 'm.dim_b', 'm.dim_a', 'm.dim_c'])
+  })
+
+  it('does not reorder edges across different source nodes', () => {
+    // Index values only matter between edges that share a `from` node, so a
+    // lone edge with a huge index must not move relative to other groups.
+    const nodes = [node('m.a'), node('m.b'), node('m.c'), node('m.d')]
+    const plain = [edge('m.a', 'm.b'), edge('m.c', 'm.d')]
+    const indexed = [
+      { ...edge('m.a', 'm.b'), fromColumnIndex: 99 },
+      { ...edge('m.c', 'm.d'), fromColumnIndex: 0 },
+    ]
+    expect(computeErdLayout(nodes, indexed)).toEqual(
+      computeErdLayout(nodes, plain),
+    )
+  })
+
+  it('is deterministic and non-overlapping for an indexed star', () => {
+    const edges = dims.map((to, i) => ({
+      from: 'm.fact',
+      to,
+      fromColumnIndex: dims.length - i,
+    }))
+    const a = computeErdLayout(starNodes, edges)
+    expect(computeErdLayout(starNodes, edges)).toEqual(a)
+    const rects = starNodes.map((n) => ({
+      x: a[n.uid].x,
+      y: a[n.uid].y,
+      w: TABLE_W,
+      h: n.height,
+    }))
+    for (let i = 0; i < rects.length; i++) {
+      for (let j = i + 1; j < rects.length; j++) {
+        expect(overlaps(rects[i], rects[j])).toBe(false)
+      }
+    }
+  })
+})
