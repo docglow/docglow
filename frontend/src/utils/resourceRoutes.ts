@@ -1,4 +1,4 @@
-export type ResourcePageType = 'model' | 'source' | 'exposure'
+export type ResourcePageType = 'model' | 'source' | 'exposure' | 'metric'
 
 export function getResourcePageTypeFromId(uniqueId: string): ResourcePageType {
   const resourceType = uniqueId.split('.')[0] ?? 'model'
@@ -8,6 +8,7 @@ export function getResourcePageTypeFromId(uniqueId: string): ResourcePageType {
 export function getResourcePageTypeFromResourceType(resourceType: string): ResourcePageType {
   if (resourceType === 'source') return 'source'
   if (resourceType === 'exposure') return 'exposure'
+  if (resourceType === 'metric') return 'metric'
   return 'model'
 }
 

@@ -21,6 +21,10 @@ export type {
   DocglowSource,
   HistogramBin,
   LastRun,
+  MetricConversion,
+  MetricDefinition,
+  MetricInputRef,
+  MetricMeasureRef,
   TestResult,
   TopValue,
 } from "./models.js";

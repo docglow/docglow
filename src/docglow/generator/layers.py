@@ -9,7 +9,8 @@ Resolution priority:
 2. Folder pattern matching
 3. Tag matching (``layer:<name>``)
 4. Name prefix/suffix matching
-5. Resource type defaults (source/seed → 0, exposure → max rank)
+5. Resource type defaults (source/seed → 0, metric → the metric layer, else
+   max rank; exposure → max rank)
 6. Auto-assignment based on neighbor ranks
 """
 
@@ -46,7 +47,8 @@ DEFAULT_LAYERS: tuple[LayerDefinition, ...] = (
     LayerDefinition(name="staging", rank=1, color="#dbeafe"),
     LayerDefinition(name="intermediate", rank=2, color="#fef3c7"),
     LayerDefinition(name="mart", rank=3, color="#fce7f3"),
-    LayerDefinition(name="exposure", rank=4, color="#f3e8ff"),
+    LayerDefinition(name="metric", rank=4, color="#ede9fe"),
+    LayerDefinition(name="exposure", rank=5, color="#f3e8ff"),
 )
 
 DEFAULT_RULES: tuple[LayerRule, ...] = (
@@ -174,7 +176,13 @@ def resolve_node_layer(
     # 5. Resource type defaults
     if resource_type in ("source", "seed"):
         return _layer_name_to_rank("source", config.layers) or 0
-    if resource_type == "exposure":
+    if resource_type == "metric":
+        # Configs written before the metric layer existed fall through to the
+        # last column, next to exposures.
+        rank = _layer_name_to_rank("metric", config.layers)
+        if rank is not None:
+            return rank
+    if resource_type in ("exposure", "metric"):
         max_rank = max((layer.rank for layer in config.layers), default=4)
         return max_rank
 

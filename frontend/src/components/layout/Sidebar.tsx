@@ -93,12 +93,12 @@ export function Sidebar() {
 
   const tree = useMemo(() => {
     if (!data) return null
-    return buildTree(data.models, data.sources, data.exposures, data.seeds, data.snapshots)
+    return buildTree(data.models, data.sources, data.exposures, data.seeds, data.snapshots, data.metrics)
   }, [data])
 
   const allTags = useMemo(() => {
     if (!data) return []
-    return collectAllTags(data.models, data.sources, data.exposures, data.seeds, data.snapshots)
+    return collectAllTags(data.models, data.sources, data.exposures, data.seeds, data.snapshots, data.metrics)
   }, [data])
 
   // Only "models" expanded by default; sub-folders collapsed
@@ -143,6 +143,7 @@ export function Sidebar() {
   const exposureCount = data ? Object.keys(data.exposures).length : 0
   const seedCount = data ? Object.keys(data.seeds).length : 0
   const snapshotCount = data ? Object.keys(data.snapshots).length : 0
+  const metricCount = data ? Object.keys(data.metrics).length : 0
 
   if (!tree) return null
 
@@ -284,6 +285,7 @@ export function Sidebar() {
         }
         {snapshotCount > 0 && <> &middot; {snapshotCount} snapshots</>}
         {seedCount > 0 && <> &middot; {seedCount} seeds</>}
+        {metricCount > 0 && <> &middot; {metricCount} metrics</>}
       </div>
     </aside>
   )

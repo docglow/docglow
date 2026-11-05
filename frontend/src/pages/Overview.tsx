@@ -87,6 +87,7 @@ export function Overview() {
   const modelCount = Object.keys(data.models).length
   const sourceCount = Object.keys(data.sources).length
   const exposureCount = Object.keys(data.exposures).length
+  const metricCount = Object.keys(data.metrics).length
   const testCount = Object.values(data.models).reduce(
     (sum, m) => sum + m.test_results.length, 0
   )
@@ -98,6 +99,7 @@ export function Overview() {
     `${formatNumber(sourceCount)} sources`,
     `${formatNumber(testCount)} tests`,
     exposureCount > 0 ? `${formatNumber(exposureCount)} exposures` : null,
+    metricCount > 0 ? `${formatNumber(metricCount)} metrics` : null,
   ].filter(Boolean)
 
   // No max-width: the map, the card grid and the search results all get more

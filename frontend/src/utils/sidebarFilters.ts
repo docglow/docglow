@@ -1,4 +1,4 @@
-import type { DocglowExposure, DocglowModel, DocglowSource } from '../types'
+import type { DocglowExposure, DocglowMetric, DocglowModel, DocglowSource } from '../types'
 
 export interface SidebarTreeNode {
   name: string
@@ -9,13 +9,14 @@ export interface SidebarTreeNode {
   children: Map<string, SidebarTreeNode>
 }
 
-/** Collect and deduplicate all tags from models, sources, exposures, seeds, and snapshots, sorted alphabetically. */
+/** Collect and deduplicate all tags from models, sources, exposures, seeds, snapshots, and metrics, sorted alphabetically. */
 export function collectAllTags(
   models: Record<string, DocglowModel>,
   sources: Record<string, DocglowSource>,
   exposures: Record<string, DocglowExposure> = {},
   seeds: Record<string, DocglowModel> = {},
   snapshots: Record<string, DocglowModel> = {},
+  metrics: Record<string, DocglowMetric> = {},
 ): string[] {
   const tags = new Set<string>()
   for (const m of Object.values(models)) {
@@ -32,6 +33,9 @@ export function collectAllTags(
   }
   for (const snapshot of Object.values(snapshots)) {
     for (const tag of snapshot.tags) tags.add(tag)
+  }
+  for (const metric of Object.values(metrics)) {
+    for (const tag of metric.tags) tags.add(tag)
   }
   return [...tags].sort()
 }

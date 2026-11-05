@@ -111,6 +111,16 @@ declare module "@docglow/shared-types" {
     readonly maturity: string;
   }
 
+  // Metric fields added after v0.1.0. Optional: sites generated before them
+  // only carry the base fields. Remove once shared-types is republished.
+  interface DocglowMetric {
+    readonly package_name?: string;
+    readonly models?: string[];
+    readonly input_metrics?: string[];
+    readonly semantic_models?: string[];
+    readonly definition?: MetricDefinition;
+  }
+
   // Added in 0.8.6 (DOC-296). False when no source has freshness monitoring, in
   // which case the dimension is excluded from the weighted score and
   // `freshness` is a placeholder 0. Optional so payloads generated before this
@@ -130,6 +140,42 @@ declare module "@docglow/shared-types" {
   interface NamingData {
     readonly total_models?: number;
   }
+}
+
+// Metric definition types added after @docglow/shared-types v0.1.0 (see
+// packages/shared-types/src/models.ts). Remove once shared-types is republished.
+export interface MetricMeasureRef {
+  readonly name?: string;
+  readonly agg?: string;
+  readonly expr?: string;
+  readonly filter?: string[];
+}
+
+export interface MetricInputRef {
+  readonly name: string;
+  readonly alias?: string;
+  readonly offset?: string;
+  readonly filter?: string[];
+}
+
+export interface MetricConversion {
+  readonly base_measure?: string;
+  readonly conversion_measure?: string;
+  readonly entity?: string;
+  readonly calculation?: string;
+  readonly window?: string;
+}
+
+export interface MetricDefinition {
+  readonly measure?: MetricMeasureRef;
+  readonly numerator?: MetricInputRef;
+  readonly denominator?: MetricInputRef;
+  readonly metrics?: MetricInputRef[];
+  readonly expr?: string;
+  readonly window?: string;
+  readonly grain_to_date?: string;
+  readonly conversion?: MetricConversion;
+  readonly filter?: string[];
 }
 
 export interface ComplexityThresholds {

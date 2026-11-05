@@ -245,16 +245,29 @@ def stage_transform_exposures_metrics(ctx: PipelineContext) -> None:
             "tags": list(exposure.tags),
         }
 
+    from docglow.generator.transforms.metrics import transform_metric
+
     for unique_id, metric in manifest.metrics.items():
-        ctx.metrics[unique_id] = {
-            "unique_id": unique_id,
-            "name": metric.name,
-            "description": metric.description,
-            "label": metric.label,
-            "type": metric.type,
-            "depends_on": metric.depends_on.nodes,
-            "tags": list(metric.tags),
-        }
+        ctx.metrics[unique_id] = transform_metric(metric, manifest.semantic_models)
+
+    # Under --select / --exclude, keep only metrics that still reach a kept
+    # model, directly or through their input metrics. Otherwise every metric
+    # in the project would show up next to a one-model selection.
+    if ctx.select or ctx.exclude:
+        kept_models = set(ctx.models) | set(ctx.seeds) | set(ctx.snapshots)
+        kept: set[str] = set()
+        changed = True
+        while changed:
+            changed = False
+            for uid, data in ctx.metrics.items():
+                if uid in kept:
+                    continue
+                if any(m in kept_models for m in data["models"]) or any(
+                    m in kept for m in data["input_metrics"]
+                ):
+                    kept.add(uid)
+                    changed = True
+        ctx.metrics = {uid: data for uid, data in ctx.metrics.items() if uid in kept}
 
 
 def stage_build_lineage(ctx: PipelineContext) -> None:
@@ -269,6 +282,7 @@ def stage_build_lineage(ctx: PipelineContext) -> None:
         ctx.snapshots,
         layer_config=ctx.layer_config,
         exclude_packages=ctx.exclude_packages,
+        metrics=ctx.metrics,
     )
 
 
@@ -282,6 +296,7 @@ def stage_build_search_index(ctx: PipelineContext) -> None:
         ctx.seeds,
         ctx.snapshots,
         ctx.exposures,
+        ctx.metrics,
     )
 
 
