@@ -185,6 +185,13 @@ export interface DocglowMetric {
   readonly input_metrics?: string[];
   readonly semantic_models?: string[];
   readonly definition?: MetricDefinition;
+  /** Model columns the metric's measures read. */
+  readonly columns?: MetricColumnRef[];
+}
+
+export interface MetricColumnRef {
+  readonly model: string;
+  readonly column: string;
 }
 
 export interface MetricMeasureRef {

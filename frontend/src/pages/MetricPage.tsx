@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Markdown } from '../components/Markdown'
 import { LineageFlow } from '../components/lineage/LineageFlow'
+import { ColumnTraceDrawer } from '../components/models/ColumnTraceDrawer'
 import { useProjectStore } from '../stores/projectStore'
 import { getSubgraph } from '../utils/graph'
 import { buildModelColumnsMap } from '../utils/modelColumns'
@@ -56,6 +57,7 @@ export function MetricPage() {
   // build on them, so show both directions.
   const [depth, setDepth] = useState(2)
   const [lineageFullscreen, setLineageFullscreen] = useState(false)
+  const [traceOpen, setTraceOpen] = useState(false)
 
   const lineageSubgraph = useMemo(() => {
     if (!data?.lineage || !decodedId) return null
@@ -163,6 +165,63 @@ export function MetricPage() {
             })}
           </div>
         </div>
+      )}
+
+      {((metric.columns ?? []).length > 0 || data?.column_lineage?.[metric.unique_id]) && (
+        <div className="mb-6">
+          <div className="flex items-center gap-3 mb-3">
+            <h2 className="text-lg font-semibold">Reads columns</h2>
+            {data?.column_lineage?.[metric.unique_id] && (
+              <button
+                onClick={() => setTraceOpen(true)}
+                className="px-2 py-1 text-xs rounded border border-[var(--border)] bg-[var(--bg-surface)]
+                           hover:border-[var(--primary)] cursor-pointer transition-colors"
+              >
+                Trace column lineage
+              </button>
+            )}
+          </div>
+          {(metric.columns ?? []).length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {metric.columns!.map((ref) => {
+                const model = getResource(ref.model)
+                const label = `${model?.name ?? ref.model.split('.').pop()}.${ref.column}`
+                return model ? (
+                  <button
+                    key={`${ref.model}.${ref.column}`}
+                    onClick={() => navigate(buildResourcePath(ref.model, `#col-${ref.column.toLowerCase()}`))}
+                    title={`${ref.model} · ${ref.column}`}
+                    className="px-2 py-1 text-xs rounded border border-[var(--border)] bg-[var(--bg-surface)]
+                               hover:border-[var(--primary)] cursor-pointer transition-colors font-mono"
+                  >
+                    {label}
+                  </button>
+                ) : (
+                  <span
+                    key={`${ref.model}.${ref.column}`}
+                    title={`${ref.model} (not in this site)`}
+                    className="px-2 py-1 text-xs rounded border border-[var(--border)] text-[var(--text-muted)] font-mono"
+                  >
+                    {label}
+                  </span>
+                )
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-[var(--text-muted)]">
+              Through its input metrics. Trace the lineage to see the columns behind them.
+            </p>
+          )}
+        </div>
+      )}
+
+      {traceOpen && data?.column_lineage && (
+        <ColumnTraceDrawer
+          modelId={metric.unique_id}
+          columnName={metric.name}
+          columnLineageData={data.column_lineage}
+          onClose={() => setTraceOpen(false)}
+        />
       )}
 
       {metric.tags.length > 0 && (

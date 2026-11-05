@@ -119,6 +119,7 @@ declare module "@docglow/shared-types" {
     readonly input_metrics?: string[];
     readonly semantic_models?: string[];
     readonly definition?: MetricDefinition;
+    readonly columns?: MetricColumnRef[];
   }
 
   // Added in 0.8.6 (DOC-296). False when no source has freshness monitoring, in
@@ -164,6 +165,11 @@ export interface MetricConversion {
   readonly entity?: string;
   readonly calculation?: string;
   readonly window?: string;
+}
+
+export interface MetricColumnRef {
+  readonly model: string;
+  readonly column: string;
 }
 
 export interface MetricDefinition {

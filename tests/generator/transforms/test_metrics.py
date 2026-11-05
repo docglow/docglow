@@ -187,3 +187,87 @@ class TestMetricsInSite:
         assert "metric.jaffle_shop.order_gross_profit" in data["metrics"]
         metric_edges = [e for e in data["lineage"]["edges"] if e["target"].startswith("metric.")]
         assert all(e["source"] in ids for e in metric_edges)
+
+
+def _columns_metric(expr: str | None, **fields: Any) -> ManifestMetric:
+    sm = ManifestSemanticModel(
+        unique_id="semantic_model.p.accounts",
+        name="accounts",
+        depends_on={"nodes": ["model.p.accounts"]},
+        measures=[{"name": "m", "agg": "count_distinct", "expr": expr}],
+    )
+    metric = _metric("simple", [sm.unique_id], type_params={"measure": {"name": "m"}, **fields})
+    return transform_metric(metric, {sm.unique_id: sm}, dialect="databricks")
+
+
+class TestMetricColumns:
+    def test_measure_without_expr_reads_its_own_name(self) -> None:
+        assert _columns_metric(None)["columns"] == [{"model": "model.p.accounts", "column": "m"}]
+
+    def test_plain_column_expr(self) -> None:
+        assert _columns_metric("account_id")["columns"] == [
+            {"model": "model.p.accounts", "column": "account_id"}
+        ]
+
+    def test_sql_expr_lists_every_column_once(self) -> None:
+        expr = "case when is_trial and lt_type = 'GL' then account_id end"
+        columns = [c["column"] for c in _columns_metric(expr)["columns"]]
+        assert columns == ["is_trial", "lt_type", "account_id"]
+
+    def test_row_count_reads_no_column(self) -> None:
+        assert _columns_metric("1")["columns"] == []
+        assert _columns_metric("true")["columns"] == []
+
+    def test_unparsable_expr_reads_no_column(self) -> None:
+        assert _columns_metric("case when (")["columns"] == []
+
+    def test_derived_metric_reads_columns_through_its_inputs(self) -> None:
+        metric = _metric("derived", ["metric.p.a"], type_params={"expr": "a * 2"})
+        assert transform_metric(metric, SEMANTIC_MODELS)["columns"] == []
+
+
+class TestMetricColumnLineage:
+    def test_metrics_join_column_lineage(self, tmp_path: Path) -> None:
+        data = _build(tmp_path, column_lineage_enabled=True)
+        cl = data["column_lineage"]
+
+        assert cl["metric.jaffle_shop.revenue"] == {
+            "revenue": [
+                {
+                    "source_model": "model.jaffle_shop.order_items",
+                    "source_column": "product_price",
+                    "transformation": "aggregated",
+                }
+            ]
+        }
+        # Derived metrics chain through their inputs' metric "columns".
+        assert {
+            (d["source_model"], d["source_column"])
+            for d in cl["metric.jaffle_shop.order_gross_profit"]["order_gross_profit"]
+        } == {
+            ("metric.jaffle_shop.revenue", "revenue"),
+            ("metric.jaffle_shop.order_cost", "order_cost"),
+        }
+        # A row count (expr: 1) reads no column, so it has no entry.
+        assert "metric.jaffle_shop.orders" not in cl
+
+    def test_metric_columns_exist_on_their_models(self, tmp_path: Path) -> None:
+        data = _build(tmp_path, column_lineage_enabled=True)
+        for metric in data["metrics"].values():
+            for ref in metric["columns"]:
+                names = [c["name"] for c in data["models"][ref["model"]]["columns"]]
+                assert ref["column"] in names, (metric["name"], ref)
+
+    def test_no_entries_when_column_lineage_is_off(self, tmp_path: Path) -> None:
+        data = _build(tmp_path)
+        assert data["column_lineage"] is None
+        # The metric still lists the columns it reads.
+        assert data["metrics"]["metric.jaffle_shop.revenue"]["columns"] == [
+            {"model": "model.jaffle_shop.order_items", "column": "product_price"}
+        ]
+
+    def test_select_only_links_kept_metrics(self, tmp_path: Path) -> None:
+        data = _build(tmp_path, column_lineage_enabled=True, select="customers")
+        metric_keys = {k for k in data["column_lineage"] if k.startswith("metric.")}
+        assert metric_keys <= set(data["metrics"])
+        assert "metric.jaffle_shop.lifetime_spend_pretax" in metric_keys

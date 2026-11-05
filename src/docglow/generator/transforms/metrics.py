@@ -2,14 +2,23 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
+import sqlglot
+from sqlglot import exp
+from sqlglot.errors import SqlglotError
+
 from docglow.artifacts.manifest import ManifestMetric, ManifestSemanticModel
+
+_IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+_NOT_COLUMNS = {"true", "false", "null"}
 
 
 def transform_metric(
     metric: ManifestMetric,
     semantic_models: dict[str, ManifestSemanticModel],
+    dialect: str | None = None,
 ) -> dict[str, Any]:
     """Transform a manifest metric into a DocglowMetric dict.
 
@@ -17,7 +26,8 @@ def transform_metric(
     which docglow does not show as a node of its own; ``models`` resolves it to
     the model the semantic model is built on, so lineage can draw
     model → metric. Derived and ratio metrics depend on other metrics, listed
-    in ``input_metrics``.
+    in ``input_metrics``. ``columns`` lists the model columns the metric's
+    measures read, for column-level lineage.
     """
     deps = metric.depends_on.nodes
     sm_ids = [d for d in deps if d.startswith("semantic_model.")]
@@ -50,7 +60,72 @@ def transform_metric(
         "input_metrics": [d for d in deps if d.startswith("metric.")],
         "semantic_models": [sm.name for sm in sms],
         "definition": _definition(metric, sms),
+        "columns": _read_columns(metric, sms, dialect),
     }
+
+
+def _read_columns(
+    metric: ManifestMetric, sms: list[ManifestSemanticModel], dialect: str | None
+) -> list[dict[str, str]]:
+    """The model columns a metric's measures read, as ``{"model", "column"}``.
+
+    A measure's ``expr`` is a SQL expression over the semantic model's model
+    (``case when is_trial then account_id end``); with no ``expr`` the measure
+    reads the column of its own name. Derived and ratio metrics read no
+    columns themselves: they get theirs through their input metrics.
+    """
+    params = metric.type_params
+    names: list[str] = []
+    input_measures = params.get("input_measures")
+    refs = [params.get("measure"), *(input_measures if isinstance(input_measures, list) else [])]
+    conversion = params.get("conversion_type_params")
+    if isinstance(conversion, dict):
+        refs += [conversion.get("base_measure"), conversion.get("conversion_measure")]
+    for ref in refs:
+        name = _name(ref)
+        if name and name not in names:
+            names.append(name)
+
+    # (semantic model, expression) pairs the metric aggregates.
+    reads: list[tuple[ManifestSemanticModel, str]] = []
+    for name in names:
+        for sm in sms:
+            measure = next((m for m in sm.measures if m.get("name") == name), None)
+            if measure is not None:
+                reads.append((sm, str(measure.get("expr") or name)))
+                break
+    if not names:
+        # dbt 1.10+ simple metrics can aggregate an expression directly.
+        agg_params = params.get("metric_aggregation_params")
+        expr = params.get("expr")
+        if isinstance(agg_params, dict) and expr:
+            sm_name = agg_params.get("semantic_model")
+            reads += [(sm, str(expr)) for sm in sms if sm.name == sm_name or len(sms) == 1]
+
+    columns: list[dict[str, str]] = []
+    for sm, expr in reads:
+        for model in sm.depends_on.nodes:
+            for column in _expr_columns(expr, dialect):
+                ref = {"model": model, "column": column}
+                if ref not in columns:
+                    columns.append(ref)
+    return columns
+
+
+def _expr_columns(expr: str, dialect: str | None) -> list[str]:
+    """Column names referenced by a SQL expression; ``[]`` if it can't be parsed."""
+    expr = expr.strip()
+    if _IDENTIFIER.match(expr):
+        return [] if expr.lower() in _NOT_COLUMNS else [expr]
+    try:
+        tree = sqlglot.parse_one(expr, read=dialect)
+    except SqlglotError:
+        return []
+    names: list[str] = []
+    for column in tree.find_all(exp.Column, bfs=False):
+        if column.name and column.name not in names:
+            names.append(column.name)
+    return names
 
 
 def _definition(metric: ManifestMetric, sms: list[ManifestSemanticModel]) -> dict[str, Any]:

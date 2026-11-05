@@ -982,8 +982,7 @@ function LineageFlowInner({
           <button
             onClick={() => {
               onNavigateAway?.()
-              const type = selectedNodeData.resource_type === 'source' ? 'source' : 'model'
-              navigate(`/${type}/${encodeURIComponent(selectedNodeData.id)}`)
+              navigate(buildResourcePath(selectedNodeData.id))
             }}
             style={{
               marginTop: 16, width: '100%', padding: '6px 0', fontSize: 12, fontWeight: 600,
