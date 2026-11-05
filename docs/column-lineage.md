@@ -36,6 +36,12 @@ When both are present, the catalog wins on column ordering and `data_type`; desc
 
 > **Cache note** — the column lineage cache is keyed on each model's compiled SQL hash, not on the source schema. If you add a column to `sources.yml` without changing any model SQL, the cache won't notice. Delete `.docglow-column-lineage-cache.json` (or change the model SQL) to force a recompute.
 
+## Metrics
+
+dbt (MetricFlow) metrics join column lineage as one-column nodes: the column is the metric itself. A simple, cumulative or conversion metric reads the columns its measure's `expr` uses on the semantic model's model (with no `expr`, the column named after the measure). A derived or ratio metric reads its input metrics. So tracing a model column shows the metrics built on it, and **Trace column lineage** on a metric page follows it back through the models to source columns.
+
+A measure that only counts rows (`expr: 1`) reads no column, so its metric has no column lineage. Metric filters (`{{ Dimension(...) }}`) are not traced yet.
+
 ## Analyzing Specific Models
 
 For large projects (75+ models), a full column lineage analysis can take several minutes. Use `--column-lineage-select` to scope the analysis to a specific model and its dependencies:

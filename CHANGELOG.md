@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **dbt metrics in the site** — MetricFlow metrics were parsed but never shown. Each metric is now a lineage node, has a page at `/metric/:id` (definition, the model it is built on, lineage), is listed in the sidebar and indexed in search, and appears under "Referenced by" on the model it is built on. A simple metric's semantic model is resolved to the model behind it, so lineage reads model → metric, and derived and ratio metrics draw metric → metric edges. Metrics get a new default `metric` lineage layer between `mart` and `exposure`, so the default `exposure` rank moves from 4 to 5; a custom `lineage_layers` config can add a layer named `metric`, and without one metrics go in the last column as exposures do. Under `--select` / `--exclude`, only metrics that still reach a kept model are included.
+- **Column-level lineage for metrics** — each metric is a one-column node in column lineage, reading the columns its measure's `expr` uses (parsed with SQLGlot) or, for derived and ratio metrics, its input metrics. A model column's badges list the metrics built on it, and the metric page lists the columns it reads with a **Trace column lineage** button that follows them back to sources. Row counts (`expr: 1`) read no column; metric filters are not traced yet.
+
 ## [0.9.3] - 2026-10-30
 
 ### Performance

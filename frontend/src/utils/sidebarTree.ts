@@ -1,4 +1,4 @@
-import type { DocglowExposure, DocglowModel, DocglowSource } from '../types'
+import type { DocglowExposure, DocglowMetric, DocglowModel, DocglowSource } from '../types'
 import type { SidebarTreeNode } from './sidebarFilters'
 
 /**
@@ -47,6 +47,7 @@ export function buildTree(
   exposures: Record<string, DocglowExposure>,
   seeds: Record<string, DocglowModel> = {},
   snapshots: Record<string, DocglowModel> = {},
+  metrics: Record<string, DocglowMetric> = {},
 ): SidebarTreeNode {
   const root: SidebarTreeNode = { name: 'root', path: '', children: new Map() }
 
@@ -88,6 +89,19 @@ export function buildTree(
     })
   }
   if (exposureRoot.children.size > 0) root.children.set('exposures', exposureRoot)
+
+  const metricRoot: SidebarTreeNode = { name: 'metrics', path: 'metrics', children: new Map() }
+  for (const metric of Object.values(metrics)) {
+    metricRoot.children.set(metric.name, {
+      name: metric.name,
+      path: metric.unique_id,
+      uniqueId: metric.unique_id,
+      resourceType: 'metric',
+      tags: metric.tags,
+      children: new Map(),
+    })
+  }
+  if (metricRoot.children.size > 0) root.children.set('metrics', metricRoot)
 
   return root
 }

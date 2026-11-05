@@ -17,6 +17,7 @@ def build_lineage(
     *,
     layer_config: LineageLayerConfig,
     exclude_packages: bool = True,
+    metrics: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build lineage graph nodes and edges."""
     # Determine which node IDs to exclude (package models/seeds/snapshots)
@@ -129,6 +130,28 @@ def build_lineage(
         )
         for dep in exposure.depends_on.nodes:
             if dep not in excluded_ids:
+                edges.append({"source": dep, "target": uid})
+
+    # Add metric nodes. ``models`` already resolves a metric's semantic model
+    # to the model behind it (see transforms/metrics.py), so the graph shows
+    # model → metric, and metric → metric for derived and ratio metrics.
+    # Only draw edges from nodes this site has: under --select / --exclude a
+    # kept metric can still depend on a filtered-out model or input metric.
+    present = set(models) | set(seeds) | set(snapshots) | set(metrics or {})
+    for uid, metric in (metrics or {}).items():
+        _add_lineage_node(
+            unique_id=uid,
+            name=metric["name"],
+            resource_type="metric",
+            materialization="",
+            schema="",
+            test_status="none",
+            has_description=bool(metric.get("description")),
+            folder="",
+            tags=list(metric.get("tags", [])),
+        )
+        for dep in [*metric.get("models", []), *metric.get("input_metrics", [])]:
+            if dep in present and dep not in excluded_ids:
                 edges.append({"source": dep, "target": uid})
 
     # Resolve layer ranks for all nodes

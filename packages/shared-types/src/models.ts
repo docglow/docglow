@@ -178,6 +178,55 @@ export interface DocglowMetric {
   readonly type: string;
   readonly depends_on: string[];
   readonly tags: string[];
+  readonly package_name?: string;
+  /** Models the metric is built on, resolved through its semantic model. */
+  readonly models?: string[];
+  /** Input metrics of a derived or ratio metric. */
+  readonly input_metrics?: string[];
+  readonly semantic_models?: string[];
+  readonly definition?: MetricDefinition;
+  /** Model columns the metric's measures read. */
+  readonly columns?: MetricColumnRef[];
+}
+
+export interface MetricColumnRef {
+  readonly model: string;
+  readonly column: string;
+}
+
+export interface MetricMeasureRef {
+  readonly name?: string;
+  readonly agg?: string;
+  readonly expr?: string;
+  readonly filter?: string[];
+}
+
+export interface MetricInputRef {
+  readonly name: string;
+  readonly alias?: string;
+  readonly offset?: string;
+  readonly filter?: string[];
+}
+
+export interface MetricConversion {
+  readonly base_measure?: string;
+  readonly conversion_measure?: string;
+  readonly entity?: string;
+  readonly calculation?: string;
+  readonly window?: string;
+}
+
+/** The readable parts of a metric's `type_params`; empty keys are omitted. */
+export interface MetricDefinition {
+  readonly measure?: MetricMeasureRef;
+  readonly numerator?: MetricInputRef;
+  readonly denominator?: MetricInputRef;
+  readonly metrics?: MetricInputRef[];
+  readonly expr?: string;
+  readonly window?: string;
+  readonly grain_to_date?: string;
+  readonly conversion?: MetricConversion;
+  readonly filter?: string[];
 }
 
 /** Union type for any resource that can be displayed. */

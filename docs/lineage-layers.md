@@ -64,8 +64,9 @@ Rules map individual models to a layer. Each rule has a `layer`, a `match` type,
 After rules, these fallbacks apply:
 
 1. `resource_type == "source"` or `"seed"` → `source` layer
-2. `resource_type == "exposure"` → highest-rank layer
-3. Anything still unresolved is auto-assigned based on neighbor ranks in the lineage graph
+2. `resource_type == "metric"` → the `metric` layer if you define one, otherwise the highest-rank layer
+3. `resource_type == "exposure"` → highest-rank layer
+4. Anything still unresolved is auto-assigned based on neighbor ranks in the lineage graph
 
 !!! warning "Auto-assignment is a fallback, not a feature"
     If you see models in unexpected layers, it usually means no rule matched and they were auto-assigned by neighbor rank. Add an explicit rule to fix it.

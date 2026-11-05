@@ -160,6 +160,26 @@ class ManifestMetric(BaseModel):
     depends_on: DependsOn = Field(default_factory=DependsOn)
     tags: list[str] = Field(default_factory=list)
     meta: dict[str, object] = Field(default_factory=dict)
+    type_params: dict[str, object] = Field(default_factory=dict)
+    filter: dict[str, object] | None = None
+    package_name: str = ""
+    original_file_path: str = ""
+
+
+class ManifestSemanticModel(BaseModel):
+    """A MetricFlow semantic model in the dbt manifest.
+
+    Only what metrics need: the model it is built on (``depends_on``) and its
+    measures, so a simple metric can be traced to a model and its aggregation.
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+    unique_id: str
+    name: str
+    description: str | None = ""
+    depends_on: DependsOn = Field(default_factory=DependsOn)
+    measures: list[dict[str, object]] = Field(default_factory=list)
 
 
 class Manifest(BaseModel):
@@ -172,5 +192,6 @@ class Manifest(BaseModel):
     sources: dict[str, ManifestSource] = Field(default_factory=dict)
     exposures: dict[str, ManifestExposure] = Field(default_factory=dict)
     metrics: dict[str, ManifestMetric] = Field(default_factory=dict)
+    semantic_models: dict[str, ManifestSemanticModel] = Field(default_factory=dict)
     parent_map: dict[str, list[str]] = Field(default_factory=dict)
     child_map: dict[str, list[str]] = Field(default_factory=dict)

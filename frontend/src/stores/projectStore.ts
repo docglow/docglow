@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type {
   DocglowData,
   DocglowExposure,
+  DocglowMetric,
   DocglowModel,
   DocglowSource,
   ColumnLineageDependency,
@@ -22,7 +23,8 @@ interface ProjectState {
   getModel: (uniqueId: string) => DocglowModel | undefined
   getSource: (uniqueId: string) => DocglowSource | undefined
   getExposure: (uniqueId: string) => DocglowExposure | undefined
-  getResource: (uniqueId: string) => DocglowModel | DocglowSource | DocglowExposure | undefined
+  getMetric: (uniqueId: string) => DocglowMetric | undefined
+  getResource: (uniqueId: string) => DocglowModel | DocglowSource | DocglowExposure | DocglowMetric | undefined
   getColumnLineage: (modelId: string) => Record<string, ColumnLineageDependency[]> | undefined
 }
 
@@ -105,6 +107,12 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       return data.exposures[uniqueId]
     },
 
+    getMetric: (uniqueId) => {
+      const { data } = get()
+      if (!data) return undefined
+      return data.metrics[uniqueId]
+    },
+
     getResource: (uniqueId) => {
       const { data } = get()
       if (!data) return undefined
@@ -112,6 +120,7 @@ export const useProjectStore = create<ProjectState>((set, get) => {
         data.models[uniqueId] ??
         data.sources[uniqueId] ??
         data.exposures[uniqueId] ??
+        data.metrics[uniqueId] ??
         data.seeds[uniqueId] ??
         data.snapshots[uniqueId]
       )

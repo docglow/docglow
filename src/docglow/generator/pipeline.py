@@ -245,16 +245,40 @@ def stage_transform_exposures_metrics(ctx: PipelineContext) -> None:
             "tags": list(exposure.tags),
         }
 
+    from docglow.generator.transforms.metrics import transform_metric
+    from docglow.lineage.column_parser import detect_dialect
+
+    dialect = detect_dialect(manifest.metadata.adapter_type)
     for unique_id, metric in manifest.metrics.items():
-        ctx.metrics[unique_id] = {
-            "unique_id": unique_id,
-            "name": metric.name,
-            "description": metric.description,
-            "label": metric.label,
-            "type": metric.type,
-            "depends_on": metric.depends_on.nodes,
-            "tags": list(metric.tags),
-        }
+        data = transform_metric(metric, manifest.semantic_models, dialect)
+        # Use the model's own spelling of each column, so the metric's
+        # columns match the keys column lineage uses for the model.
+        for ref in data["columns"]:
+            model_columns = ctx.models.get(ref["model"], {}).get("columns", [])
+            ref["column"] = next(
+                (c["name"] for c in model_columns if c["name"].lower() == ref["column"].lower()),
+                ref["column"],
+            )
+        ctx.metrics[unique_id] = data
+
+    # Under --select / --exclude, keep only metrics that still reach a kept
+    # model, directly or through their input metrics. Otherwise every metric
+    # in the project would show up next to a one-model selection.
+    if ctx.select or ctx.exclude:
+        kept_models = set(ctx.models) | set(ctx.seeds) | set(ctx.snapshots)
+        kept: set[str] = set()
+        changed = True
+        while changed:
+            changed = False
+            for uid, data in ctx.metrics.items():
+                if uid in kept:
+                    continue
+                if any(m in kept_models for m in data["models"]) or any(
+                    m in kept for m in data["input_metrics"]
+                ):
+                    kept.add(uid)
+                    changed = True
+        ctx.metrics = {uid: data for uid, data in ctx.metrics.items() if uid in kept}
 
 
 def stage_build_lineage(ctx: PipelineContext) -> None:
@@ -269,6 +293,7 @@ def stage_build_lineage(ctx: PipelineContext) -> None:
         ctx.snapshots,
         layer_config=ctx.layer_config,
         exclude_packages=ctx.exclude_packages,
+        metrics=ctx.metrics,
     )
 
 
@@ -282,6 +307,7 @@ def stage_build_search_index(ctx: PipelineContext) -> None:
         ctx.seeds,
         ctx.snapshots,
         ctx.exposures,
+        ctx.metrics,
     )
 
 
@@ -354,6 +380,38 @@ def stage_build_column_lineage(ctx: PipelineContext) -> None:
         ctx.snapshots,
         max_workers=ctx.column_lineage_workers,
     )
+
+
+def stage_link_metric_columns(ctx: PipelineContext) -> None:
+    """Add metrics to column lineage as one-column nodes.
+
+    Each metric becomes ``column_lineage[metric_id][metric_name]``: the model
+    columns its measures read, and for derived / ratio metrics their input
+    metrics. Column tracing then runs from a source column through the models
+    into the metrics built on it, and back, with no metric-specific frontend
+    code.
+    """
+    if ctx.column_lineage is None:
+        return
+
+    for uid, metric in ctx.metrics.items():
+        agg = "aggregated" if metric["definition"].get("measure", {}).get("agg") else "derived"
+        deps = [
+            {"source_model": ref["model"], "source_column": ref["column"], "transformation": agg}
+            for ref in metric.get("columns", [])
+            if ref["model"] in ctx.models
+        ]
+        deps += [
+            {
+                "source_model": input_id,
+                "source_column": ctx.metrics[input_id]["name"],
+                "transformation": "derived",
+            }
+            for input_id in metric.get("input_metrics", [])
+            if input_id in ctx.metrics
+        ]
+        if deps:
+            ctx.column_lineage[uid] = {metric["name"]: deps}
 
 
 def stage_strip_sql(ctx: PipelineContext) -> None:
@@ -451,6 +509,11 @@ def default_stages(ctx: PipelineContext) -> list[PipelineStage]:
         PipelineStage(
             "build_column_lineage",
             stage_build_column_lineage,
+            enabled=ctx.column_lineage_enabled,
+        ),
+        PipelineStage(
+            "link_metric_columns",
+            stage_link_metric_columns,
             enabled=ctx.column_lineage_enabled,
         ),
         PipelineStage("strip_sql", stage_strip_sql, enabled=ctx.slim),

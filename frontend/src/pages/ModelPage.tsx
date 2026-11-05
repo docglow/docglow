@@ -125,9 +125,20 @@ export function ModelPage() {
   const decodedId = id ? decodeURIComponent(id) : ''
   const model = decodedId ? getModel(decodedId) : undefined
 
-  // Exposures resolve to /exposure/:id; redirect if reached via /model/:id
+  // A model's direct dbt children include semantic models, which have no page
+  // of their own; list the metrics built on them instead.
+  const referencedBy = useMemo(() => {
+    if (!model) return []
+    const ids = model.referenced_by.filter((ref) => !ref.startsWith('semantic_model.'))
+    for (const metric of Object.values(data?.metrics ?? {})) {
+      if (metric.models?.includes(model.unique_id)) ids.push(metric.unique_id)
+    }
+    return ids
+  }, [model, data?.metrics])
+
+  // Exposures and metrics have their own pages; redirect if reached via /model/:id
   useEffect(() => {
-    if (model || !decodedId.startsWith('exposure.')) return
+    if (model || !(decodedId.startsWith('exposure.') || decodedId.startsWith('metric.'))) return
     navigate(buildResourcePath(decodedId), { replace: true })
   }, [decodedId, model, navigate])
 
@@ -265,7 +276,7 @@ export function ModelPage() {
       </div>
 
       {/* Dependencies */}
-      {(model.depends_on.length > 0 || model.referenced_by.length > 0) && (
+      {(model.depends_on.length > 0 || referencedBy.length > 0) && (
         <div className="mb-6 flex gap-8 text-sm">
           {model.depends_on.length > 0 && (
             <DependencyList
@@ -274,10 +285,10 @@ export function ModelPage() {
               onNavigate={(targetId) => navigate(buildResourcePath(targetId))}
             />
           )}
-          {model.referenced_by.length > 0 && (
+          {referencedBy.length > 0 && (
             <DependencyList
               label="Referenced by"
-              ids={model.referenced_by}
+              ids={referencedBy}
               onNavigate={(targetId) => navigate(buildResourcePath(targetId))}
             />
           )}
