@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { buildTree, collectFolderPaths } from '../utils/sidebarTree'
-import type { DocglowExposure, DocglowModel, DocglowSource } from '../types'
+import type { DocglowExposure, DocglowMetric, DocglowModel, DocglowSource } from '../types'
 
 function makeNode(
   resourceType: string,
@@ -147,6 +147,31 @@ describe('buildTree', () => {
     )
     expect(tree.children.get('snapshots')!.children.get('s')!.tags).toEqual(['scd2'])
     expect(tree.children.get('seeds')!.children.get('b')!.tags).toEqual(['static'])
+  })
+
+  it('lists metrics last, as leaves that route to the metric page', () => {
+    const metric = {
+      unique_id: 'metric.project.revenue',
+      name: 'revenue',
+      description: '',
+      label: 'Revenue',
+      type: 'simple',
+      depends_on: [],
+      tags: ['finance'],
+    } as DocglowMetric
+    const tree = buildTree(
+      { 'model.project.a': makeModel('a') },
+      {},
+      { 'exposure.project.dash': makeExposure('dash') },
+      {},
+      {},
+      { 'metric.project.revenue': metric },
+    )
+    expect([...tree.children.keys()].at(-1)).toBe('metrics')
+    const leaf = tree.children.get('metrics')!.children.get('revenue')!
+    expect(leaf.uniqueId).toBe('metric.project.revenue')
+    expect(leaf.resourceType).toBe('metric')
+    expect(leaf.tags).toEqual(['finance'])
   })
 
   it('groups sources by source_name', () => {

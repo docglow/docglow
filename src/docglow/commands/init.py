@@ -60,8 +60,11 @@ INIT_TEMPLATE = """\
 #     - name: mart
 #       rank: 3
 #       color: "#fce7f3"
-#     - name: exposure
+#     - name: metric
 #       rank: 4
+#       color: "#ede9fe"
+#     - name: exposure
+#       rank: 5
 #       color: "#f3e8ff"
 
 # ui:
