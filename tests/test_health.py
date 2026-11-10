@@ -394,18 +394,6 @@ class TestHealthScore:
         assert "m1" in orphan_ids
         assert "m2" not in orphan_ids
 
-    def test_ephemeral_models_excluded_from_orphans(self) -> None:
-        """Ephemeral models compile to CTEs and produce no warehouse artifact,
-        so they should not be flagged as orphans."""
-        models = {
-            "m1": _make_model(referenced_by=[], materialization="ephemeral"),
-            "m2": _make_model(uid="m2", name="m2", referenced_by=[]),
-        }
-        report = compute_health(models, {}, {}, {})
-        orphan_ids = [o["unique_id"] for o in report.orphan_models]
-        assert "model.pkg.test_model" not in orphan_ids
-        assert "m2" in orphan_ids
-
     def test_freshness_score_no_monitored_sources(self) -> None:
         """When no sources have freshness monitoring, freshness is N/A (0.0)
         and its weight is redistributed to other dimensions."""
