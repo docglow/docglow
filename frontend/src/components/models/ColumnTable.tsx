@@ -1,10 +1,12 @@
-import { useState, useMemo, type MouseEvent } from 'react'
+import { useEffect, useState, useMemo, type CSSProperties, type MouseEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import type { DocglowColumn, ColumnProfile, TopValue, HistogramBin, ColumnLineageDependency, ColumnDownstreamDependency, ColumnLineageData, LineageBadgeConfig } from '../../types'
 import { useProjectStore } from '../../stores/projectStore'
 import { TestBadge } from '../tests/TestBadge'
 import { formatNumber, formatPercent } from '../../utils/formatting'
 import { ColumnTraceDrawer } from './ColumnTraceDrawer'
+import { badgeHasHoverDetail, badgePanelPosition, type BadgePanelPosition } from '../../utils/lineageBadge'
 
 interface ColumnTableProps {
   columns: DocglowColumn[]
@@ -157,6 +159,124 @@ function Histogram({ bins }: { bins: HistogramBin[] }) {
   )
 }
 
+/** Compact badge whose full names open in a floating panel outside the table flow. */
+function LineageBadgeWithPanel({
+  onClick,
+  ariaLabel,
+  buttonStyle,
+  accentColor,
+  direction,
+  modelName,
+  modelDisplay,
+  colLabel,
+  colDisplay,
+  transformationLabel,
+}: {
+  onClick: (e: MouseEvent) => void
+  ariaLabel: string
+  buttonStyle: CSSProperties
+  accentColor: string
+  direction: 'upstream' | 'downstream'
+  modelName: string
+  modelDisplay: string
+  colLabel: string
+  colDisplay: string
+  transformationLabel: string
+}) {
+  const [position, setPosition] = useState<BadgePanelPosition | null>(null)
+
+  useEffect(() => {
+    if (!position) return
+    const dismiss = () => setPosition(null)
+    const dismissOnEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') dismiss()
+    }
+    // Capture so scrolling inside any container closes the viewport-fixed panel.
+    window.addEventListener('scroll', dismiss, true)
+    window.addEventListener('resize', dismiss)
+    window.addEventListener('keydown', dismissOnEscape)
+    return () => {
+      window.removeEventListener('scroll', dismiss, true)
+      window.removeEventListener('resize', dismiss)
+      window.removeEventListener('keydown', dismissOnEscape)
+    }
+  }, [position])
+
+  const openPanel = (element: HTMLElement) => {
+    setPosition(
+      badgePanelPosition(
+        element.getBoundingClientRect(),
+        { width: window.innerWidth, height: window.innerHeight },
+        Math.max(modelName.length, colLabel.length + 2),
+      ),
+    )
+  }
+  const closePanel = () => setPosition(null)
+
+  return (
+    <span className="relative inline-flex max-w-[min(260px,100%)] min-w-0 align-top">
+      <button
+        onClick={onClick}
+        aria-label={ariaLabel}
+        style={buttonStyle}
+        onMouseEnter={(e) => openPanel(e.currentTarget)}
+        onFocus={(e) => openPanel(e.currentTarget)}
+        onMouseLeave={closePanel}
+        onBlur={closePanel}
+        className="box-border w-full max-w-[min(260px,100%)] min-w-0 inline-flex flex-row flex-nowrap items-center gap-1.5
+                   rounded border px-[7px] py-[3px] text-[11px] overflow-hidden cursor-pointer text-left
+                   transition-[background-color,border-color,filter] duration-200 ease-out
+                   hover:brightness-95"
+      >
+        {direction === 'upstream' && (
+          <span className="shrink-0" style={{ opacity: 0.6, fontSize: 11, lineHeight: 1 }}>
+            &#x2190;
+          </span>
+        )}
+        <span className="min-w-0 flex-1 overflow-hidden font-medium whitespace-nowrap text-ellipsis">
+          {modelDisplay}
+        </span>
+        <span className="shrink-0" style={{ opacity: 0.7 }}>
+          .
+        </span>
+        <span
+          className="min-w-0 flex-initial max-w-[60%] overflow-hidden whitespace-nowrap text-ellipsis"
+          style={{ opacity: 0.7 }}
+        >
+          {colDisplay}
+        </span>
+        {direction === 'downstream' && (
+          <span className="shrink-0" style={{ opacity: 0.6, fontSize: 11, lineHeight: 1 }}>
+            &#x2192;
+          </span>
+        )}
+      </button>
+      {position && createPortal(
+        <div
+          role="tooltip"
+          data-testid="lineage-badge-detail"
+          className="fixed z-[9999] w-fit min-w-[180px] max-w-[min(360px,calc(100vw-16px))]
+                     rounded border bg-[var(--bg)] px-2.5 py-2 text-[11px]
+                     text-[var(--text)] shadow-xl ring-1 ring-black/5 pointer-events-none"
+          style={{ top: position.top, bottom: position.bottom, left: position.left, borderColor: `${accentColor}40` }}
+        >
+          <div className="font-medium [overflow-wrap:anywhere]" style={{ color: accentColor }}>
+            {modelName}
+          </div>
+          <div className="mt-1 flex gap-1 [overflow-wrap:anywhere]">
+            <span className="shrink-0" style={{ color: accentColor }}>&#x21b3;</span>
+            <span>{colLabel}</span>
+          </div>
+          <div className="mt-1 text-[var(--text-muted)]">
+            Type: <span style={{ color: accentColor }}>{transformationLabel}</span>
+          </div>
+        </div>,
+        document.body,
+      )}
+    </span>
+  )
+}
+
 /** A single directional badge: ← model.col or → model.col */
 function LineageBadge({
   modelId,
@@ -178,10 +298,18 @@ function LineageBadge({
   const colLabel = columns.length === 1 ? columns[0] : `{${columns.join(', ')}}`
   const modelDisplay = applyBadgeAbbreviation(modelName, badgeConfig.max_model_chars, badgeConfig.abbreviation)
   const colDisplay = applyBadgeAbbreviation(colLabel, badgeConfig.max_column_chars, badgeConfig.abbreviation)
-  // Only expand on hover when the compact form had to abbreviate or could not
-  // show the full text. Short names that render fully stay as static badges —
+  // Only reveal more on hover when the compact form had to abbreviate or could
+  // not show the full text. Short names that render fully stay as static badges —
   // expanding them just adds vertical noise with no new information.
-  const isAbbreviated = modelDisplay !== modelName || colDisplay !== colLabel
+  const hasHoverDetail = badgeHasHoverDetail(
+    { modelName, modelDisplay, colLabel, colDisplay },
+    badgeConfig.hover_detail,
+  )
+  const detailLines = [
+    `${direction === 'upstream' ? 'From' : 'To'}: ${modelId}`,
+    `Columns: ${columns.join(', ')}`,
+    `Type: ${transformation}`,
+  ]
 
   const commonButtonProps = {
     onClick: (e: MouseEvent) => {
@@ -189,7 +317,7 @@ function LineageBadge({
       const colAnchor = columns.length === 1 ? `#col-${columns[0].toLowerCase()}` : ''
       navigate(`/${navType}/${encodeURIComponent(modelId)}${colAnchor}`)
     },
-    title: `${direction === 'upstream' ? 'From' : 'To'}: ${modelId}\nColumns: ${columns.join(', ')}\nType: ${transformation}`,
+    title: detailLines.join('\n'),
     style: {
       background: style.bg,
       color: style.color,
@@ -197,7 +325,7 @@ function LineageBadge({
     },
   }
 
-  if (!isAbbreviated) {
+  if (!hasHoverDetail) {
     return (
       <button
         {...commonButtonProps}
@@ -218,6 +346,23 @@ function LineageBadge({
           </span>
         )}
       </button>
+    )
+  }
+
+  if (badgeConfig.hover_detail === 'panel') {
+    return (
+      <LineageBadgeWithPanel
+        onClick={commonButtonProps.onClick}
+        ariaLabel={detailLines.join('; ')}
+        buttonStyle={commonButtonProps.style}
+        accentColor={style.color}
+        direction={direction}
+        modelName={modelName}
+        modelDisplay={modelDisplay}
+        colLabel={colLabel}
+        colDisplay={colDisplay}
+        transformationLabel={TRANSFORMATION_STYLES[transformation]?.label ?? transformation}
+      />
     )
   }
 

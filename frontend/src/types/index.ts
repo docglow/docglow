@@ -151,11 +151,13 @@ export interface HealthConfigData {
 }
 
 export type LineageBadgeAbbreviation = 'smart' | 'truncate' | 'middle' | 'none';
+export type LineageBadgeHoverDetail = 'inline' | 'panel';
 
 export interface LineageBadgeConfig {
   readonly abbreviation: LineageBadgeAbbreviation;
   readonly max_model_chars: number;
   readonly max_column_chars: number;
+  readonly hover_detail?: LineageBadgeHoverDetail;
 }
 
 export interface UiConfig {

@@ -93,6 +93,7 @@ class InsightsConfig:
 
 
 LINEAGE_BADGE_ABBREVIATIONS = ("smart", "truncate", "middle", "none")
+LINEAGE_BADGE_HOVER_DETAILS = ("inline", "panel")
 
 
 @dataclass(frozen=True)
@@ -100,6 +101,7 @@ class LineageBadgeConfig:
     abbreviation: str = "smart"  # smart | truncate | middle | none
     max_model_chars: int = 30
     max_column_chars: int = 22
+    hover_detail: str = "inline"  # inline | panel
 
 
 @dataclass(frozen=True)
@@ -317,6 +319,15 @@ def _build_ui_config(raw: dict[str, Any]) -> UiConfig:
         )
         abbreviation = "smart"
 
+    hover_detail = badge_raw.get("hover_detail", "inline")
+    if hover_detail not in LINEAGE_BADGE_HOVER_DETAILS:
+        logger.warning(
+            "Invalid ui.lineage_badge.hover_detail %r — expected one of %s; using 'inline'",
+            hover_detail,
+            LINEAGE_BADGE_HOVER_DETAILS,
+        )
+        hover_detail = "inline"
+
     max_model_chars = _coerce_positive_int(
         badge_raw.get("max_model_chars"), default=30, name="ui.lineage_badge.max_model_chars"
     )
@@ -329,6 +340,7 @@ def _build_ui_config(raw: dict[str, Any]) -> UiConfig:
             abbreviation=abbreviation,
             max_model_chars=max_model_chars,
             max_column_chars=max_column_chars,
+            hover_detail=hover_detail,
         )
     )
 
