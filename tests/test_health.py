@@ -541,6 +541,7 @@ class TestHealthPackageExclusion:
         ctx.sources = {}
         ctx.seeds = {}
         ctx.snapshots = {}
+        ctx.health_config = HealthConfig()
 
         stage_compute_health(ctx)
 
@@ -576,6 +577,7 @@ class TestHealthPackageExclusion:
         ctx.sources = {}
         ctx.seeds = {}
         ctx.snapshots = {}
+        ctx.health_config = HealthConfig()
 
         stage_compute_health(ctx)
 
