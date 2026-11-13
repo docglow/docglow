@@ -79,6 +79,7 @@ ui:
     abbreviation: smart           # smart | truncate | middle | none
     max_model_chars: 30           # Max chars before the model name is shortened
     max_column_chars: 22          # Max chars before the column name is shortened
+    hover_detail: inline          # inline | panel
 ```
 
 ## Theme
@@ -122,3 +123,21 @@ The column-level lineage column on a model page renders a small pill for each up
 
 !!! tip
     Not sure which to pick? Start with `smart` (the default) — it preserves the most unique part of the name. If your team expects names to match `dbt docs` output exactly, switch to `truncate`.
+
+`ui.lineage_badge.hover_detail` controls how a shortened badge reveals its full name on hover.
+
+| Value | What it does |
+|---|---|
+| `inline` *(default)* | Hovering anywhere on the row expands each shortened badge in place, which makes the row taller while the pointer is over it |
+| `panel` | Hovering or focusing a badge opens a floating panel with the full model name, column name, and transformation type. The panel sits outside the table, so the row height never changes |
+
+In `panel` mode a badge also gets the panel when no name was shortened but the combined `model.column` text is too long to fit the pill.
+
+`hover_detail` does not change how names are shortened. `abbreviation: middle` already gives middle-ellipsis names, and pairing it with `hover_detail: panel` gives the look from [#130](https://github.com/docglow/docglow/pull/130):
+
+```yaml
+ui:
+  lineage_badge:
+    abbreviation: middle
+    hover_detail: panel
+```

@@ -1,5 +1,7 @@
 """Tests for configuration loading."""
 
+import logging
+
 from docglow.config import (
     DocglowConfig,
     HealthWeights,
@@ -243,3 +245,22 @@ class TestUiConfig:
         for strategy in ("smart", "truncate", "middle", "none"):
             config = _build_config_from_dict({"ui": {"lineage_badge": {"abbreviation": strategy}}})
             assert config.ui.lineage_badge.abbreviation == strategy
+
+    def test_hover_detail_defaults_to_inline_when_absent(self):
+        assert _build_config_from_dict({}).ui.lineage_badge.hover_detail == "inline"
+        config = _build_config_from_dict({"ui": {"lineage_badge": {"abbreviation": "middle"}}})
+        assert config.ui.lineage_badge.hover_detail == "inline"
+
+    def test_accepts_both_hover_detail_values(self):
+        for value in ("inline", "panel"):
+            config = _build_config_from_dict({"ui": {"lineage_badge": {"hover_detail": value}}})
+            assert config.ui.lineage_badge.hover_detail == value
+
+    def test_invalid_hover_detail_warns_and_falls_back_to_inline(self, caplog):
+        with caplog.at_level(logging.WARNING, logger="docglow.config"):
+            config = _build_config_from_dict(
+                {"ui": {"lineage_badge": {"hover_detail": "popover", "abbreviation": "middle"}}}
+            )
+        assert config.ui.lineage_badge.hover_detail == "inline"
+        assert config.ui.lineage_badge.abbreviation == "middle"
+        assert "ui.lineage_badge.hover_detail" in caplog.text

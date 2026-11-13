@@ -489,6 +489,7 @@ def context_to_dict(ctx: PipelineContext) -> dict[str, Any]:
                 "abbreviation": ctx.ui_config.lineage_badge.abbreviation,
                 "max_model_chars": ctx.ui_config.lineage_badge.max_model_chars,
                 "max_column_chars": ctx.ui_config.lineage_badge.max_column_chars,
+                "hover_detail": ctx.ui_config.lineage_badge.hover_detail,
             },
         },
     }

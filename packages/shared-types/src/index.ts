@@ -72,6 +72,7 @@ export type {
   HostedFeatures,
   LineageBadgeAbbreviation,
   LineageBadgeConfig,
+  LineageBadgeHoverDetail,
   UiConfig,
 } from "./site.js";
 

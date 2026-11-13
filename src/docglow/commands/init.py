@@ -69,6 +69,7 @@ INIT_TEMPLATE = """\
 #     abbreviation: smart   # smart | truncate | middle | none
 #     max_model_chars: 30
 #     max_column_chars: 22
+#     hover_detail: inline   # inline | panel
 """
 
 
