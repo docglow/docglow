@@ -62,6 +62,7 @@ class PipelineContext:
     lineage: dict[str, Any] = field(default_factory=dict)
     search_index: list[dict[str, Any]] = field(default_factory=list)
     health: dict[str, Any] = field(default_factory=dict)
+    tests: dict[str, Any] = field(default_factory=dict)
     column_lineage: dict[str, Any] | None = None
     ai_context: dict[str, Any] | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
@@ -285,6 +286,23 @@ def stage_build_search_index(ctx: PipelineContext) -> None:
     )
 
 
+def stage_build_tests(ctx: PipelineContext) -> None:
+    """Build the project-wide tests catalog for the Tests dashboard."""
+    from docglow.generator.transforms.tests import build_test_catalog
+
+    run_results = ctx.artifacts.run_results
+    # Like compute_health, build from what filter_nodes kept (sources are never
+    # filtered), so --select/--exclude can't leak tests whose pages weren't generated.
+    resource_ids = set(ctx.models) | set(ctx.seeds) | set(ctx.snapshots) | set(ctx.sources)
+    ctx.tests = build_test_catalog(
+        ctx.artifacts.manifest,
+        ctx.run_results_by_id,
+        resource_ids=resource_ids,
+        has_run_results=run_results is not None,
+        generated_at=(run_results.metadata.generated_at if run_results else ""),
+    )
+
+
 def stage_compute_health(ctx: PipelineContext) -> None:
     """Compute project health scores."""
     from docglow.analyzer.health import compute_health, health_to_dict
@@ -449,6 +467,7 @@ def default_stages(ctx: PipelineContext) -> list[PipelineStage]:
         ),
         PipelineStage("build_lineage", stage_build_lineage),
         PipelineStage("build_search_index", stage_build_search_index),
+        PipelineStage("build_tests", stage_build_tests),
         PipelineStage("compute_health", stage_compute_health),
         PipelineStage(
             "warn_column_lineage",
@@ -487,6 +506,7 @@ def context_to_dict(ctx: PipelineContext) -> dict[str, Any]:
         "metrics": ctx.metrics,
         "lineage": ctx.lineage,
         "health": ctx.health,
+        "tests": ctx.tests,
         "search_index": ctx.search_index,
         "ai_context": ctx.ai_context,
         "ai_key": None,
