@@ -6,6 +6,7 @@ import { useProjectStore } from '../../stores/projectStore'
 import { TestBadge } from '../tests/TestBadge'
 import { formatNumber, formatPercent } from '../../utils/formatting'
 import { ColumnTraceDrawer } from './ColumnTraceDrawer'
+import { ColumnDescription } from './ColumnDescription'
 import { badgeHasHoverDetail, badgePanelPosition, type BadgePanelPosition } from '../../utils/lineageBadge'
 
 interface ColumnTableProps {
@@ -788,12 +789,10 @@ export function ColumnTable({ columns, columnLineage, columnDownstream, modelId,
                     {/* Description + insights */}
                     <div className="px-4 py-2 flex-1 min-w-0">
                       {col.description ? (
-                        <span className="text-sm block">
-                          {col.description}
-                          {col.insights?.generated_description && col.description === col.insights.generated_description && (
-                            <span className="ml-1.5 text-[9px] text-[var(--text-muted)] opacity-60 font-medium uppercase">auto</span>
-                          )}
-                        </span>
+                        <ColumnDescription
+                          description={col.description}
+                          isGenerated={!!col.insights?.generated_description && col.description === col.insights.generated_description}
+                        />
                       ) : (
                         <span className="text-sm text-[var(--text-muted)] italic">No description</span>
                       )}
