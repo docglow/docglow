@@ -7,12 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-26
+
 ### Added
+- **Tests dashboard** — test definitions and results were only visible one model at a time, so there was no way to see which tests failed in the last run or how much of the project they cover. A new **Tests** page (`/tests`) joins each test's definition from `manifest.json` with its outcome from `run_results.json`: summary tiles by status (which also filter the list), search and test-type filters, a failure drill-down with the message, failing-row count, and defining file, and links to the model or source the test is defined on. Failing tests sort first, and the sidebar entry shows the fail/error count, or a check once tests have run and all passed. The page is a snapshot of the last `dbt test` / `dbt build`; without `run_results.json`, tests show as defined but not run rather than passing. The payload gains a top-level `tests` key that respects `--select` / `--exclude`; it is optional in `@docglow/shared-types`, and sites generated before it exist tell the reader to regenerate. Thanks to [@james-geiger](https://github.com/james-geiger). (#146)
 - **`ui.lineage_badge.hover_detail`** — opt-in `panel` mode for column-level lineage badges. Hovering or focusing a shortened badge (or one whose `model.column` text is too long for the pill) opens a floating panel with the full model name, column name, and transformation type, rendered outside the table so the row height no longer changes on hover. The default, `inline`, keeps today's expand-in-place behavior, so existing sites are unchanged. Pair with `abbreviation: middle` for the layout proposed in #130.
 
 ### Changed
-- **ERD star layout** — when the ERD shows one fact table whose foreign keys point at dimension tables that have no other relationships, the dimensions are now stacked in the order their FK columns appear in the fact table, so the relationship lines no longer cross. Any other graph shape keeps today's layout (#153).
-- **ERD relationship lines get their own lanes** — relationship lines that cross the same gap between tables used to turn at the same x and merge into one shared vertical run, so you couldn't tell which column led to which table. Each line now turns in its own lane, ordered so lines don't cross wherever a crossing-free order exists (and with crossings trimmed by a local search where one doesn't). Crow's-foot markers, cardinality, and edge selection are unchanged.
+- **ERD star layout** — when the ERD shows one fact table whose foreign keys point at dimension tables that have no other relationships, the dimensions are now stacked in the order their FK columns appear in the fact table, so the relationship lines no longer cross. Any other graph shape keeps today's layout. (#183, fixes #153)
+- **ERD relationship lines get their own lanes** — relationship lines that cross the same gap between tables used to turn at the same x and merge into one shared vertical run, so you couldn't tell which column led to which table. Each line now turns in its own lane, ordered so lines don't cross wherever a crossing-free order exists (and with crossings trimmed by a local search where one doesn't). Crow's-foot markers, cardinality, and edge selection are unchanged. Lanes are assigned for the automatic layout: after you drag a table sideways, its line turns at its own gap midpoint and can sit on or near a neighbour's lane. (#184)
+
+### Fixed
+- **Package models no longer count toward the Health score** — `docglow generate` already left models from installed dbt packages (elementary and the like) out of lineage unless `--include-packages` was passed, but health scoring ignored that setting and scored them alongside the project's own models, so package models you don't document or test pulled down Documentation and Testing coverage and could show up as orphans, complexity, or naming findings. Package models, seeds, and snapshots are now filtered out of health scoring the same way. **If your project installs packages that ship models, your scores will change on upgrade** — usually up — unless you generate with `--include-packages`. Projects without package models score exactly as before. Thanks to [@manypozo](https://github.com/manypozo). (#136, fixes #135)
 
 ## [0.9.3] - 2026-10-30
 
@@ -391,7 +397,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Suppressed hover highlights during node drag to prevent flicker
 - Shared SVG markers to reduce DOM overhead
 
-[Unreleased]: https://github.com/docglow/docglow/compare/v0.9.3...HEAD
+[Unreleased]: https://github.com/docglow/docglow/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/docglow/docglow/compare/v0.9.3...v0.10.0
 [0.9.3]: https://github.com/docglow/docglow/compare/v0.9.2...v0.9.3
 [0.9.2]: https://github.com/docglow/docglow/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/docglow/docglow/compare/v0.9.0...v0.9.1
