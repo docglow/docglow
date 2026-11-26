@@ -166,3 +166,168 @@ describe('computeErdLayout (dagre)', () => {
     expect(edges).toEqual(edgesBefore)
   })
 })
+
+/**
+ * Star schema from issue #153: one fact table with FK columns to five
+ * dimension tables. Relationships arrive in a scrambled order (the order
+ * that produced crossing lines in the issue's "current" screenshot).
+ */
+const FACT = 'm.fact_webshop_sales'
+const FACT_COLUMNS = [
+  'sales_id',
+  'platform',
+  'shop',
+  'staat_code',
+  'amount',
+  're_gu_datum',
+  'artikel_id',
+]
+/** Dimension uids in the order their FK columns appear on the fact. */
+const DIMS_IN_FK_ORDER = [
+  'm.dim_platform_group',
+  'm.dim_shop_group',
+  'm.dim_staat',
+  'm.kalender',
+  'm.dim_artikel',
+]
+const STAR_EDGES = [
+  { from: FACT, to: 'm.dim_artikel', fromColumn: 'artikel_id' },
+  { from: FACT, to: 'm.dim_platform_group', fromColumn: 'platform' },
+  { from: FACT, to: 'm.kalender', fromColumn: 're_gu_datum' },
+  { from: FACT, to: 'm.dim_shop_group', fromColumn: 'shop' },
+  { from: FACT, to: 'm.dim_staat', fromColumn: 'staat_code' },
+]
+const STAR_NODES = [
+  { uid: FACT, height: 250, columns: FACT_COLUMNS },
+  { uid: 'm.dim_artikel', height: 114, columns: ['artikel_id'] },
+  { uid: 'm.dim_platform_group', height: 114, columns: ['platform'] },
+  { uid: 'm.kalender', height: 140, columns: ['kj_datum_nr'] },
+  { uid: 'm.dim_shop_group', height: 88, columns: ['shop'] },
+  { uid: 'm.dim_staat', height: 114, columns: ['staat_code'] },
+]
+
+function topToBottom(
+  result: Record<string, { x: number; y: number }>,
+  uids: readonly string[],
+): string[] {
+  return [...uids].sort((a, b) => result[a].y - result[b].y)
+}
+
+function withoutColumnInfo(
+  nodes: readonly { uid: string; height: number }[],
+  edges: readonly { from: string; to: string }[],
+) {
+  return {
+    nodes: nodes.map(({ uid, height }) => ({ uid, height })),
+    edges: edges.map(({ from, to }) => ({ from, to })),
+  }
+}
+
+describe('computeErdLayout — star ordering (#153)', () => {
+  it('stacks dimensions top-to-bottom in FK column order', () => {
+    const result = computeErdLayout(STAR_NODES, STAR_EDGES)
+    expect(topToBottom(result, DIMS_IN_FK_ORDER)).toEqual(DIMS_IN_FK_ORDER)
+  })
+
+  it('keeps dimensions in one column to the right of the fact table', () => {
+    const result = computeErdLayout(STAR_NODES, STAR_EDGES)
+    const dimXs = new Set(DIMS_IN_FK_ORDER.map((uid) => result[uid].x))
+    expect(dimXs.size).toBe(1)
+    expect(result[FACT].x).toBeLessThan(result[DIMS_IN_FK_ORDER[0]].x)
+  })
+
+  it('does not depend on the order relationships or nodes arrive in', () => {
+    const reference = computeErdLayout(STAR_NODES, STAR_EDGES)
+    const reversed = computeErdLayout(
+      [...STAR_NODES].reverse(),
+      [...STAR_EDGES].reverse(),
+    )
+    expect(topToBottom(reversed, DIMS_IN_FK_ORDER)).toEqual(DIMS_IN_FK_ORDER)
+    expect(topToBottom(reference, DIMS_IN_FK_ORDER)).toEqual(
+      topToBottom(reversed, DIMS_IN_FK_ORDER),
+    )
+  })
+
+  it('is deterministic across runs', () => {
+    const first = computeErdLayout(STAR_NODES, STAR_EDGES)
+    for (let i = 0; i < 5; i++) {
+      expect(computeErdLayout(STAR_NODES, STAR_EDGES)).toEqual(first)
+    }
+  })
+
+  it('orders a dimension reached by several FK columns by its first one', () => {
+    // A second FK to dim_artikel near the top of the fact pulls it up.
+    const columns = ['sales_id', 'old_artikel_id', ...FACT_COLUMNS.slice(1)]
+    const result = computeErdLayout(
+      STAR_NODES.map((n) => (n.uid === FACT ? { ...n, columns } : n)),
+      [...STAR_EDGES, { from: FACT, to: 'm.dim_artikel', fromColumn: 'old_artikel_id' }],
+    )
+    expect(topToBottom(result, DIMS_IN_FK_ORDER)).toEqual([
+      'm.dim_artikel',
+      'm.dim_platform_group',
+      'm.dim_shop_group',
+      'm.dim_staat',
+      'm.kalender',
+    ])
+  })
+
+  it('still orders the star when isolated tables are shown alongside it', () => {
+    const result = computeErdLayout(
+      [...STAR_NODES, node('m.isolated_a'), node('m.isolated_b')],
+      STAR_EDGES,
+    )
+    expect(topToBottom(result, DIMS_IN_FK_ORDER)).toEqual(DIMS_IN_FK_ORDER)
+  })
+
+  describe('non-star graphs lay out exactly as before', () => {
+    const cols = (uid: string, ...columns: string[]) => ({ uid, height: H, columns })
+    const cases = {
+      // dim_staat also has its own FK, so the fact is not the only source.
+      snowflake: {
+        nodes: [
+          ...STAR_NODES,
+          cols('m.dim_region', 'region_id'),
+        ],
+        edges: [
+          ...STAR_EDGES,
+          { from: 'm.dim_staat', to: 'm.dim_region', fromColumn: 'region_id' },
+        ],
+      },
+      // Two fact tables sharing a dimension.
+      twoFacts: {
+        nodes: [
+          cols('m.orders', 'order_id', 'customer_id', 'product_id'),
+          cols('m.returns', 'return_id', 'product_id', 'customer_id'),
+          cols('m.customers', 'customer_id'),
+          cols('m.products', 'product_id'),
+        ],
+        edges: [
+          { from: 'm.orders', to: 'm.products', fromColumn: 'product_id' },
+          { from: 'm.orders', to: 'm.customers', fromColumn: 'customer_id' },
+          { from: 'm.returns', to: 'm.customers', fromColumn: 'customer_id' },
+          { from: 'm.returns', to: 'm.products', fromColumn: 'product_id' },
+        ],
+      },
+      chain: {
+        nodes: [
+          cols('m.items', 'item_id', 'order_id'),
+          cols('m.orders', 'order_id', 'customer_id'),
+          cols('m.customers', 'customer_id'),
+        ],
+        edges: [
+          { from: 'm.items', to: 'm.orders', fromColumn: 'order_id' },
+          { from: 'm.orders', to: 'm.customers', fromColumn: 'customer_id' },
+        ],
+      },
+    }
+
+    for (const [name, { nodes, edges }] of Object.entries(cases)) {
+      it(name, () => {
+        const legacy = withoutColumnInfo(nodes, edges)
+        expect(computeErdLayout(nodes, edges)).toEqual(
+          computeErdLayout(legacy.nodes, legacy.edges),
+        )
+      })
+    }
+  })
+})
