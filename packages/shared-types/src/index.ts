@@ -25,6 +25,15 @@ export type {
   TopValue,
 } from "./models.js";
 
+// Project-wide test catalog (Tests dashboard)
+export type {
+  ProjectTest,
+  ProjectTestStatus,
+  TestSeverity,
+  TestsData,
+  TestSummary,
+} from "./tests.js";
+
 // Health scoring types
 export type {
   ComplexityData,

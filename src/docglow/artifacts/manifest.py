@@ -75,6 +75,10 @@ class ManifestNode(BaseModel):
     # Test-specific fields
     test_metadata: TestMetadata | None = None
     column_name: str | None = None
+    # The resource a generic test is defined on. Authoritative for attribution:
+    # `depends_on.nodes` is unordered with respect to it (dbt lists the
+    # *referenced* model first for `relationships` tests). Null for singular tests.
+    attached_node: str | None = None
 
     # Refs and sources used
     refs: list[object] = Field(default_factory=list)
