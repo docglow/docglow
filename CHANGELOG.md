@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- **Column descriptions render as Markdown** — the columns table on model pages showed column descriptions as plain text, so a dbt doc block with a bullet list or emphasis came out as one line of raw Markdown. They now use the same Markdown renderer as model descriptions. Search results and other one-line places stay plain text. (fixes #148)
+
 ### Added
 - **`ui.lineage_badge.hover_detail`** — opt-in `panel` mode for column-level lineage badges. Hovering or focusing a shortened badge (or one whose `model.column` text is too long for the pill) opens a floating panel with the full model name, column name, and transformation type, rendered outside the table so the row height no longer changes on hover. The default, `inline`, keeps today's expand-in-place behavior, so existing sites are unchanged. Pair with `abbreviation: middle` for the layout proposed in #130.
 

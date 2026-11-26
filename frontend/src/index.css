@@ -90,6 +90,14 @@ body {
 .markdown-body li {
   margin: 0.25em 0;
 }
+.column-description .markdown-body > :first-child { margin-top: 0; }
+.column-description .markdown-body > :last-child { margin-bottom: 0; }
+.column-description .markdown-body ul, .column-description .markdown-body ol {
+  margin: 0.25em 0;
+}
+.column-description .markdown-body li {
+  margin: 0.1em 0;
+}
 .markdown-body blockquote {
   margin: 0.5em 0;
   padding: 0.25em 1em;
