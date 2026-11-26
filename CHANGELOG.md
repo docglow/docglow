@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 - **ERD star layout** — when the ERD shows one fact table whose foreign keys point at dimension tables that have no other relationships, the dimensions are now stacked in the order their FK columns appear in the fact table, so the relationship lines no longer cross. Any other graph shape keeps today's layout (#153).
+- **ERD relationship lines get their own lanes** — relationship lines that cross the same gap between tables used to turn at the same x and merge into one shared vertical run, so you couldn't tell which column led to which table. Each line now turns in its own lane, ordered so lines don't cross wherever a crossing-free order exists (and with as few crossings as possible where one doesn't). Crow's-foot markers, cardinality, and edge selection are unchanged.
 
 ## [0.9.3] - 2026-10-30
 

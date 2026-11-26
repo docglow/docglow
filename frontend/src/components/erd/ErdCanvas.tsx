@@ -48,12 +48,24 @@ import { ErdInspector } from './ErdInspector'
 import { ErdNode } from './ErdNode'
 import { useErdStore, type ErdNodeState } from '../../stores/erdStore'
 import { useProjectStore } from '../../stores/projectStore'
-import { computeErdLayout, ROW_H_HEAD, type ErdNodePosition } from '../../utils/erdLayout'
+import {
+  computeErdLayout,
+  ROW_H_HEAD,
+  TABLE_W,
+  type ErdNodePosition,
+} from '../../utils/erdLayout'
+import {
+  assignEdgeLanes,
+  type EdgeLane,
+  type LaneEdgeInput,
+} from '../../utils/erdEdgeLanes'
 import {
   pickEdgeHandles,
   pickSelfLoopHandles,
+  type ErdHandlePair,
   type ErdNodeRenderState,
 } from '../../utils/erdEdgeMapping'
+import { ROW_H_COL } from '../../utils/erdNodeDimensions'
 import { computeKeyColumns } from '../../utils/erdKeys'
 import { filterOrphans } from '../../utils/erdOrphanFilter'
 import { getProjectKey } from '../../utils/erdProjectKey'
@@ -91,6 +103,47 @@ const nodeTypes: NodeTypes = {
 
 const edgeTypes: EdgeTypes = {
   erdRelationship: ErdEdge,
+}
+
+/** ErdNode's node-midpoint side handles (vs. the per-column ones). */
+const GENERIC_HANDLES: ReadonlySet<string> = new Set([
+  'source-left',
+  'source-right',
+  'target-left',
+  'target-right',
+])
+
+/** A relationship with its chosen handles and vertical lane. */
+interface RoutedEdge {
+  readonly rel: ErdRelationship
+  readonly handles: ErdHandlePair
+  readonly lane: EdgeLane | undefined
+}
+
+/** Column rows a node renders in `state`, in display order (mirrors ErdNode). */
+function visibleColumnNames(
+  model: DocglowModel,
+  state: ErdNodeRenderState,
+  keyColumns: ReadonlySet<string> | undefined,
+): readonly string[] {
+  if (state === 'compact') return []
+  const names = model.columns.map((c) => c.name)
+  if (state === 'full') return names
+  return names.filter((name) => keyColumns?.has(name) ?? false)
+}
+
+/**
+ * Estimated y of an edge anchor below its node's top: the centre of
+ * `column`'s row when the edge attaches to a column handle (`column` set),
+ * else the card midpoint where ErdNode's generic side handles sit.
+ */
+function estimateAnchorOffsetY(
+  visibleColumns: readonly string[],
+  column: string | null,
+): number {
+  const row = column === null ? -1 : visibleColumns.indexOf(column)
+  if (row !== -1) return ROW_H_HEAD + row * ROW_H_COL + ROW_H_COL / 2
+  return (ROW_H_HEAD + visibleColumns.length * ROW_H_COL) / 2
 }
 
 /** Stable empty-object reference for the project-overrides selector — avoids
@@ -282,8 +335,8 @@ function ErdCanvasInner({ models, relationships, mode = 'standalone' }: ErdCanva
   // v1's behavior in `resolveErdAnchors` (returned null, canvas filtered).
   // Skip relationships whose endpoints aren't in the rendered set —
   // defensive; shouldn't happen in practice but stay resilient.
-  const rfEdges = useMemo<Edge[]>(() => {
-    return relationships
+  const routedEdges = useMemo<readonly RoutedEdge[]>(() => {
+    const routed = relationships
       .filter((rel) => {
         if (rel.parent_column_exists === false) return false
         if (rel.to_unique_id === '') return false
@@ -341,30 +394,74 @@ function ErdCanvasInner({ models, relationships, mode = 'standalone' }: ErdCanva
               toColumn: rel.to_column,
             })
 
-        const edge: Edge = {
+        // Estimated anchor points, used only to pick each edge's lane.
+        // ErdEdge still draws from React Flow's measured handle positions.
+        const fromRight = handles.sourceHandle.startsWith('source-right')
+        const toRight = handles.targetHandle.startsWith('target-right')
+        const anchors: LaneEdgeInput = {
           id: rel.id,
-          source: rel.from_unique_id,
-          target: rel.to_unique_id,
-          sourceHandle: handles.sourceHandle,
-          targetHandle: handles.targetHandle,
-          type: 'erdRelationship',
-          data: {
-            rel,
-            selected: selectedEdgeId === rel.id,
-          },
-          selectable: false,
+          fromX: fromPos.x + (fromRight ? TABLE_W : 0),
+          fromY:
+            fromPos.y +
+            estimateAnchorOffsetY(
+              visibleColumnNames(
+                models[rel.from_unique_id],
+                fromState,
+                keyColumnSets[rel.from_unique_id],
+              ),
+              GENERIC_HANDLES.has(handles.sourceHandle) ? null : rel.from_column,
+            ),
+          toX: toPos.x + (toRight ? TABLE_W : 0),
+          toY:
+            toPos.y +
+            estimateAnchorOffsetY(
+              visibleColumnNames(
+                models[rel.to_unique_id],
+                toState,
+                keyColumnSets[rel.to_unique_id],
+              ),
+              GENERIC_HANDLES.has(handles.targetHandle) ? null : rel.to_column,
+            ),
         }
-        return edge
+
+        return { rel, handles, anchors: isSelfLoop ? null : anchors }
       })
+
+    const lanes = assignEdgeLanes(
+      routed.flatMap((r) => (r.anchors ? [r.anchors] : [])),
+    )
+    return routed.map(({ rel, handles }) => ({
+      rel,
+      handles,
+      lane: lanes.get(rel.id),
+    }))
   }, [
     relationships,
     models,
     positions,
     projectOverrides,
-    selectedEdgeId,
     effectiveStates,
     keyColumnSets,
   ])
+
+  const rfEdges = useMemo<Edge[]>(
+    () =>
+      routedEdges.map(({ rel, handles, lane }) => ({
+        id: rel.id,
+        source: rel.from_unique_id,
+        target: rel.to_unique_id,
+        sourceHandle: handles.sourceHandle,
+        targetHandle: handles.targetHandle,
+        type: 'erdRelationship',
+        data: {
+          rel,
+          selected: selectedEdgeId === rel.id,
+          lane,
+        },
+        selectable: false,
+      })),
+    [routedEdges, selectedEdgeId],
+  )
 
   const handleEdgeClick: EdgeMouseHandler = useCallback((event, edge) => {
     event.stopPropagation()
