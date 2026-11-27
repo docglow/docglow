@@ -15,6 +15,10 @@
  *   - one_or_many       → `}|`
  *   - zero_or_many      → `}o`
  *
+ * Lanes: the H-V-H path turns at `data.lane`'s x within the gap (see
+ * `utils/erdEdgeLanes.ts`), so edges sharing a gap each get their own
+ * vertical segment instead of merging into one trunk.
+ *
  * Special cases:
  *   - Self-referential FK (`from_unique_id === to_unique_id`): curved Bezier
  *     loop instead of an orthogonal H-V-H path. Glyphs suppressed because the
@@ -27,10 +31,16 @@
 import { useCallback } from 'react'
 import { Position, type EdgeProps } from '@xyflow/react'
 import type { ErdEndpoint, ErdRelationship, ErdStatus } from '../../types'
+import { laneX, type EdgeLane } from '../../utils/erdEdgeLanes'
 
 export interface ErdEdgeData {
   readonly rel: ErdRelationship
   readonly selected?: boolean
+  /**
+   * This edge's vertical lane within its channel, assigned by `ErdCanvas`
+   * via `assignEdgeLanes`. Absent → turn at the gap midpoint.
+   */
+  readonly lane?: EdgeLane
 }
 
 const STATUS_COLOR: Record<ErdStatus, string> = {
@@ -56,9 +66,10 @@ const GLYPH_CIRCLE_R = 3
 function buildOrthogonalPath(
   from: { x: number; y: number },
   to: { x: number; y: number },
+  lane: EdgeLane | undefined,
 ): string {
-  const midX = (from.x + to.x) / 2
-  return `M ${from.x} ${from.y} H ${midX} V ${to.y} H ${to.x}`
+  const turnX = laneX(lane, from.x, to.x)
+  return `M ${from.x} ${from.y} H ${turnX} V ${to.y} H ${to.x}`
 }
 
 function buildSelfLoopPath(
@@ -198,7 +209,7 @@ export function ErdEdge(props: EdgeProps) {
 
   const path = isSelfRef
     ? buildSelfLoopPath(fromAnchor, toAnchor)
-    : buildOrthogonalPath(fromAnchor, toAnchor)
+    : buildOrthogonalPath(fromAnchor, toAnchor, edgeData?.lane)
 
   const fromSide = positionToSide(sourcePosition)
   const toSide = positionToSide(targetPosition)
