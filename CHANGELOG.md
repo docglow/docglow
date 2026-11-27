@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 - **`ui.lineage_badge.hover_detail`** — opt-in `panel` mode for column-level lineage badges. Hovering or focusing a shortened badge (or one whose `model.column` text is too long for the pill) opens a floating panel with the full model name, column name, and transformation type, rendered outside the table so the row height no longer changes on hover. The default, `inline`, keeps today's expand-in-place behavior, so existing sites are unchanged. Pair with `abbreviation: middle` for the layout proposed in #130.
 
+### Changed
+- **ERD star layout** — when the ERD shows one fact table whose foreign keys point at dimension tables that have no other relationships, the dimensions are now stacked in the order their FK columns appear in the fact table, so the relationship lines no longer cross. Any other graph shape keeps today's layout (#153).
+
 ## [0.9.3] - 2026-10-30
 
 ### Performance

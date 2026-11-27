@@ -191,11 +191,13 @@ function ErdCanvasInner({ models, relationships, mode = 'standalone' }: ErdCanva
       const keyCount = model ? computeKeyColumns(model, relationships).size : 0
       const visibleRows = Math.max(keyCount, 2)
       const height = ROW_H_HEAD + visibleRows * 26 + 40 // header + rows + summary
-      return { uid, height }
+      const columns = model ? model.columns.map((c) => c.name) : []
+      return { uid, height, columns }
     })
     const layoutEdges = relationships.map((r) => ({
       from: r.from_unique_id,
       to: r.to_unique_id,
+      fromColumn: r.from_column,
     }))
     return computeErdLayout(layoutNodes, layoutEdges)
   }, [modelUids, models, relationships])
